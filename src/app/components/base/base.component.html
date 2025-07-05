@@ -1,0 +1,9 @@
+<div class="flex w-full">
+    <div class="menu-sec">
+        <app-sidebar-menu (visibleChange)="setMenuVisiable($event)"></app-sidebar-menu>
+    </div>
+    <div class="main-context flex-grow" [class]="{'p-open-drawer': isMenuVisible}">
+        <app-header></app-header>
+        <router-outlet></router-outlet>
+    </div>
+</div>
