@@ -19,7 +19,7 @@ const MyPreset = definePreset(Aura, {
         },
         surface: {
             dark: {
-                0: '{zinc.950}',     // Deep background (e.g., body)
+                0: '{zinc.900}',     // Deep background (e.g., body)
                 50: '{zinc.900}',    // Dark cards/containers
                 100: '{zinc.800}',
                 200: '{zinc.700}',
