@@ -1,0 +1,13 @@
+.sidebar-logo {
+  .bars {
+    display: none;
+  }
+  &:hover {
+    .logo {
+      display: none;
+    }
+    .bars {
+      display: block;
+    }
+  }
+}
