@@ -1,0 +1,10 @@
+{
+  "name": "neura",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c blue,magenta \"npm run dev --prefix neura-api\" \"npm run dev --prefix neura-web\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
