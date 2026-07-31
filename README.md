@@ -179,4 +179,4 @@ This project is available for portfolio and educational reference. Contact the a
 
 ---
 
-Built by Roxana Haghgoo — [LinkedIn](https://www.linkedin.com/feed/) · [Email](haghgoo.roxana@gmail.com)
+Built by Roxana Haghgoo — [LinkedIn](https://www.linkedin.com/in/roxana-haghgoo/) · [Email](mailto:haghgoo.roxana@gmail.com)
