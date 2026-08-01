@@ -26,3 +26,11 @@ export async function buildTaskContext(userId: string) {
 
   return { today: todayTasks, upcomingWeek: weekTasks };
 }
+
+export async function buildUserProfile(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, age: true, job: true, gender: true },
+  });
+  return user;
+}

@@ -21,17 +21,22 @@ function TaskListItem({ task }: Iprops) {
   const list = useTasksStore((s) => s.lists.find((l) => l.id === task.list_id));
   const [alertOpen, setAlertOpen] = useState(false);
 
-  const { mutate: toggleTask, isPending: isTogglePending } = useToggleTask();
+  const { mutate: toggleTask } = useToggleTask();
+  const [isTaskPending, setIsTaskPending] = useState(false);
 
   const { mutate: deleteTask } = useDeleteTask();
-  
+
   const removeTaskHandler = () => {
     setAlertOpen(true);
   };
 
   const TaskCheckHandler = (checked: boolean) => {
-    toggleTask({ id: task.id, completed: checked });
-  }
+    setIsTaskPending(true);
+    toggleTask(
+      { id: task.id, completed: checked },
+      { onSettled: () => setIsTaskPending(false) },
+    );
+  };
 
    const isOutdated =
     !!task.due_date &&
@@ -49,7 +54,7 @@ function TaskListItem({ task }: Iprops) {
         <div className="flex items-start w-full gap-1 sm:gap-4">
           {/* ── Checkbox (non-clickable for task detail) ── */}
           <div className="py-1" onClick={(e) => e.stopPropagation()}>
-            {isTogglePending ? (
+            {isTaskPending ? (
               <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
             ) : (
               <Checkbox

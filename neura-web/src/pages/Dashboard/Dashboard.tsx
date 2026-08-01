@@ -18,6 +18,7 @@ import { useTasks } from "../../components/features/Tasks/hooks/useTasks";
 import { useNotes } from "../../components/features/Notes/hooks/useNotes";
 import type { Task } from "../../types/Tasks";
 import NoTasks from "../../components/features/Tasks/components/NoTasks";
+import { useDailyPlan } from "../../components/features/assistant/hooks/useDailyPlan";
 
 function Dashboard() {
   const getGreeting = () => {
@@ -35,6 +36,7 @@ function Dashboard() {
   };
   const { data: session } = useSession();
   const { data: tasks } = useTasks();
+  const { data: dailyPlan, isLoading: isPlanLoading, isError: isPlanError } = useDailyPlan();
   const { todayTasks, weekTasks, upcomingTasks } = useMemo(() => {
     if (!tasks)
       return {
@@ -96,10 +98,11 @@ function Dashboard() {
           </h5>
         </div>
         <p className="text-sm py-3">
-          Welcome back, {session?.user.name}. Based on your current deadlines, I
-          recommend starting with the Project Specs review. You have a 2-hour
-          deep work window before your sync with the Design Team. Focus on
-          high-impact tasks first to maintain momentum.
+          {isPlanLoading
+            ? "Looking at your day..."
+            : isPlanError
+            ? `Welcome back, ${session?.user.name}. I couldn't pull today's plan just now — head to the assistant if you'd like a hand.`
+            : dailyPlan}
         </p>
         <div className="flex gap-2 py-1">
           <Link to={"/assistant"}>

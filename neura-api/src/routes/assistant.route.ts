@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth";
-import { buildTaskContext } from "../services/assistant-context.service";
+import {
+  buildTaskContext,
+  buildUserProfile,
+} from "../services/assistant-context.service";
 import { TASK_TOOLS, executeTaskTool } from "../services/task-tools.service";
 import { runAssistantTurn } from "../lib/gemini";
 
@@ -39,8 +42,37 @@ General formatting:
 - If there's nothing to report (empty list), say so warmly and naturally — not as a dead-end statement.
 - It's fine for replies to run a bit longer when there's something useful to say. Don't pad for length, but don't clip yourself short either.
 
+Personalization — using what you know about the user:
+You'll be given the user's name, age, job, and gender at the top of each message. Use this like a colleague who knows the user would — quietly informing your tone and suggestions, not announced or recited back.
+
+- Use their first name occasionally, not every message — mainly when it adds warmth (greeting the day, wrapping up a win) not as a filler tag on every sentence.
+- Let their job shape your framing. A developer's "high priority" task might get a suggestion like "worth knocking out before context-switching"; a nurse's might get "before your shift starts." Don't state their job back to them ("As a developer, you..."), just let it color your word choice.
+- Never open a reply by restating their profile ("Hi Roxana, a 28-year-old developer..."). That's a data dump, not conversation.
+- Age and gender should almost never surface explicitly — they're context for tone calibration only, not talking points.
+
+Example — good use of profile info:
+Profile: name: Alex, job: nurse
+User asks: "what's on for today?"
+Good reply: "Morning, Alex — light day, just one thing before your shift:
+- **Refill prescription** — medium, due today
+
+Should be quick to knock out before you head in."
+
+Example — bad use of profile info (do not do this):
+"Hi Alex! As a nurse, you have the following tasks today: ..."
+
+Suggestion requests:
+When asked for a suggestion or "what should I prioritize," you don't need to list every task — pull in list_tasks (scope: "all" or "upcoming") if you don't already have enough in the snapshot, then give one clear, specific recommendation with a short reason. You can reference 1-2 tasks by name to ground it, but this isn't a full list-and-react — it's a direct opinion. Keep it to 2-4 sentences.
+
+Daily plan requests (mode: "daily_plan"):
+This is for a small dashboard card, not the chat panel — be brief and direct, like a quick morning briefing, not a reaction. 2 sentences max, no bullet list, no markdown.
+- Name one specific task to start with (pick the most urgent or highest priority) and a short reason why, in the style of "Start with X — it's Y." Add one practical note if relevant (a time gap before a meeting, momentum, etc.) only if it fits naturally — don't force it.
+- If nothing is due today, name one specific thing to make progress on instead — something from this week, an overdue item, or starting a focus session. Never just say the day is empty and stop there.
+- Use the person's name at the very start if you have it ("Welcome back, Alex.") — skip it if you don't.
+
 Capabilities:
 - You can look up tasks (list_tasks), create tasks (create_task), edit or complete tasks (update_task), and delete tasks (delete_task).
+- "upcoming" is different from "week" — it has no date ceiling. Use it when the user wants a full horizon view, not just the next 7 days.
 - Always call list_tasks first if you need a task's id to edit, complete, or delete it — never guess an id.
 - When the user's request is clear, take the action directly — don't ask for confirmation first. Confirm warmly afterward instead (e.g. "Done — added 'Buy groceries', due Friday. Let me know if you want to set a priority on it.").
 - If a request is ambiguous (e.g. it could match more than one task), ask which one before acting instead of guessing.
@@ -61,22 +93,46 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
     }: { mode: string; question?: string; history?: HistoryTurn[] } = req.body;
 
     const quickInstructions: Record<string, string> = {
-      today: "Tell me what's on for today.",
-      week: "Tell me what's coming up this week.",
-      overdue: "Tell me if anything's overdue.",
-    };
+  today: "Tell me what's on for today.",
+  week: "Tell me what's coming up this week.",
+  upcoming: "Tell me what's coming up — no specific timeframe, just everything on the horizon.",
+  overdue: "Tell me if anything's overdue.",
+  suggestion: "Look at everything on my plate right now and give me one clear suggestion for what to prioritize or how to approach it.",
+  daily_plan: "Give me a short daily plan for today.",
+};
 
-    const instruction = quickInstructions[mode] ?? question ?? "Summarize the user's tasks.";
+    const instruction =
+      quickInstructions[mode] ?? question ?? "Summarize the user's tasks.";
 
-    // Give the model a starting snapshot so simple summaries don't need a tool round-trip
-    const snapshot = await buildTaskContext(userId);
+    // Fetch snapshot + profile in parallel
+    const [snapshot, profile] = await Promise.all([
+      buildTaskContext(userId),
+      buildUserProfile(userId),
+    ]);
 
     const conversation = history
       .slice(-8)
-      .map((turn) => `${turn.role === "user" ? "User" : "Assistant"}: ${turn.content}`)
+      .map(
+        (turn) =>
+          `${turn.role === "user" ? "User" : "Assistant"}: ${turn.content}`,
+      )
       .join("\n");
 
+    // Only include fields that are actually set — never inject placeholder
+    // strings like "unknown" into the prompt, the model can end up echoing them.
+    const profileParts: string[] = [];
+    if (profile?.name) profileParts.push(`name: ${profile.name}`);
+    if (profile?.job) profileParts.push(`job: ${profile.job}`);
+    if (profile?.age) profileParts.push(`age: ${profile.age}`);
+
+    const profileBlock =
+      profileParts.length > 0
+        ? `About the user — ${profileParts.join(", ")}`
+        : "About the user: no profile info available.";
+
     const userPrompt = `
+${profileBlock}
+
 Current task snapshot (JSON, may be slightly stale — call list_tasks if you need exact ids or fresh data):
 ${JSON.stringify(snapshot)}
 
@@ -91,9 +147,11 @@ Request: ${instruction}
       executeTool: (name, args) => executeTaskTool(name, args, userId),
     });
 
-    // Only tell the frontend about actions that actually changed data (not list_tasks reads)
     const mutations = actions.filter(
-      (a) => a.name === "create_task" || a.name === "update_task" || a.name === "delete_task"
+      (a) =>
+        a.name === "create_task" ||
+        a.name === "update_task" ||
+        a.name === "delete_task",
     );
 
     res.json({ reply, actions: mutations });

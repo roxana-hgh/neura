@@ -55,15 +55,20 @@ function TaskDetail({ task, trigger }: IProps) {
   >(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
 
-  const { mutate: toggleTask, isPending: isTogglePending } = useToggleTask();
-  const { mutate: toggleSubTask, isPending: isToggleSubTaskPending } =
-    useToggleSubTask();
+  const { mutate: toggleTask } = useToggleTask();
+  const { mutate: toggleSubTask } = useToggleSubTask();
 
-  const { mutate: addSubtask, isPending: isAddSubtaskPending } =
-    useAddSubtask();
+  const { mutate: addSubtask } = useAddSubtask();
   const updateSubtask = useUpdateSubtask();
-  const { mutate: deleteSubtask, isPending: isDeleteSubtaskPending } =
-    useDeleteSubtask();
+  const { mutate: deleteSubtask } = useDeleteSubtask();
+  const [isTaskPending, setIsTaskPending] = useState(false);
+  const [pendingSubtaskId, setPendingSubtaskId] = useState<
+    string | number | null
+  >(null);
+  const [pendingDeleteSubtaskId, setPendingDeleteSubtaskId] = useState<
+    string | number | null
+  >(null);
+  const [isAddingSubtaskPending, setIsAddingSubtaskPending] = useState(false);
   const lists = useTasksStore((s) => s.lists);
   const { mutate: deleteTask } = useDeleteTask();
 
@@ -73,13 +78,26 @@ function TaskDetail({ task, trigger }: IProps) {
 
   const handleAddSubtask = () => {
     if (!subtaskTitle.trim()) return;
-    addSubtask({ taskId: task.id, title: subtaskTitle.trim() });
-    setSubtaskTitle("");
-    setAddingSubtask(false);
+    const nextTitle = subtaskTitle.trim();
+    setIsAddingSubtaskPending(true);
+    addSubtask(
+      { taskId: task.id, title: nextTitle },
+      {
+        onSettled: () => {
+          setIsAddingSubtaskPending(false);
+          setSubtaskTitle("");
+          setAddingSubtask(false);
+        },
+      },
+    );
   };
 
   const handleRemoveSubtask = (subtaskId: string | number) => {
-    deleteSubtask({ taskId: task.id, subtaskId });
+    setPendingDeleteSubtaskId(subtaskId);
+    deleteSubtask(
+      { taskId: task.id, subtaskId },
+      { onSettled: () => setPendingDeleteSubtaskId(null) },
+    );
   };
 
   const handleSaveEditSubtask = () => {
@@ -165,18 +183,22 @@ function TaskDetail({ task, trigger }: IProps) {
             <DialogHeader className="px-6 pt-6 pb-3 border-b border-neutral-200 dark:border-neutral-800/50">
               <DialogTitle className="text-base font-normal tracking-tight">
                 <div className="flex items-center gap-2.5 group">
-                  {isTogglePending ? (
+                  {isTaskPending ? (
                     <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
                   ) : (
                     <Checkbox
                       checked={task.completed}
                       id={`task-detail-${task.id}`}
-                      onCheckedChange={(checked) =>
-                        toggleTask({
-                          id: task.id,
-                          completed: checked as boolean,
-                        })
-                      }
+                      onCheckedChange={(checked) => {
+                        setIsTaskPending(true);
+                        toggleTask(
+                          {
+                            id: task.id,
+                            completed: checked as boolean,
+                          },
+                          { onSettled: () => setIsTaskPending(false) },
+                        );
+                      }}
                       className=" h-4 w-4 mt-0.5 transition-all duration-150"
                     />
                   )}
@@ -394,19 +416,28 @@ function TaskDetail({ task, trigger }: IProps) {
                         ) : (
                           // View mode
                           <>
-                            {isToggleSubTaskPending ? (
+                            {pendingSubtaskId === subtask.id ? (
                               <div className="w-3 h-3 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
                             ) : (
                               <Checkbox
                                 checked={subtask.completed}
                                 id={`subtask-${task.id}-${subtask.id}`}
-                                onCheckedChange={(checked) =>
-                                  toggleSubTask({
-                                    taskId: task.id,
-                                    subtaskId: subtask.id,
-                                    completed: checked as boolean,
-                                  })
-                                }
+                                onCheckedChange={(checked) => {
+                                  setPendingSubtaskId(subtask.id);
+                                  toggleSubTask(
+                                    {
+                                      taskId: task.id,
+                                      subtaskId: subtask.id,
+                                      completed: checked as boolean,
+                                    },
+                                    {
+                                      onSettled: () =>
+                                        setPendingSubtaskId((current) =>
+                                          current === subtask.id ? null : current,
+                                        ),
+                                    },
+                                  );
+                                }}
                                 className="h-3.5 w-3.5 transition-all duration-150"
                               />
                             )}
@@ -437,7 +468,7 @@ function TaskDetail({ task, trigger }: IProps) {
                               >
                                 <Pencil size={10} />
                               </Button>
-                              {isDeleteSubtaskPending ? (
+                              {pendingDeleteSubtaskId === subtask.id ? (
                                 <div className="w-3 h-3 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
                               ) : (
                                 <Button
@@ -464,7 +495,7 @@ function TaskDetail({ task, trigger }: IProps) {
                       </p>
                     </div>
                   )}
-                  {isAddSubtaskPending && (
+                  {isAddingSubtaskPending && (
                     <div className="flex justify-center py-2">
                       <div className="w-3 h-3 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
                     </div>

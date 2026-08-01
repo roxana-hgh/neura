@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../lib/api";
 
 
-export type AssistantMode = "today" | "week" | "overdue" | "custom";
+export type AssistantMode = "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom";
 
 export interface ToolAction {
   name: "create_task" | "update_task" | "delete_task";

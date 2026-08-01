@@ -18,10 +18,10 @@ export const TASK_TOOLS = [
           type: "object",
           properties: {
             scope: {
-              type: "string",
-              enum: ["today", "week", "overdue", "all"],
-              description: "Which tasks to return.",
-            },
+  type: "string",
+  enum: ["today", "week", "upcoming", "overdue", "all"],
+  description: "Which tasks to return.",
+},
           },
           required: ["scope"],
         },
@@ -99,6 +99,9 @@ async function listTasks(scope: string, userId: string) {
   } else if (scope === "week") {
     where.dueDate = { gte: startOfDay(now), lte: addDays(now, 7) };
     where.completed = false;
+  } else if (scope === "upcoming") {
+    where.dueDate = { gte: startOfDay(now) };
+    where.completed = false;
   } else if (scope === "overdue") {
     where.dueDate = { lt: startOfDay(now) };
     where.completed = false;
@@ -106,7 +109,7 @@ async function listTasks(scope: string, userId: string) {
 
   const tasks = await prisma.task.findMany({
     where,
-    orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
+    orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
     select: { id: true, title: true, priority: true, dueDate: true, completed: true },
   });
 
