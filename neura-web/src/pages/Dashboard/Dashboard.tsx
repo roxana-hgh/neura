@@ -16,6 +16,7 @@ import { useMemo } from "react";
 import { isToday, isAfter, isBefore, startOfDay, endOfWeek } from "date-fns";
 import { useTasks } from "../../components/features/Tasks/hooks/useTasks";
 import { useNotes } from "../../components/features/Notes/hooks/useNotes";
+
 import type { Task } from "../../types/Tasks";
 import NoTasks from "../../components/features/Tasks/components/NoTasks";
 import { useDailyPlan } from "../../components/features/assistant/hooks/useDailyPlan";
@@ -36,7 +37,8 @@ function Dashboard() {
   };
   const { data: session } = useSession();
   const { data: tasks } = useTasks();
-  const { data: dailyPlan, isLoading: isPlanLoading, isError: isPlanError } = useDailyPlan();
+  const dailyPlan = useDailyPlan();
+
   const { todayTasks, weekTasks, upcomingTasks } = useMemo(() => {
     if (!tasks)
       return {
@@ -98,18 +100,31 @@ function Dashboard() {
           </h5>
         </div>
         <p className="text-sm py-3">
-          {isPlanLoading
+          {dailyPlan.isPending
             ? "Looking at your day..."
-            : isPlanError
-            ? `Welcome back, ${session?.user.name}. I couldn't pull today's plan just now — head to the assistant if you'd like a hand.`
-            : dailyPlan}
+            : dailyPlan.isError
+            ? "Couldn't pull a plan just now — try again in a moment."
+            : dailyPlan.data
+            ? dailyPlan.data
+            : `Welcome back, ${session?.user.name}. Tap "AI Suggest" for a quick read on today.`}
         </p>
         <div className="flex gap-2 py-1">
+          <Button
+            size="xs"
+            variant="outline"
+            className="cursor-pointer"
+            disabled={dailyPlan.isPending}
+            onClick={() => dailyPlan.mutate()}
+          >
+            <span className="flex gap-1 items-center">
+              <Stars size={12} />
+              {dailyPlan.isPending ? "Thinking..." : "AI Suggest"}
+            </span>
+          </Button>
           <Link to={"/assistant"}>
             <Button asChild size="xs" className=" cursor-pointer">
               <span className="flex gap-0.5 items-center">
                 Adjust Plan with AI
-                {/* <Stars/> */}
               </span>
             </Button>
           </Link>
@@ -120,7 +135,7 @@ function Dashboard() {
           <div className="glass py-3 px-4 h-full">
             <Tabs defaultValue="today">
               <div className="flex justify-between items-center">
-                <h2 className="font-medium text-base mb-2">Upcoming Tasks</h2>
+                <h2 className="font-medium text-sm sm:text-base mb-2">Upcoming Tasks</h2>
                 <div className="flex items-center gap-2">
                   <TabsList>
                     <TabsTrigger value="today">
@@ -168,13 +183,6 @@ function Dashboard() {
                   Start Session
                 </Button>
               </Link>
-              {/* <Button
-                size="icon-sm"
-                variant="outline"
-                className=" cursor-pointer"
-              >
-                <RefreshCw />
-              </Button> */}
             </div>
           </div>
         </div>

@@ -93,13 +93,15 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
     }: { mode: string; question?: string; history?: HistoryTurn[] } = req.body;
 
     const quickInstructions: Record<string, string> = {
-  today: "Tell me what's on for today.",
-  week: "Tell me what's coming up this week.",
-  upcoming: "Tell me what's coming up — no specific timeframe, just everything on the horizon.",
-  overdue: "Tell me if anything's overdue.",
-  suggestion: "Look at everything on my plate right now and give me one clear suggestion for what to prioritize or how to approach it.",
-  daily_plan: "Give me a short daily plan for today.",
-};
+      today: "Tell me what's on for today.",
+      week: "Tell me what's coming up this week.",
+      upcoming:
+        "Tell me what's coming up — no specific timeframe, just everything on the horizon.",
+      overdue: "Tell me if anything's overdue.",
+      suggestion:
+        "Look at everything on my plate right now and give me one clear suggestion for what to prioritize or how to approach it.",
+      daily_plan: "Give me a short daily plan for today.",
+    };
 
     const instruction =
       quickInstructions[mode] ?? question ?? "Summarize the user's tasks.";

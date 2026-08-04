@@ -89,7 +89,7 @@ export function CalendarPage() {
   return (
     <div className="p-3 sm:p-4 md:p-6 h-full flex flex-col gap-3 sm:gap-4 md:gap-5">
       {/* Header */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 px-1">
         <h1 className="text-base sm:text-lg md:text-xl font-semibold text-foreground flex-1 truncate">
           {format(currentMonth, "MMMM yyyy")}
         </h1>
@@ -138,7 +138,7 @@ export function CalendarPage() {
 
         {/* Day cells */}
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground min-h-100">
             Loading...
           </div>
         ) : (

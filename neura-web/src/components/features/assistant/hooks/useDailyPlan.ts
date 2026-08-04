@@ -1,5 +1,5 @@
 // hooks/useDailyPlan.ts
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { api } from "../../../../lib/api";
 
 interface DailyPlanResponse {
@@ -17,11 +17,7 @@ async function fetchDailyPlan() {
 }
 
 export function useDailyPlan() {
-  return useQuery({
-    // date-keyed so it naturally refreshes once a new day starts
-    queryKey: ["assistant", "daily-plan", new Date().toDateString()],
-    queryFn: fetchDailyPlan,
-    staleTime: 1000 * 60 * 30, // 30 min — avoid re-hitting Gemini on every dashboard visit
-    refetchOnWindowFocus: false,
+  return useMutation({
+    mutationFn: fetchDailyPlan,
   });
 }
