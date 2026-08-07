@@ -15,6 +15,7 @@ import GuestRoute from "./components/features/user/GuestRoute";
 import { CalendarPage } from "./pages/Tasks/CalendarPage";
 import SettingPage from "./pages/settings/settingsPage";
 import AssistantPage from "./pages/Assisstance/AssistantPage";
+import { HabitsPage } from "./pages/Habits/HabitsPage";
 
 
 export const router = createBrowserRouter([
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
       { path: "note/:id/edit", element: <AddEditNotePage /> },
       { path: "settings", element: <SettingPage /> },
       { path: "focus", element: <FocusTimerPage /> },
+      { path: "habits", element: <HabitsPage /> },
       { path: "assistant", element: <AssistantPage /> },
     ],
   },

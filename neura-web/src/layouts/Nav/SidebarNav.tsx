@@ -6,6 +6,7 @@ import {
   Timer,
   Stars,
   Calendar,
+  CalendarCheck2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +57,11 @@ const items = [
     title: "Focus Mode",
     url: "/focus",
     icon: Timer,
+  },
+  {
+    title: "Habit Tracker",
+    url: "/habits",
+    icon: CalendarCheck2,
   },
   {
     title: "Chat with AI",
