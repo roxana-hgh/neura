@@ -148,17 +148,17 @@ model FocusSession {
 }
 
 model Habit {
-  id         String       @id @default(cuid())
-  title      String
-  color      String
-  startDate  DateTime     @default(now())
-  endDate    DateTime
-  isArchived Boolean      @default(false)
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries    HabitEntry[]
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  title        String
+  color        String
+  startDate    DateTime     @default(now())
+  durationDays Int?         // null = no due date, tracks forever
+  isArchived   Boolean      @default(false)
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries      HabitEntry[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@index([userId])
 }

@@ -7,10 +7,17 @@ import {
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../lib/get-session";
 
+
 const router = Router();
 
 type ViewType = "week" | "month" | "year" | "all";
+type HabitRow = { startDate: Date; durationDays: number | null };
+
 const dayKey = (d: Date) => format(d, "yyyy-MM-dd");
+
+function habitDueDate(h: HabitRow): Date | null {
+  return h.durationDays != null ? addDays(h.startDate, h.durationDays) : null;
+}
 
 function getRange(view: ViewType, dateStr: string | undefined, earliest: Date | null) {
   const base = dateStr ? new Date(dateStr) : new Date();
@@ -39,9 +46,14 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
   const allHabits = await prisma.habit.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
 
-  // lazy auto-archive: anything past its endDate gets flipped on read
+  // lazy auto-archive: anything past its due date gets flipped on read.
+  // habits with durationDays === null never get archived (they track forever).
   const now = new Date();
-  const toArchive = allHabits.filter((h) => !h.isArchived && h.endDate < now);
+  const toArchive = allHabits.filter((h) => {
+    if (h.isArchived) return false;
+    const due = habitDueDate(h);
+    return due !== null && due < now;
+  });
   if (toArchive.length) {
     await prisma.habit.updateMany({ where: { id: { in: toArchive.map((h) => h.id) } }, data: { isArchived: true } });
     toArchive.forEach((h) => (h.isArchived = true));
@@ -66,8 +78,12 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   }
 
   const buildStats = (habit: (typeof activeHabits)[number], rangeStart: Date, rangeEnd: Date) => {
+    const due = habitDueDate(habit);
     const cellStart = maxDate([rangeStart, habit.startDate]);
-    const cellEnd = minDate([rangeEnd, habit.endDate, now]);
+    const cellEndCandidates = [rangeEnd, now];
+    if (due) cellEndCandidates.push(due);
+    const cellEnd = minDate(cellEndCandidates);
+
     const total = Math.max(0, differenceInCalendarDays(cellEnd, cellStart) + 1);
     const doneSet = entriesByHabit.get(habit.id) ?? new Set<string>();
     let completed = 0;
@@ -79,7 +95,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   };
 
   const habitsPayload = activeHabits.map((h) => ({
-    id: h.id, title: h.title, color: h.color, startDate: h.startDate, endDate: h.endDate,
+    id: h.id, title: h.title, color: h.color, startDate: h.startDate, durationDays: h.durationDays,
     isArchived: h.isArchived, entries: Array.from(entriesByHabit.get(h.id) ?? []), stats: buildStats(h, start, end),
   }));
 
@@ -101,8 +117,11 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     }
     let pTotal = 0, pCompleted = 0;
     for (const h of activeHabits) {
+      const due = habitDueDate(h);
       const cellStart = maxDate([prevRange.start, h.startDate]);
-      const cellEnd = minDate([prevRange.end, h.endDate, now]);
+      const cellEndCandidates = [prevRange.end, now];
+      if (due) cellEndCandidates.push(due);
+      const cellEnd = minDate(cellEndCandidates);
       pTotal += Math.max(0, differenceInCalendarDays(cellEnd, cellStart) + 1);
       pCompleted += Array.from(prevByHabit.get(h.id) ?? []).filter((d) => {
         const dd = new Date(d);
@@ -115,21 +134,18 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   res.json({ habits: habitsPayload, rangeStart: start, rangeEnd: end, currentPercent, previousPercent });
 });
 
-// POST /api/habits — create a habit
+// POST /api/habits — create a habit. durationDays: number | null (null = no due date)
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { title, color, durationWeeks = 3 } = req.body;
+  const { title, color, durationDays = null } = req.body;
 
   if (!title?.trim()) {
     res.status(400).json({ error: "Title is required" });
     return;
   }
 
-  const startDate = new Date();
-  const endDate = addDays(startDate, durationWeeks * 7);
-
   const habit = await prisma.habit.create({
-    data: { title: title.trim(), color, startDate, endDate, userId },
+    data: { title: title.trim(), color, startDate: new Date(), durationDays, userId },
   });
 
   res.status(201).json(habit);
@@ -139,7 +155,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
-  const { title, color, durationWeeks } = req.body;
+  const { title, color } = req.body;
 
   const existing = await prisma.habit.findFirst({ where: { id, userId } });
   if (!existing) {
@@ -150,9 +166,10 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
   const data: Record<string, unknown> = {};
   if (title !== undefined) data.title = title.trim();
   if (color !== undefined) data.color = color;
-  if (durationWeeks !== undefined) {
-    data.endDate = addDays(existing.startDate, durationWeeks * 7);
-    data.isArchived = false; // extending brings it back to active
+  // distinguish "not provided" (leave unchanged) from "explicitly null" (clear due date)
+  if (Object.prototype.hasOwnProperty.call(req.body, "durationDays")) {
+    data.durationDays = req.body.durationDays; // number | null
+    data.isArchived = false; // changing duration brings it back to active
   }
 
   try {

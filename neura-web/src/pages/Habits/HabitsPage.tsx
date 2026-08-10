@@ -5,9 +5,15 @@ import { Plus } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useHabits } from "../../components/features/Habits/hooks/useHabits";
 import { HabitViewTabs } from "../../components/features/Habits/components/HabitViewTabs";
-import { HabitGrid } from "../../components/features/Habits/components/HabitGrid";
+
 import { CreateHabitModal } from "../../components/features/Habits/components/CreateHabitModal";
 import type { HabitView } from "../../types/habit";
+import { WeekGrid } from "../../components/features/Habits/components/Weekgrid";
+import { MonthCalendar } from "../../components/features/Habits/components/Monthcalendar";
+import { YearHeatmap } from "../../components/features/Habits/components/Yearheatmap";
+
+
+
 
 export function HabitsPage() {
   const [view, setView] = useState<HabitView>("week");
@@ -29,8 +35,8 @@ export function HabitsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <HabitViewTabs view={view} onChange={setView} />
-
-        <Button type="button" size="sm" variant="outline" onClick={() => setModalOpen(true)}>
+    
+         <Button type="button" size="sm" variant="outline" onClick={() => setModalOpen(true)}>
           <span className="hidden sm:block text-sm">Add Habit</span>{" "}
           <Plus />
         </Button>
@@ -58,7 +64,15 @@ export function HabitsPage() {
             </div>
           </div>
 
-          <HabitGrid habits={data.habits} rangeStart={data.rangeStart} rangeEnd={data.rangeEnd} view={view} />
+          {view === "week" && (
+            <WeekGrid habits={data.habits} rangeStart={data.rangeStart} rangeEnd={data.rangeEnd} />
+          )}
+          {view === "month" && (
+            <MonthCalendar habits={data.habits} monthDate={anchorDate} />
+          )}
+          {(view === "year" || view === "all") && (
+            <YearHeatmap habits={data.habits} rangeStart={data.rangeStart} rangeEnd={data.rangeEnd} />
+          )}
         </>
       )}
 

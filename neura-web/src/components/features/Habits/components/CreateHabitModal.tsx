@@ -6,7 +6,30 @@ import { Input } from "../../../ui/input";
 import { Button } from "../../../ui/button";
 
 
+
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select";
+import type { DurationUnit } from "../../../../types/habit";
+import { unitToDays } from "../lib/Habitdate";
+import { cn } from "../../../../lib/utils";
+
+
+
 const COLORS = ["#f97316", "#8b5cf6", "#14b8a6", "#3b82f6", "#22c55e", "#ec4899", "#eab308", "#ef4444"];
+
+interface Preset {
+  label: string;
+  enabled: boolean;
+  value?: number;
+  unit?: DurationUnit;
+}
+
+const PRESETS: Preset[] = [
+  { label: "No due date", enabled: false },
+  { label: "21 days", enabled: true, value: 21, unit: "day" },
+  { label: "1 week", enabled: true, value: 1, unit: "week" },
+  { label: "1 month", enabled: true, value: 1, unit: "month" },
+];
 
 interface CreateHabitModalProps {
   open: boolean;
@@ -16,21 +39,37 @@ interface CreateHabitModalProps {
 export function CreateHabitModal({ open, onOpenChange }: CreateHabitModalProps) {
   const [title, setTitle] = useState("");
   const [color, setColor] = useState(COLORS[0]);
-  const [durationWeeks, setDurationWeeks] = useState(3);
+  const [durationEnabled, setDurationEnabled] = useState(false); // default: no due date
+  const [durationValue, setDurationValue] = useState(21);
+  const [durationUnit, setDurationUnit] = useState<DurationUnit>("day");
   const { mutate: createHabit, isPending } = useCreateHabit();
+
+  const applyPreset = (preset: Preset) => {
+    setDurationEnabled(preset.enabled);
+    if (preset.enabled) {
+      setDurationValue(preset.value!);
+      setDurationUnit(preset.unit!);
+    }
+  };
+
+  const isActivePreset = (preset: Preset) =>
+    preset.enabled === durationEnabled &&
+    (!preset.enabled || (preset.value === durationValue && preset.unit === durationUnit));
+
+  const reset = () => {
+    setTitle("");
+    setColor(COLORS[0]);
+    setDurationEnabled(false);
+    setDurationValue(21);
+    setDurationUnit("day");
+  };
 
   const handleSubmit = () => {
     if (!title.trim()) return;
+    const durationDays = durationEnabled ? unitToDays(durationUnit, durationValue) : null;
     createHabit(
-      { title: title.trim(), color, durationWeeks },
-      {
-        onSuccess: () => {
-          setTitle("");
-          setColor(COLORS[0]);
-          setDurationWeeks(3);
-          onOpenChange(false);
-        },
-      }
+      { title: title.trim(), color, durationDays },
+      { onSuccess: () => { reset(); onOpenChange(false); } }
     );
   };
 
@@ -44,12 +83,56 @@ export function CreateHabitModal({ open, onOpenChange }: CreateHabitModalProps) 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label htmlFor="habit-title">Title</Label>
-            <Input id="habit-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Read, Workout, Meditate" autoFocus />
+            <Input
+              id="habit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Read, Workout, Meditate"
+              autoFocus
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="habit-duration">Duration (weeks)</Label>
-            <Input id="habit-duration" type="number" min={1} max={52} value={durationWeeks} onChange={(e) => setDurationWeeks(Number(e.target.value) || 1)} />
+            <Label>Duration</Label>
+            <div className="flex flex-wrap gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition",
+                    isActivePreset(p)
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {durationEnabled && (
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  type="number"
+                  min={1}
+                  value={durationValue}
+                  onChange={(e) => setDurationValue(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-20"
+                />
+                <Select value={durationUnit} onValueChange={(v) => setDurationUnit(v as DurationUnit)}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Days</SelectItem>
+                    <SelectItem value="week">Weeks</SelectItem>
+                    <SelectItem value="month">Months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
