@@ -3,16 +3,21 @@ import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../lib/api";
 
+export type AssistantMode = "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom" | "daily_plan";
 
-export type AssistantMode = "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom";
+type TaskActionName = "create_task" | "update_task" | "delete_task";
+type HabitActionName = "create_habit" | "update_habit" | "delete_habit" | "log_habit_completion";
 
 export interface ToolAction {
-  name: "create_task" | "update_task" | "delete_task";
+  name: TaskActionName | HabitActionName;
   args: Record<string, any>;
   result: {
-    created?: { id: string; title: string; priority: string };
-    updated?: { id: string; title: string; priority: string };
+    created?: { id: string; title: string; priority?: string; durationDays?: number | null };
+    updated?: { id: string; title: string; priority?: string; durationDays?: number | null };
     deleted?: { id: string; title: string };
+    habit?: string;
+    date?: string;
+    completed?: boolean;
     error?: string;
   };
 }
@@ -35,6 +40,13 @@ interface AskAssistantPayload {
   history: { role: "user" | "assistant"; content: string }[];
 }
 
+const HABIT_ACTION_NAMES = new Set<HabitActionName>([
+  "create_habit",
+  "update_habit",
+  "delete_habit",
+  "log_habit_completion",
+]);
+
 async function askAssistant(payload: AskAssistantPayload) {
   const { data } = await api.post<AskAssistantResponse>("/assistant", payload);
   return data;
@@ -52,11 +64,13 @@ export function useAssistant() {
         { id: crypto.randomUUID(), role: "assistant", content: reply, actions },
       ]);
 
-      // If the assistant created, edited, or deleted a task, make sure the rest
-      // of the app (task list, calendar) reflects it. Adjust the key below if
-      // your tasks hook uses a different query key.
       if (actions.length > 0) {
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        const touchedTasks = actions.some((a) => !HABIT_ACTION_NAMES.has(a.name as HabitActionName));
+        const touchedHabits = actions.some((a) => HABIT_ACTION_NAMES.has(a.name as HabitActionName));
+
+        // Adjust these keys if your tasks/habits hooks use different query keys.
+        if (touchedTasks) queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        if (touchedHabits) queryClient.invalidateQueries({ queryKey: ["habits"] });
       }
     },
     onError: () => {
@@ -88,8 +102,6 @@ export function useAssistant() {
     [messages, mutation]
   );
 
-  // Quick actions now carry their own mode + message, so adding a new one
-  // is just adding an entry in QuickActions.tsx — no hook changes needed.
   const sendQuickAction = useCallback(
     (mode: AssistantMode, message: string) => {
       sendMessage(message, mode);

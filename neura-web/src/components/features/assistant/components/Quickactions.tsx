@@ -13,6 +13,7 @@ import {
   Pencil,
   ChevronRight,
   Sparkles,
+  Flame,
 } from "lucide-react";
 
 
@@ -31,10 +32,9 @@ const ASK_ACTIONS: {
 }[] = [
   { mode: "today", message: "What's on my plate today?", label: "Today's priorities", icon: ListChecks },
   { mode: "week", message: "What's coming up this week?", label: "This week", icon: CalendarDays },
-  { mode: "upcoming", message: "What's coming up, no timeframe — just everything ahead?", label: "Upcoming", icon: CalendarRange },
   { mode: "overdue", message: "Do I have anything overdue?", label: "Overdue", icon: AlarmClock },
   { mode: "custom", message: "What are my high priority tasks?", label: "High priority", icon: Flag },
-  { mode: "custom", message: "What have I completed today?", label: "Completed today", icon: CheckCircle2 },
+  { mode: "custom", message: "How are my habits going — anything I'm about to break a streak on?", label: "Habit check-in", icon: Flame },
   { mode: "suggestion", message: "Based on everything I've got, what should I focus on?", label: "Get a suggestion", icon: Sparkles },
 ];
 
