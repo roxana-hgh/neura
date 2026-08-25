@@ -19,7 +19,7 @@ function FocusSession() {
       </div>
 
       <div className="py-6 p-2 md:px-4 mx-auto grid gap-6">
-        <SessionStats />
+        {/* <SessionStats /> */}
         <SessionHistory />
       </div>
 

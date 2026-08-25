@@ -13,14 +13,14 @@ const VIEWS: { value: HabitView; label: string }[] = [
 
 export function HabitViewTabs({ view, onChange }: { view: HabitView; onChange: (v: HabitView) => void }) {
   return (
-    <div className="inline-flex rounded-full bg-muted p-1">
+    <div className="inline-flex items-center gap-1 rounded-full bg-neutral-50/20 dark:bg-white/5 border border-neutral-600/20 dark:border-white/10 p-1">
       {VIEWS.map((v) => (
         <button
           key={v.value}
           onClick={() => onChange(v.value)}
           className={cn(
-            "rounded-full px-4 py-1.5 text-sm font-medium transition",
-            view === v.value ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            "rounded-full px-3 py-1 text-sm font-medium transition-colors",
+            view === v.value ? "bg-primary text-primary-foreground" : "text-neutral-600 dark:text-neutral-400 cursor-pointer"
           )}
         >
           {v.label}

@@ -81,7 +81,7 @@ function LoginForm() {
             {isSubmitting ? "Logging in..." : "Login"}
           </Button>
 
-          <p className="text-muted-foreground text-sm text-center w-full my-1">
+          <p className="text-muted text-sm text-center w-full my-1">
             Don't have an account?
             <Link to="/signup" className="text-neutral-800 font-medium hover:underline mx-2">
               Sign Up

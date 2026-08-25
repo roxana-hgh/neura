@@ -97,7 +97,7 @@ function SignUpForm() {
           <Button variant="default" className="mt-3 bg-neutral-900 text-white hover:bg-neutral-800" type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Creating account..." : "Sign Up"}
           </Button>
-          <p className="text-muted-foreground text-sm text-center w-full my-1">
+          <p className="text-muted text-sm text-center w-full my-1">
             Already have an account?
             <Link
               to={"/login"}
