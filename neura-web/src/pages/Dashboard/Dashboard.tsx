@@ -20,6 +20,9 @@ import { useNotes } from "../../components/features/Notes/hooks/useNotes";
 import type { Task } from "../../types/Tasks";
 import NoTasks from "../../components/features/Tasks/components/NoTasks";
 import { useDailyPlan } from "../../components/features/assistant/hooks/useDailyPlan";
+import HabitHeatmapCard from "../../components/features/Habits/components/HabitHeatmapCard";
+import WeeklyOverviewChart from "../../components/features/dashboard/WeeklyOverviewChart";
+
 
 function Dashboard() {
   const getGreeting = () => {
@@ -185,6 +188,14 @@ function Dashboard() {
               </Link>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        <div className="col-span-4 md:col-span-2">
+          <HabitHeatmapCard />
+        </div>
+        <div className="col-span-4 md:col-span-2">
+          <WeeklyOverviewChart />
         </div>
       </div>
       {Taskslists?.length > 0 && (

@@ -3,12 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
- "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "lint": "eslint .",
-  "preview": "vite preview"
-},
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/vite": "^4.1.18",
@@ -40,6 +40,7 @@
     "react-hook-form": "^7.71.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
+    "recharts": "^3.8.0",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
