@@ -162,7 +162,10 @@ router.patch("/:id/toggle", requireAuth, async (req: Request, res: Response) => 
 
   const task = await prisma.task.update({
     where: { id, userId },
-    data: { completed },
+    data: {
+      completed,
+      completedAt: completed ? new Date() : null,
+    },
     include: { subtasks: true },
   });
 

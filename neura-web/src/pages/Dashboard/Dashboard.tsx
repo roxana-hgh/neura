@@ -1,4 +1,4 @@
-import { Stars, Timer } from "lucide-react";
+import { Stars, Timer, ListTodo, FolderKanban, StickyNote } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
   Tabs,
@@ -22,7 +22,7 @@ import NoTasks from "../../components/features/Tasks/components/NoTasks";
 import { useDailyPlan } from "../../components/features/assistant/hooks/useDailyPlan";
 import HabitHeatmapCard from "../../components/features/Habits/components/HabitHeatmapCard";
 import WeeklyOverviewChart from "../../components/features/dashboard/WeeklyOverviewChart";
-
+import TasksCompletedChart from "../../components/features/Tasks/components/TasksCompletedChart";
 
 function Dashboard() {
   const getGreeting = () => {
@@ -138,7 +138,10 @@ function Dashboard() {
           <div className="glass py-3 px-4 h-full">
             <Tabs defaultValue="today">
               <div className="flex justify-between items-center">
-                <h2 className="font-medium text-sm sm:text-base mb-2">Upcoming Tasks</h2>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <ListTodo size={16} className="text-blue-400" />
+                  <h2 className="font-medium text-sm sm:text-base">Upcoming Tasks</h2>
+                </div>
                 <div className="flex items-center gap-2">
                   <TabsList>
                     <TabsTrigger value="today">
@@ -168,8 +171,8 @@ function Dashboard() {
         </div>
         <div className="col-span-4 md:col-span-1">
           <div className="glass py-3 px-4 h-full flex flex-col">
-            <div className="flex gap-2 items-center px-1  mb-2">
-              <Timer size={16} />
+            <div className="flex gap-1.5 items-center px-1  mb-2">
+              <Timer size={16} className="text-amber-400" />
               <h2 className="font-medium text-base">Focus Timer</h2>
             </div>
             <div className="py-3 mb-3 grow flex flex-col justify-center">
@@ -190,18 +193,18 @@ function Dashboard() {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-3">
-        <div className="col-span-4 md:col-span-2">
-          <HabitHeatmapCard />
-        </div>
-        <div className="col-span-4 md:col-span-2">
-          <WeeklyOverviewChart />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <HabitHeatmapCard />
+        <WeeklyOverviewChart />
+        <TasksCompletedChart />
       </div>
       {Taskslists?.length > 0 && (
         <div className=" py-3 h-full">
           <div className="flex justify-between items-center px-1">
-            <h2 className="font-medium text-base mb-2">Projects</h2>
+            <div className="flex items-center gap-1.5 mb-2">
+              <FolderKanban size={16} className="text-purple-400" />
+              <h2 className="font-medium text-base">Projects</h2>
+            </div>
             <Link to={"/lists"}>
               <Button size="sm" variant="ghost">
                 <span className="text-xs">View All</span>
@@ -224,7 +227,10 @@ function Dashboard() {
       {notes?.length > 0 && (
         <div className="py-3  h-full">
           <div className="flex justify-between items-center px-1">
-            <h2 className="font-medium text-base mb-2">Latest Notes</h2>
+            <div className="flex items-center gap-1.5 mb-2">
+              <StickyNote size={16} className="text-yellow-400" />
+              <h2 className="font-medium text-base">Latest Notes</h2>
+            </div>
             <Link to={"/notes"}>
               <Button size="sm" variant="ghost">
                 <span className="text-xs">View All</span>

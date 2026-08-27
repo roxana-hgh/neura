@@ -5,6 +5,8 @@ import type { Task } from "../../../../../types/Tasks";
 import { useTasksStore } from "../../stores/tasks";
 import { getListColorClass } from "../../utils/colorMapper";
 import TaskDetail from "../TaskDetail";
+import { useState } from "react";
+import { useToggleTask } from "../../hooks/useTasks";
 
 interface Iprops {
   task: Task;
@@ -14,8 +16,18 @@ function TaskItemSummery({ task }: Iprops) {
   const list = useTasksStore((s) =>
     s.lists.find((l) => l.id === task.list_id)
   );
-  
-  const toggleTask = useTasksStore((state) => state.toggleTask);
+
+  const { mutate: toggleTask } = useToggleTask();
+  const [isTaskPending, setIsTaskPending] = useState(false);
+
+  const TaskCheckHandler = (checked: boolean) => {
+    setIsTaskPending(true);
+    toggleTask(
+      { id: task.id, completed: checked },
+      { onSettled: () => setIsTaskPending(false) },
+    );
+  };
+
 
 
   return (
@@ -23,13 +35,16 @@ function TaskItemSummery({ task }: Iprops) {
       <div className="flex items-start w-full gap-4">
         {/* ── Checkbox (non-clickable for task detail) ── */}
         <div className="py-1" onClick={(e) => e.stopPropagation()}>
-          <Checkbox
-            checked={task.completed}
-            id={`task-item${task.id}`}
-            onCheckedChange={(checked) =>
-              toggleTask(task.id, Boolean(checked))
-            }
-          />
+
+          {isTaskPending ? (
+            <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
+          ) : (
+            <Checkbox
+              checked={task.completed}
+              id={`task-item${task.id}`}
+              onCheckedChange={TaskCheckHandler}
+            />
+          )}
           <Label className="hidden" htmlFor={`task-item${task.id}`}></Label>
         </div>
 
@@ -39,11 +54,10 @@ function TaskItemSummery({ task }: Iprops) {
           trigger={
             <div className="grow cursor-pointer">
               <h5
-                className={`text-sm mb-1 ${
-                  task.completed
+                className={`text-sm mb-1 ${task.completed
                     ? "line-through text-muted-foreground"
                     : "font-medium"
-                }`}
+                  }`}
               >
                 {task.title}
               </h5>
@@ -66,23 +80,22 @@ function TaskItemSummery({ task }: Iprops) {
                   Due{" "}
                   {task.due_date
                     ? new Date(task.due_date).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
                     : "No due date"}
                 </span>
 
                 <span
-                  className={`text-xs rounded-full flex gap-1 items-center ${
-                    task.priority === "high"
+                  className={`text-xs rounded-full flex gap-1 items-center ${task.priority === "high"
                       ? "text-red-600 dark:text-red-300"
                       : task.priority === "low"
                         ? "text-green-600 dark:text-green-300"
                         : task.priority === "medium"
                           ? "text-amber-600 dark:text-amber-300"
                           : "text-neutral-400"
-                  }`}
+                    }`}
                 >
                   <Tag size={10} /> {task.priority}
                 </span>
@@ -102,8 +115,8 @@ function TaskItemSummery({ task }: Iprops) {
           }
         />
 
-       
-    
+
+
       </div>
     </div>
   );

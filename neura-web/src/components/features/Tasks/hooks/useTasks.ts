@@ -5,6 +5,8 @@ import { api } from "../../../../lib/api";
 import type { TaskFormValues } from "../schema/task.schema";
 import { useTasksStore } from "../stores/tasks";
 import type { ListFormValues } from "../schema/list.schema";
+import { useMemo } from "react";
+import { eachDayOfInterval, format, isSameDay, startOfDay, subDays } from "date-fns";
 
 // Map snake_case DB fields → your frontend types
 export const mapTask = (raw: any): Task => ({
@@ -14,6 +16,7 @@ export const mapTask = (raw: any): Task => ({
   completed: raw.completed,
   priority: raw.priority as "low" | "medium" | "high",
   created_at: raw.createdAt, // DateTime → ISO string (already is one)
+  completed_at: raw.completedAt ?? null,
   due_date: raw.dueDate ?? null,
   list_id: raw.listId ?? null,
   subtasks: raw.subtasks ?? null,
@@ -244,4 +247,28 @@ export function useDeleteSubtask() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
+}
+
+// Derived, client-side: tasks completed per day for the last 7 days.
+// Reuses the cached /tasks list — no extra network call.
+export function useTasksCompletedByDay() {
+  const { data: tasks, isPending } = useTasks();
+
+  const chartData = useMemo(() => {
+    const today = startOfDay(new Date());
+    const days = eachDayOfInterval({ start: subDays(today, 6), end: today });
+
+    return days.map((day) => {
+      const count = (tasks ?? []).filter(
+        (t) => t.completed && t.completed_at && isSameDay(new Date(t.completed_at), day)
+      ).length;
+
+      return {
+        date: format(day, "EEE"),
+        tasksCompleted: count,
+      };
+    });
+  }, [tasks]);
+
+  return { data: chartData, isPending };
 }

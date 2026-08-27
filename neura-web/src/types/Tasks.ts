@@ -13,6 +13,7 @@ export interface Task {
   description: string | null;
   completed: boolean;
   created_at: string;
+  completed_at: string | null;
   due_date: string | null;
   priority: "low" | "medium" | "high";
   subtasks: SubTask[] | null;
@@ -31,4 +32,3 @@ export type TaskWithListName = Task & {
   listName: string | null;
   listColor: colors
 };
-
