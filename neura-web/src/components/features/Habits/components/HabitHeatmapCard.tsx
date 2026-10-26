@@ -4,11 +4,11 @@ import { Button } from "../../../ui/button";
 import { useHabits } from "../hooks/useHabits";
 import { useToggleHabitEntry } from "../hooks/useHabits";
 import {
-  eachDayOfInterval,
   format,
   isAfter,
   isSameDay,
   startOfDay,
+  addDays, parseISO
 } from "date-fns";
 
 const dateKey = (d: Date) => format(d, "yyyy-MM-dd");
@@ -24,11 +24,10 @@ function TrendBadge({
   const isUp = delta >= 0;
   return (
     <span
-      className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${
-        isUp
+      className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${isUp
           ? "text-emerald-500 bg-emerald-500/10"
           : "text-red-500 bg-red-500/10"
-      }`}
+        }`}
     >
       {isUp ? "+" : ""}
       {delta}%
@@ -42,10 +41,9 @@ function HabitHeatmapCard() {
   const toggleEntry = useToggleHabitEntry();
 
   const days = data
-    ? eachDayOfInterval({
-        start: new Date(data.rangeStart),
-        end: new Date(data.rangeEnd),
-      })
+    ? Array.from({ length: 7 }, (_, i) =>
+      addDays(parseISO(data.rangeStart.slice(0, 10)), i)
+    )
     : [];
 
   const activeHabits = data?.habits.filter((h) => !h.isArchived).slice(0, 4) ?? [];
@@ -127,11 +125,10 @@ function HabitHeatmapCard() {
                     onClick={() =>
                       toggleEntry.mutate({ habitId: habit.id, date: key })
                     }
-                    className={`w-5 h-5 mx-auto rounded-md transition-colors ${
-                      future
+                    className={`w-5 h-5 mx-auto rounded-md transition-colors ${future
                         ? "bg-muted/30 cursor-not-allowed"
                         : "cursor-pointer hover:opacity-80"
-                    } ${isToday && !done ? "ring-1 ring-offset-1 ring-muted-foreground/40" : ""}`}
+                      } ${isToday && !done ? "ring-1 ring-offset-1 ring-muted-foreground/40" : ""}`}
                     style={{
                       backgroundColor: done ? habit.color : undefined,
                     }}
