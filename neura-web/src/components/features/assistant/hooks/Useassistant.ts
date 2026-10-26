@@ -2,11 +2,20 @@
 import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../../lib/api";
+import { format } from "date-fns";
 
-export type AssistantMode = "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom" | "daily_plan";
+export type AssistantMode =
+  | "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom" | "daily_plan"
+  | "plan_day" | "next_up" | "reschedule_overdue" | "plan_week" | "habit_checkin" | "wrap_up";
 
 type TaskActionName = "create_task" | "update_task" | "delete_task";
 type HabitActionName = "create_habit" | "update_habit" | "delete_habit" | "log_habit_completion";
+
+export interface MentionRef {
+  id: string;
+  title: string;
+  type: "task" | "habit";
+}
 
 export interface ToolAction {
   name: TaskActionName | HabitActionName;
@@ -38,6 +47,9 @@ interface AskAssistantPayload {
   mode: AssistantMode;
   question: string;
   history: { role: "user" | "assistant"; content: string }[];
+  references?: MentionRef[];
+  clientDate: string;
+  timeZone: string;
 }
 
 const HABIT_ACTION_NAMES = new Set<HabitActionName>([
@@ -73,34 +85,39 @@ export function useAssistant() {
         if (touchedHabits) queryClient.invalidateQueries({ queryKey: ["habits"] });
       }
     },
-    onError: () => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "Sorry, I couldn't reach the assistant just now. Try again in a moment.",
-        },
-      ]);
+   onError: (error: any) => {
+  const serverMessage = error?.response?.data?.message;
+  setMessages((prev) => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: serverMessage ?? "Sorry, I couldn't reach the assistant just now. Try again in a moment.",
     },
+  ]);
+},
   });
 
-  const sendMessage = useCallback(
-    (text: string, mode: AssistantMode = "custom") => {
-      const trimmed = text.trim();
-      if (!trimmed || mutation.isPending) return;
+ const sendMessage = useCallback(
+  (text: string, mode: AssistantMode = "custom", references?: MentionRef[]) => {
+    const trimmed = text.trim();
+    if (!trimmed || mutation.isPending) return;
 
-      const history = messages.map(({ role, content }) => ({ role, content }));
+    const history = messages.map(({ role, content }) => ({ role, content }));
 
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "user", content: trimmed },
-      ]);
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: trimmed }]);
 
-      mutation.mutate({ mode, question: trimmed, history });
-    },
-    [messages, mutation]
-  );
+    mutation.mutate({
+      mode,
+      question: trimmed,
+      history,
+      references,
+      clientDate: format(new Date(), "EEEE, yyyy-MM-dd HH:mm"),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  },
+  [messages, mutation]
+);
 
   const sendQuickAction = useCallback(
     (mode: AssistantMode, message: string) => {

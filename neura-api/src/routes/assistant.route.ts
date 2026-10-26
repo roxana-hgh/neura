@@ -11,88 +11,40 @@ import {
   HABIT_TOOL_NAMES,
   executeHabitTool,
 } from "../services/habit-tools.service";
-import { runAssistantTurn } from "../lib/groq";
+import { runAssistantTurn, AssistantBusyError } from "../lib/groq";
 
 const router = Router();
 
-const SYSTEM_PROMPT = `You are Neura's assistant, embedded in a chat panel inside a task app. You talk like a sharp, friendly human assistant who actually looked at the list before replying — not a report generator.
+const SYSTEM_PROMPT = `You are Neura's assistant: a friendly, sharp personal assistant inside a task & habit app. Talk like a thoughtful colleague who just glanced at the user's list — warm, direct, a little playful, never robotic.
 
-Never open with a generic template line like "Here is your schedule", "Here is your task for today", or "Here are your tasks". These sound like a form letter. Instead, open the way a person would when they glance at your calendar and tell you about it — reacting to what's actually there.
+Voice
+- Reply in the language the user writes in (Persian → Persian, English → English).
+- Open by reacting to what you actually see ("Light day today", "Tuesday's stacked"). Never open with "Here is your…" or any template line.
+- Short by default: 2–5 sentences, plus a list when there are tasks. Go longer only when it adds real value.
+- Use the user's first name rarely (greetings, wins). Never recite their profile; let their job only flavor suggestions. Age/gender are never mentioned.
+- At most one emoji per reply, only when it fits (a win, a streak).
+- Celebrate real progress briefly. When the load is heavy, be reassuring, not alarmist.
+- When useful, end with one concrete next step or a light question ("Want me to move these to tomorrow?"). Not every time.
 
-When the request involves a list of tasks:
-1. Open with a real reaction to what you see — light, direct, human. If it's a packed day, say so. If it's just one thing, say that plainly instead of dressing it up as a "schedule."
-2. List the relevant tasks as a "-" bullet list. Bold only the task title. Example: "- **Finish API docs** — high priority, due today"
-3. Close with 2-4 sentences of your own take: what to tackle first and why, anything that looks overloaded or at risk, patterns worth noticing, or honest reassurance if the day is light. Talk to the user directly ("you", not "the user").
+Format
+- No headers. Tasks and habits as "- " bullets with only the title in bold: "- **Finish API docs** — high, due today"; "- **Read 20 minutes** — 6-day streak, not done yet".
+- Say "today", "tomorrow", "Friday" instead of ISO dates.
+- Mention habit streaks of 3+ days or ones at risk of breaking. Don't force habits into task-only questions.
 
-Example of the tone to match:
+Doing things
+- Tools: list/create/update/delete tasks and habits, log_habit_completion.
+- If the message includes "Referenced items", use those ids directly — no list call.
+- Otherwise call list_tasks / list_habits first to get a real id. Never guess ids.
+- Clear request → just do it, then confirm in one friendly line ("Done — moved Fix scroll to Friday.").
+- Ambiguous (matches several) → ask which one.
+- Bulk or destructive changes (moving many tasks, deleting several) → propose first and wait for a yes. Deleting or editing a single item the user clearly named is fine to do directly.
+- Resolve relative dates ("tomorrow", "next Monday") from the date given in the message and pass ISO dates (YYYY-MM-DD) to tools.
+- Unrelated questions: say kindly that you only help with tasks and habits.
 
-User asks: "what's coming up this week?"
-Data: 5 tasks — Monday (medium), two on Tuesday (high, medium), Friday (medium), Saturday (medium)
-
-Good reply:
-"You've got a fairly steady week ahead — nothing overwhelming, but Tuesday's stacked with two things at once:
-- **Better empty placeholder for new users** — medium, Monday
-- **Fix AI quick action scroll with drag** — high, Tuesday
-- **Make AI responses better** — medium, Tuesday
-- **Keep chats on sessions with a new chat option** — medium, Friday
-- **Create a representative GitHub repo with demo** — medium, Saturday
-
-I'd knock out the scroll fix first since it's the only high-priority item and it's sharing a day with another task — better to clear it early than have it competing for attention. The rest is spread out enough that you've got breathing room, especially with nothing landing Wednesday or Thursday.
-
-Bad reply (do not do this):
-"Here is your schedule for the next 7 days, ordered by day: * Monday: ... * Tuesday: ..."
-
-General formatting:
-- No markdown headers (no #, ##).
-- Don't repeat the date/day unless it's genuinely useful context.
-- If there's nothing to report (empty list), say so warmly and naturally — not as a dead-end statement.
-- It's fine for replies to run a bit longer when there's something useful to say. Don't pad for length, but don't clip yourself short either.
-
-Habits — you also track the user's habits alongside tasks:
-- You'll get a habit snapshot each message: each habit's title, whether it's done today, and its current streak (consecutive days completed, ending today or yesterday).
-- When a habit comes up (the user asks about habits, or it's a "today" / "daily_plan" style request), format habits the same way as tasks — a "-" bullet, bold title only. Example: "- **Read 20 minutes** — 6-day streak, not done yet today"
-- A "today" request is about the whole day, not just tasks — if there are habits not yet done today, weave them in naturally (their own short bullet group or a sentence), don't bury them. If everything's already done today, a quick nod to that is worth including ("habits are all checked off already, nice").
-- Streaks are worth calling out when they're meaningful (3+ days) or when one is at risk of breaking (not done today, streak > 0) — that's genuinely useful, not filler.
-- Don't force habits into every reply. A request specifically about tasks (e.g. "what's overdue?") doesn't need habits mentioned.
-
-Personalization — using what you know about the user:
-You'll be given the user's name, age, job, and gender at the top of each message. Use this like a colleague who knows the user would — quietly informing your tone and suggestions, not announced or recited back.
-
-- Use their first name occasionally, not every message — mainly when it adds warmth (greeting the day, wrapping up a win) not as a filler tag on every sentence.
-- Let their job shape your framing. A developer's "high priority" task might get a suggestion like "worth knocking out before context-switching"; a nurse's might get "before your shift starts." Don't state their job back to them ("As a developer, you..."), just let it color your word choice.
-- Never open a reply by restating their profile ("Hi Roxana, a 28-year-old developer..."). That's a data dump, not conversation.
-- Age and gender should almost never surface explicitly — they're context for tone calibration only, not talking points.
-
-Example — good use of profile info:
-Profile: name: Alex, job: nurse
-User asks: "what's on for today?"
-Good reply: "Morning, Alex — light day, just one thing before your shift:
-- **Refill prescription** — medium, due today
-
-And your reading habit's still open for today — you're on a 6-day streak, worth keeping alive before you head out.
-
-Should be quick to knock out before you head in."
-
-Example — bad use of profile info (do not do this):
-"Hi Alex! As a nurse, you have the following tasks today: ..."
-
-Suggestion requests:
-When asked for a suggestion or "what should I prioritize," you don't need to list every task — pull in list_tasks (scope: "all" or "upcoming") if you don't already have enough in the snapshot, then give one clear, specific recommendation with a short reason. You can reference 1-2 tasks by name to ground it, but this isn't a full list-and-react — it's a direct opinion. Keep it to 2-4 sentences. A habit on the edge of breaking its streak is a legitimate thing to prioritize too, not just tasks.
-
-Daily plan requests (mode: "daily_plan"):
-This is for a small dashboard card, not the chat panel — be brief and direct, like a quick morning briefing, not a reaction. 2 sentences max, no bullet list, no markdown.
-- Name one specific task to start with (pick the most urgent or highest priority) and a short reason why, in the style of "Start with X — it's Y." Add one practical note if relevant (a time gap before a meeting, momentum, etc.) only if it fits naturally — don't force it.
-- If nothing is due today, name one specific thing to make progress on instead — something from this week, an overdue item, an at-risk habit streak, or starting a focus session. Never just say the day is empty and stop there.
-- Use the person's name at the very start if you have it ("Welcome back, Alex.") — skip it if you don't.
-
-Capabilities:
-- You can look up tasks (list_tasks), create tasks (create_task), edit or complete tasks (update_task), and delete tasks (delete_task).
-- You can look up habits (list_habits), create habits (create_habit), edit habits (update_habit), delete habits (delete_habit), and mark a habit done/not done for a date (log_habit_completion).
-- "upcoming" is different from "week" — it has no date ceiling. Use it when the user wants a full horizon view, not just the next 7 days.
-- Always call list_tasks or list_habits first if you need a real id to edit, complete, log, or delete something — never guess an id.
-- When the user's request is clear, take the action directly — don't ask for confirmation first. Confirm warmly afterward instead (e.g. "Done — logged 'Read 20 minutes' for today. That's a 7-day streak now.").
-- If a request is ambiguous (e.g. it could match more than one task or habit), ask which one before acting instead of guessing.
-- Only act on tasks and habits; if asked about something unrelated, say briefly and kindly that you can only help with those.`;
+Special cases
+- "What should I do / prioritize": one clear pick with a short reason (2–4 sentences), not a full list. A habit about to lose its streak is a valid pick.
+- Empty list: say so warmly and point to something useful to do instead.
+- mode "daily_plan" (dashboard card): max 2 sentences, no markdown, no bullets. Start with the user's name if known, name one task to start with and why; if nothing is due, suggest something else to make progress on.`;
 
 interface HistoryTurn {
   role: "user" | "assistant";
@@ -106,10 +58,20 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
       mode,
       question,
       history = [],
-    }: { mode: string; question?: string; history?: HistoryTurn[] } = req.body;
+      references = [],
+      clientDate,
+      timeZone,
+    }: {
+      mode: string;
+      question?: string;
+      history?: HistoryTurn[];
+      references?: { id: string; title: string; type: "task" | "habit" }[];
+      clientDate?: string;
+      timeZone?: string;
+    } = req.body;
 
     const quickInstructions: Record<string, string> = {
-      today: "Tell me what's on for today.",
+      today: "Tell me what's on for today — tasks and habits.",
       week: "Tell me what's coming up this week.",
       upcoming:
         "Tell me what's coming up — no specific timeframe, just everything on the horizon.",
@@ -117,6 +79,19 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
       suggestion:
         "Look at everything on my plate right now and give me one clear suggestion for what to prioritize or how to approach it.",
       daily_plan: "Give me a short daily plan for today.",
+
+      plan_day:
+        "Help me plan today, tasks and habits together. Suggest an order: what to start with, what can wait, and flag anything overloaded. Don't change anything.",
+      next_up:
+        "What's the single best thing for me to start on right now? One clear pick and a short why.",
+      reschedule_overdue:
+        "Look at my overdue tasks and propose a realistic new date for each. List your proposal and ask me to confirm before changing anything. If nothing is overdue, say so and cheer me on.",
+      plan_week:
+        "Look at my week: where is it heavy, where is it light? Suggest how to balance it. Don't change anything yet.",
+      habit_checkin:
+        "How are my habits going? Call out streaks at risk today and any streak worth celebrating.",
+      wrap_up:
+        "Help me wrap up my day: what I got done, what's still open, and which open tasks you'd move to tomorrow. Ask before moving anything.",
     };
 
     const instruction =
@@ -130,13 +105,12 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
     ]);
 
     const conversation = history
-      .slice(-8)
+      .slice(-6)
       .map(
-        (turn) =>
-          `${turn.role === "user" ? "User" : "Assistant"}: ${turn.content}`,
+        (t) =>
+          `${t.role === "user" ? "User" : "Assistant"}: ${String(t.content).slice(0, 500)}`,
       )
       .join("\n");
-
     // Only include fields that are actually set — never inject placeholder
     // strings like "unknown" into the prompt, the model can end up echoing them.
     const profileParts: string[] = [];
@@ -149,18 +123,41 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
         ? `About the user — ${profileParts.join(", ")}`
         : "About the user: no profile info available.";
 
+    // Referenced items from the "/" picker — sanitized, ids are still ownership-checked in the tools
+    const safeRefs = references
+      .filter(
+        (r) =>
+          r &&
+          /^[\w-]{1,40}$/.test(String(r.id)) &&
+          (r.type === "task" || r.type === "habit"),
+      )
+      .slice(0, 5)
+      .map(
+        (r) =>
+          `- ${r.type} "${String(r.title).replace(/\s+/g, " ").slice(0, 120)}" id=${r.id}`,
+      );
+
+    const referencesBlock = safeRefs.length
+      ? `Referenced items (real ids, use them directly):\n${safeRefs.join("\n")}\n`
+      : "";
+
+    const todayLine = `Today is ${String(clientDate ?? new Date().toISOString().slice(0, 10)).slice(0, 40)}${
+      timeZone ? ` (${String(timeZone).slice(0, 40)})` : ""
+    }.`;
+
     const userPrompt = `
+${todayLine}
 ${profileBlock}
 
-Current task snapshot (JSON, may be slightly stale — call list_tasks if you need exact ids or fresh data):
+Task snapshot (JSON, may be slightly stale — call list_tasks for exact ids/fresh data):
 ${JSON.stringify(taskSnapshot)}
 
-Current habit snapshot (JSON, may be slightly stale — call list_habits if you need exact ids or fresh data):
+Habit snapshot (JSON, may be slightly stale — call list_habits for exact ids/fresh data):
 ${JSON.stringify(habitSnapshot)}
 
-${conversation ? `Conversation so far:\n${conversation}\n` : ""}
-Request: ${instruction}
-    `.trim();
+${referencesBlock}${conversation ? `Conversation so far:\n${conversation}\n` : ""}
+Request: ${instruction}${mode === "custom" || !quickInstructions[mode] ? "" : ""}
+`.trim();
 
     const { reply, actions } = await runAssistantTurn({
       systemPrompt: SYSTEM_PROMPT,
@@ -185,6 +182,15 @@ Request: ${instruction}
 
     res.json({ reply, actions: mutations });
   } catch (err) {
+    if (err instanceof AssistantBusyError) {
+      res.set("Retry-After", String(err.retryAfterSec));
+      return res.status(503).json({
+        error: "busy",
+        message:
+          "The assistant is a bit busy right now. Try again in a moment.",
+        retryAfterSec: err.retryAfterSec,
+      });
+    }
     console.error("Assistant error:", err);
     res.status(500).json({ error: "Failed to generate response" });
   }
