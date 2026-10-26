@@ -11,7 +11,7 @@ import {
   HABIT_TOOL_NAMES,
   executeHabitTool,
 } from "../services/habit-tools.service";
-import { runAssistantTurn } from "../lib/gemini";
+import { runAssistantTurn } from "../lib/groq";
 
 const router = Router();
 
