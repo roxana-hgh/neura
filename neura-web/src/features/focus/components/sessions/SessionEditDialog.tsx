@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { FocusSession, FocusSessionTag } from "@/features/focus/types/focusSession";
 import { useUpdateFocusSession } from "@/features/focus/hooks/useFocusSessions";
@@ -9,21 +9,17 @@ import { Button } from "@/components/ui/button";
 
 interface Props { session: FocusSession | null; onClose: () => void; }
 
+// Keyed by session, so the form starts from the session being edited
 function SessionEditDialog({ session, onClose }: Props) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [tag, setTag] = useState<FocusSessionTag | undefined>();
-  const { mutate: updateSession, isPending } = useUpdateFocusSession();
-
-  useEffect(() => {
-    if (session) {
-      setName(session.name);
-      setDescription(session.description ?? "");
-      setTag(session.tag ?? undefined);
-    }
-  }, [session]);
-
   if (!session) return null;
+  return <SessionEditForm key={session.id} session={session} onClose={onClose} />;
+}
+
+function SessionEditForm({ session, onClose }: { session: FocusSession; onClose: () => void }) {
+  const [name, setName] = useState(session.name);
+  const [description, setDescription] = useState(session.description ?? "");
+  const [tag, setTag] = useState<FocusSessionTag | undefined>(session.tag ?? undefined);
+  const { mutate: updateSession, isPending } = useUpdateFocusSession();
 
   const handleSave = () => {
     updateSession(
@@ -33,7 +29,7 @@ function SessionEditDialog({ session, onClose }: Props) {
   };
 
   return (
-    <Dialog open={!!session} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit session</DialogTitle>

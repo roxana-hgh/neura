@@ -39,3 +39,10 @@ export interface FocusSessionListResponse {
   total: number;
   hasMore: boolean;
 }
+
+/** A finished timer run, waiting to be named and logged. */
+export interface CompletedFocusSession {
+  duration: number; // focused seconds (pauses excluded)
+  startTime: Date;
+  endTime: Date;
+}

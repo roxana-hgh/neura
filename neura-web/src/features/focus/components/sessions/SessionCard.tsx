@@ -1,8 +1,9 @@
-import { LucideClock } from "lucide-react";
+import { LucideClock, LucidePencil, LucideTrash2 } from "lucide-react";
 import { format } from "date-fns";
 import type { FocusSession } from "@/features/focus/types/focusSession";
-import { formatDurationClock, TAG_BADGE_CLASSES, TAG_LABELS } from "@/features/focus/utils/time";
-
+import { formatDuration, TAG_BADGE_CLASSES, TAG_LABELS } from "@/features/focus/utils/time";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   session: FocusSession;
@@ -12,31 +13,50 @@ interface Props {
 
 function SessionCard({ session, onEdit, onDelete }: Props) {
   const tagKey = session.tag ?? "untagged";
+  const start = new Date(session.startTime);
+  const end = new Date(session.endTime);
 
   return (
-    <div className="group relative rounded-2xl border border-stone-200 bg-white hover:border-stone-300 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 transition-colors p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${TAG_BADGE_CLASSES[tagKey]}`}>
+    <div className="group flex flex-col rounded-2xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium", TAG_BADGE_CLASSES[tagKey])}>
           {TAG_LABELS[tagKey]}
         </span>
-        <span className="text-[11px] text-stone-400 dark:text-neutral-500">{format(new Date(session.startTime), "M/d/yyyy")}</span>
+        <span className="text-[11px] text-muted-foreground">{format(start, "MMM d")}</span>
       </div>
 
-      <p className="text-sm font-semibold tracking-tight leading-snug mb-3 line-clamp-2 min-h-[2.5rem]">
+      <p className="mb-1 line-clamp-2 text-sm font-semibold leading-snug tracking-tight text-foreground" title={session.name}>
         {session.name}
       </p>
+      {session.description && (
+        <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{session.description}</p>
+      )}
 
-      <div className="h-px bg-stone-200 dark:bg-white/10 mb-3" />
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-stone-600 dark:text-neutral-300">
-          <LucideClock size={13} className="text-stone-400 dark:text-neutral-500" />
-          <span className="font-mono text-xs">{formatDurationClock(session.duration)}</span>
+      <div className="mt-auto flex items-center justify-between border-t pt-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-foreground">
+            <LucideClock size={13} className="text-muted-foreground" />
+            <span className="text-sm font-semibold tabular-nums">{formatDuration(session.duration)}</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+            {format(start, "HH:mm")} – {format(end, "HH:mm")}
+          </p>
         </div>
 
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={onEdit} className="text-[11px] text-stone-500 hover:text-stone-900 dark:text-neutral-400 dark:hover:text-white">Edit</button>
-          <button onClick={onDelete} className="text-[11px] text-stone-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400">Delete</button>
+        {/* Always visible on touch screens, on hover / focus on larger ones */}
+        <div className="flex gap-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+          <Button size="icon-sm" variant="ghost" className="size-7 rounded-full" aria-label="Edit session" onClick={onEdit}>
+            <LucidePencil />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="size-7 rounded-full text-muted-foreground hover:text-destructive"
+            aria-label="Delete session"
+            onClick={onDelete}
+          >
+            <LucideTrash2 />
+          </Button>
         </div>
       </div>
     </div>

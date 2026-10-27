@@ -1,30 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { FocusSessionTag } from "@/features/focus/types/focusSession";
+import type { CompletedFocusSession, FocusSessionTag } from "@/features/focus/types/focusSession";
 import { useCreateFocusSession } from "@/features/focus/hooks/useFocusSessions";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SessionFormFields from "@/features/focus/components/sessions/SessionFormFields";
-import { formatDuration } from "@/features/focus/utils/time";
+import { defaultSessionName, formatDuration } from "@/features/focus/utils/time";
 import { toast } from "@/lib/toast";
 
-interface PendingSession { duration: number; startTime: Date; endTime: Date; }
-interface Props { pendingSession: PendingSession | null; onClose: () => void; }
+interface Props { pendingSession: CompletedFocusSession | null; onClose: () => void; }
 
+// Keyed by session, so the form starts fresh for every finished session
 function SessionSaveDialog({ pendingSession, onClose }: Props) {
-  const [name, setName] = useState("");
+  if (!pendingSession) return null;
+  return <SessionSaveForm key={pendingSession.startTime.getTime()} pendingSession={pendingSession} onClose={onClose} />;
+}
+
+function SessionSaveForm({ pendingSession, onClose }: { pendingSession: CompletedFocusSession; onClose: () => void }) {
+  const [name, setName] = useState(() => defaultSessionName(pendingSession.startTime));
   const [description, setDescription] = useState("");
   const [tag, setTag] = useState<FocusSessionTag | undefined>();
   const { mutate: createSession, isPending } = useCreateFocusSession();
-
-  useEffect(() => {
-    if (pendingSession) {
-      setName(`Focus session - ${pendingSession.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
-      setDescription("");
-      setTag(undefined);
-    }
-  }, [pendingSession]);
-
-  if (!pendingSession) return null;
 
   const handleSave = () => {
     createSession(
@@ -44,10 +39,10 @@ function SessionSaveDialog({ pendingSession, onClose }: Props) {
   };
 
   return (
-    <Dialog open={!!pendingSession} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log this session</DialogTitle>
+          <DialogTitle>Session complete 🎉</DialogTitle>
           <DialogDescription>
             You focused for {formatDuration(pendingSession.duration)}. Give it a name so you can find it later.
           </DialogDescription>

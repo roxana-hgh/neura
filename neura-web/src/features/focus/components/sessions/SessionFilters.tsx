@@ -1,13 +1,13 @@
 import type { DateRangeFilter, FocusSessionTag } from "@/features/focus/types/focusSession";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TAG_COLORS, TAG_LABELS } from "@/features/focus/utils/time";
-
-
+import { cn } from "@/lib/utils";
 
 const RANGES: { value: DateRangeFilter; label: string }[] = [
   { value: "today", label: "Today" },
-  { value: "week", label: "This Week" },
-  { value: "month", label: "This Month" },
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+  { value: "all", label: "All" },
 ];
 const TAGS: FocusSessionTag[] = ["work", "personal", "study", "break", "other"];
 
@@ -21,28 +21,27 @@ interface Props {
 function SessionFilters({ range, onRangeChange, tag, onTagChange }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-      <div className="inline-flex items-center gap-1 rounded-full bg-neutral-50/20 dark:bg-white/5 border border-neutral-600/20 dark:border-white/10 p-1  md:p-1.5">
+      <div className="inline-flex items-center gap-1 rounded-full border bg-muted/50 p-1">
         {RANGES.map((r) => (
           <button
-          
             key={r.value}
+            type="button"
             onClick={() => onRangeChange(r.value)}
-            className={`rounded-full px-2 py-1 text-xs font-medium transition-colors ${
-              range === r.value
-                ? "bg-primary text-primary-foreground"
-                : "text-neutral-600 dark:text-neutral-400 cursor-pointer"
-            } `}
+            className={cn(
+              "cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              range === r.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
           >
             {r.label}
           </button>
         ))}
       </div>
 
-     <Select value={tag} onValueChange={(v) => onTagChange(v as FocusSessionTag | "all")}>
-        <SelectTrigger className="max-w-40 max-sm:w-32.5 rounded-full bg-stone-100 border-stone-200 text-stone-700 dark:bg-white/5 dark:border-white/10 dark:text-neutral-200">
+      <Select value={tag} onValueChange={(v) => onTagChange(v as FocusSessionTag | "all")}>
+        <SelectTrigger size="sm" className="w-36 rounded-full">
           <SelectValue placeholder="Category" />
         </SelectTrigger>
-        <SelectContent className="bg-white border-stone-200 text-stone-700 dark:bg-neutral-900 dark:border-white/10 dark:text-neutral-200">
+        <SelectContent>
           <SelectItem value="all">All categories</SelectItem>
           {TAGS.map((t) => (
             <SelectItem key={t} value={t}>
@@ -59,4 +58,3 @@ function SessionFilters({ range, onRangeChange, tag, onTagChange }: Props) {
 }
 
 export default SessionFilters;
-

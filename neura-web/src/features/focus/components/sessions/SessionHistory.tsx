@@ -7,8 +7,8 @@ import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import SessionEditDialog from "@/features/focus/components/sessions/SessionEditDialog";
 import type { FocusSession } from "@/features/focus/types/focusSession";
-
-import LifetimeSummary from "@/features/focus/components/sessions/LifetimeSummary";
+import AlertDialog from "@/components/shared/AlertDialog";
+import { LucideTimer } from "lucide-react";
 import SessionCard from "@/features/focus/components/sessions/SessionCard";
 
 const PAGE_SIZE = 12;
@@ -22,6 +22,7 @@ function SessionHistory() {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<FocusSession[]>([]);
   const [editingSession, setEditingSession] = useState<FocusSession | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data, isLoading, isFetching } = useFocusSessions(range, tag === "all" ? undefined : tag, page, PAGE_SIZE);
   const { mutate: deleteSession } = useDeleteFocusSession();
@@ -43,49 +44,52 @@ function SessionHistory() {
     });
   }, [data, page]);
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Delete this focus session?")) {
-      deleteSession(id, {
-        onSuccess: () => {
-          toast.success("Session deleted");
-          setItems((prev) => prev.filter((s) => s.id !== id));
-        },
-        onError: () => toast.error("Couldn't delete the session"),
-      });
-    }
+  const handleDelete = () => {
+    const id = deletingId;
+    if (!id) return;
+    deleteSession(id, {
+      onSuccess: () => {
+        toast.success("Session deleted");
+        setItems((prev) => prev.filter((s) => s.id !== id));
+      },
+      onError: () => toast.error("Couldn't delete the session"),
+    });
   };
 
   return (
-     <div className="rounded-2xl border border-stone-200 bg-stone-50 dark:border-white/10 dark:bg-white/[0.03] p-4 md:p-6">
-    <div className="flex items-end justify-between mb-4">
-      <h2 className="text-lg font-bold text-stone-900 dark:text-white">History Stream</h2>
-      <span className="text-xs font-medium tracking-wide text-stone-400 dark:text-neutral-500 uppercase">
-        {data?.total ?? 0} {data?.total === 1 ? "Snapshot" : "Snapshots"}
-      </span>
-    </div>
+    <section className="rounded-3xl border bg-card/50 p-4 md:p-6">
+      <div className="mb-4 flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">History</h2>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {data?.total ?? 0} {data?.total === 1 ? "session" : "sessions"}
+        </span>
+      </div>
 
-    <SessionFilters range={range} onRangeChange={setRange} tag={tag} onTagChange={setTag} />
-    <LifetimeSummary />
+      <SessionFilters range={range} onRangeChange={setRange} tag={tag} onTagChange={setTag} />
 
       {isLoading && items.length === 0 ? (
-         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-2xl bg-stone-200 dark:bg-white/5" />
-        ))}
-      </div>
+        <div className="mt-4 grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-36 animate-pulse rounded-2xl bg-muted" />
+          ))}
+        </div>
       ) : items.length === 0 ? (
-        <div className="py-10 text-center text-sm text-stone-500 dark:text-neutral-500">
-        No focus sessions for this period.
-      </div>
+        <div className="flex flex-col items-center gap-2 py-12 text-center">
+          <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <LucideTimer size={20} />
+          </div>
+          <p className="text-sm font-medium text-foreground">No sessions yet</p>
+          <p className="text-xs text-muted-foreground">Finish a focus session and it will show up here.</p>
+        </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="mt-4 grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {items.map((session) => (
               <SessionCard
                 key={session.id}
                 session={session}
                 onEdit={() => setEditingSession(session)}
-                onDelete={() => handleDelete(session.id)}
+                onDelete={() => setDeletingId(session.id)}
               />
             ))}
           </div>
@@ -101,7 +105,17 @@ function SessionHistory() {
       )}
 
       <SessionEditDialog session={editingSession} onClose={() => setEditingSession(null)} />
-    </div>
+      <AlertDialog
+        open={deletingId !== null}
+        setOpen={(open) => !open && setDeletingId(null)}
+        title="Delete session?"
+        description="This focus session will be removed from your history."
+        acceptButtonText="Delete"
+        cancelButtonText="Cancel"
+        AcceptButtonVariant="danger"
+        onConfirm={handleDelete}
+      />
+    </section>
   );
 }
 
