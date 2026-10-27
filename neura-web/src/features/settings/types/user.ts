@@ -1,3 +1,5 @@
+import type { WeekStartsOn } from "@/lib/weekStart";
+
 export interface User {
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export interface User {
   age: number | null;
   job: string | null;
   gender: string | null;
+  weekStartsOn: WeekStartsOn;
   createdAt: string;
 }
 

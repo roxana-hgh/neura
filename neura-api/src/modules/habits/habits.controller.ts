@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import * as habitsService from "@/modules/habits/habits.service";
 import { HABIT_VIEWS, isDayKey, type HabitView } from "@/modules/habits/habits.utils";
-import { dayKey } from "@/utils/date";
+import { DEFAULT_WEEK_STARTS_ON, dayKey, isWeekStartsOn } from "@/utils/date";
 
 type IdParams = { id: string };
 
@@ -9,8 +9,9 @@ function isValidDuration(v: unknown) {
   return v === null || (Number.isInteger(v) && (v as number) >= 1);
 }
 
-// GET /api/habits?view=week&date=2026-02-04&today=2026-02-06
+// GET /api/habits?view=week&date=2026-02-04&today=2026-02-06&weekStartsOn=1
 // `today` is the client's calendar day, so "future" and streaks match the user's time zone.
+// `weekStartsOn` (6 | 0 | 1) is the user's week-start setting; defaults to Monday.
 export async function getHabits(req: Request, res: Response) {
   const view = (req.query.view as HabitView) || "week";
   if (!HABIT_VIEWS.includes(view)) {
@@ -19,7 +20,10 @@ export async function getHabits(req: Request, res: Response) {
   }
   const today = isDayKey(req.query.today) ? req.query.today : dayKey(new Date());
   const date = isDayKey(req.query.date) ? req.query.date : today;
-  res.json(await habitsService.getHabitsOverview(req.userId!, view, date, today));
+  const weekStartsOn = Number(req.query.weekStartsOn);
+  res.json(await habitsService.getHabitsOverview(
+    req.userId!, view, date, today, isWeekStartsOn(weekStartsOn) ? weekStartsOn : DEFAULT_WEEK_STARTS_ON,
+  ));
 }
 
 // POST /api/habits  { title, color, durationDays: number | null, startDate?: "yyyy-MM-dd" }

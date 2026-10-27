@@ -4,8 +4,8 @@ import { fromDayKey, getCellState, toDayKey } from "@/features/habits/lib/habitD
 import { HabitCell } from "@/features/habits/components/HabitCell";
 import { HabitCardHeader } from "@/features/habits/components/HabitCardHeader";
 import type { HabitActions } from "@/features/habits/components/HabitMenu";
-
-const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
+import { getWeekdayLabels } from "@/lib/weekStart";
 
 interface MonthCalendarProps extends HabitActions {
   habits: Habit[];
@@ -16,9 +16,11 @@ interface MonthCalendarProps extends HabitActions {
 }
 
 export function MonthCalendar({ habits, rangeStart, rangeEnd, today, onToggle, onEdit, onDelete }: MonthCalendarProps) {
+  const weekStartsOn = useWeekStartsOn();
+  const weekdayLabels = getWeekdayLabels(weekStartsOn, "EEEEEE"); // "Mo", "Tu", …
   const start = fromDayKey(rangeStart);
   const days = eachDayOfInterval({ start, end: fromDayKey(rangeEnd) }).map(toDayKey);
-  const leading = (getDay(start) + 6) % 7; // Monday-start offset
+  const leading = (getDay(start) - weekStartsOn + 7) % 7; // blank cells before the 1st
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -29,7 +31,7 @@ export function MonthCalendar({ habits, rangeStart, rangeEnd, today, onToggle, o
             <HabitCardHeader habit={habit} today={today} periodLabel="this month" onEdit={onEdit} onDelete={onDelete} />
 
             <div className="grid grid-cols-7 gap-1.5">
-              {WEEKDAY_LABELS.map((w) => (
+              {weekdayLabels.map((w) => (
                 <div key={w} className="text-center text-[10px] font-medium uppercase text-muted-foreground">
                   {w}
                 </div>

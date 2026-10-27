@@ -1,15 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
 import { toast } from "@/lib/toast";
 import { toDayKey } from "@/features/habits/lib/habitDate";
 import type { HabitsResponse, HabitView, CreateHabitInput, UpdateHabitInput } from "@/features/habits/types/habit";
 
 export function useHabits(view: HabitView, date: Date) {
+  const weekStartsOn = useWeekStartsOn();
   return useQuery({
-    queryKey: ["habits", view, toDayKey(date)],
+    queryKey: ["habits", view, toDayKey(date), weekStartsOn],
     queryFn: async () => {
-      // `today` is sent so the API judges "future" days and streaks in the user's time zone
-      const params = { view, date: toDayKey(date), today: toDayKey(new Date()) };
+      // `today` is sent so the API judges "future" days and streaks in the user's time zone;
+      // `weekStartsOn` decides where the week view begins (Settings → Calendar)
+      const params = { view, date: toDayKey(date), today: toDayKey(new Date()), weekStartsOn };
       const { data } = await api.get<HabitsResponse>("/habits", { params });
       return data;
     },

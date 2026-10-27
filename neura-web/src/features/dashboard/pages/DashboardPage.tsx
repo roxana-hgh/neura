@@ -22,6 +22,8 @@ import SectionCard from "@/components/shared/SectionCard";
 import StatTile from "@/components/shared/StatTile";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import type { WeekStartsOn } from "@/lib/weekStart";
+import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
 import type { Task } from "@/features/tasks/types/task";
 import { useTasks } from "@/features/tasks/hooks/useTasks";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
@@ -56,10 +58,10 @@ function getGreeting() {
 const openFirst = (a: Task, b: Task) => Number(a.completed) - Number(b.completed);
 
 /** Today = overdue + due today; This week = rest of the week; Later = after this week */
-function bucketTasks(tasks: Task[]): Record<TaskTab, Task[]> {
+function bucketTasks(tasks: Task[], weekStartsOn: WeekStartsOn): Record<TaskTab, Task[]> {
   const today = startOfDay(new Date());
   const tomorrow = addDays(today, 1);
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn });
   const buckets: Record<TaskTab, Task[]> = { today: [], week: [], later: [] };
 
   for (const task of tasks) {
@@ -201,7 +203,8 @@ function Dashboard() {
   const { notes } = useNotes();
   const [tab, setTab] = useState<TaskTab>("today");
 
-  const buckets = useMemo(() => bucketTasks(tasks ?? []), [tasks]);
+  const weekStartsOn = useWeekStartsOn();
+  const buckets = useMemo(() => bucketTasks(tasks ?? [], weekStartsOn), [tasks, weekStartsOn]);
   const stats = useMemo(() => getTaskStats(tasks ?? []), [tasks]);
 
   const habitsToday = useMemo(() => {

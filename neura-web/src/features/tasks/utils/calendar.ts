@@ -14,28 +14,29 @@ import {
 } from "date-fns";
 import type { Task } from "@/features/tasks/types/task";
 import type { CalendarView } from "@/features/tasks/stores/calendarStore";
-
-// The calendar always starts weeks on Monday
-export const WEEK_STARTS_ON = 1;
-
-export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+import type { WeekStartsOn } from "@/lib/weekStart";
 
 export interface CalendarRange {
   start: Date;
   end: Date;
 }
 
-// Visible days for a view: full weeks around the month, or the single week
-export function getVisibleRange(view: CalendarView, cursor: Date): CalendarRange {
+// Visible days for a view: full weeks around the month, or the single week.
+// Weeks start on the user's chosen day (Settings → Calendar).
+export function getVisibleRange(
+  view: CalendarView,
+  cursor: Date,
+  weekStartsOn: WeekStartsOn,
+): CalendarRange {
   if (view === "week") {
     return {
-      start: startOfWeek(cursor, { weekStartsOn: WEEK_STARTS_ON }),
-      end: endOfWeek(cursor, { weekStartsOn: WEEK_STARTS_ON }),
+      start: startOfWeek(cursor, { weekStartsOn }),
+      end: endOfWeek(cursor, { weekStartsOn }),
     };
   }
   return {
-    start: startOfWeek(startOfMonth(cursor), { weekStartsOn: WEEK_STARTS_ON }),
-    end: endOfWeek(endOfMonth(cursor), { weekStartsOn: WEEK_STARTS_ON }),
+    start: startOfWeek(startOfMonth(cursor), { weekStartsOn }),
+    end: endOfWeek(endOfMonth(cursor), { weekStartsOn }),
   };
 }
 

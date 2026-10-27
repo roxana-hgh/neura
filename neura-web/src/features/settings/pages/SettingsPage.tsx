@@ -1,6 +1,7 @@
 import PageHeader from "@/components/shared/PageHeader";
 import AccountSection from "@/features/settings/components/AccountSection";
 import AppearanceSection from "@/features/settings/components/AppearanceSection";
+import CalendarSection from "@/features/settings/components/CalendarSection";
 import SessionSection from "@/features/settings/components/SessionSection";
 
 function SettingsPage() {
@@ -9,13 +10,15 @@ function SettingsPage() {
       <PageHeader
         eyebrow="Settings"
         title="Account & preferences"
-        description="Manage your profile and how Neura looks."
+        description="Manage your profile, how Neura looks and how weeks are laid out."
       />
 
       <div className="space-y-6 md:space-y-8">
         <AccountSection />
         <div className="border-t border-border" />
         <AppearanceSection />
+        <div className="border-t border-border" />
+        <CalendarSection />
         <div className="border-t border-border" />
         <SessionSection />
       </div>

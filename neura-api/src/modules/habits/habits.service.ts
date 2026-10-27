@@ -4,6 +4,7 @@ import {
   type HabitView, getRange, shiftRange, groupEntriesByHabit, habitPeriodStats, toPercent,
   habitStartKey, habitLastKey, keyToStoredDate, currentStreak, bestStreak,
 } from "@/modules/habits/habits.utils";
+import type { WeekStartsOn } from "@/utils/date";
 
 export interface CreateHabitInput {
   title: string;
@@ -15,9 +16,12 @@ export interface CreateHabitInput {
 /**
  * Habits for the requested view + period, with per-habit stats and streaks, and
  * the completion percent of this period vs. the previous one.
- * `baseKey` / `todayKey` are the client's calendar days ("yyyy-MM-dd").
+ * `baseKey` / `todayKey` are the client's calendar days ("yyyy-MM-dd"); `weekStartsOn`
+ * is the user's first day of the week (week view).
  */
-export async function getHabitsOverview(userId: string, view: HabitView, baseKey: string, todayKey: string) {
+export async function getHabitsOverview(
+  userId: string, view: HabitView, baseKey: string, todayKey: string, weekStartsOn: WeekStartsOn,
+) {
   const allHabits = await prisma.habit.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
 
   // lazy auto-archive: anything past its last day gets flipped on read.
@@ -32,7 +36,7 @@ export async function getHabitsOverview(userId: string, view: HabitView, baseKey
   }
 
   const earliest = allHabits.reduce((min, h) => (habitStartKey(h) < min ? habitStartKey(h) : min), todayKey);
-  const range = getRange(view, baseKey, earliest, todayKey);
+  const range = getRange(view, baseKey, earliest, todayKey, weekStartsOn);
 
   // A habit belongs to a period when its lifetime overlaps it, so past periods
   // still show habits that have been archived since.
@@ -74,7 +78,7 @@ export async function getHabitsOverview(userId: string, view: HabitView, baseKey
 
   let previousPercent = 0;
   if (view !== "all") {
-    const prev = getRange(view, shiftRange(view, range.start, -1), earliest, todayKey);
+    const prev = getRange(view, shiftRange(view, range.start, -1), earliest, todayKey, weekStartsOn);
     let pTotal = 0, pCompleted = 0;
     for (const h of habits) {
       const stats = habitPeriodStats(h, entriesByHabit.get(h.id) ?? new Set(), prev.start, prev.end, todayKey);

@@ -6,23 +6,26 @@ import {
   dayKey,
   isTaskOverdue,
   PRIORITY_STYLES,
-  WEEKDAYS,
 } from "@/features/tasks/utils/calendar";
+import { getWeekdayLabels, type WeekStartsOn } from "@/lib/weekStart";
 import { cn } from "@/lib/utils";
 
 interface Props {
   cursor: Date;
   days: Date[];
+  weekStartsOn: WeekStartsOn;
   tasksByDay: Map<string, Task[]>;
   onSelectDay: (day: Date) => void;
 }
 
-export function CalendarMonthView({ cursor, days, tasksByDay, onSelectDay }: Props) {
+export function CalendarMonthView({ cursor, days, weekStartsOn, tasksByDay, onSelectDay }: Props) {
+  const weekdays = getWeekdayLabels(weekStartsOn);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-border overflow-hidden bg-card shadow-xs">
       {/* Weekday header */}
       <div className="grid grid-cols-7 border-b border-border bg-muted/30">
-        {WEEKDAYS.map((d) => (
+        {weekdays.map((d) => (
           <div
             key={d}
             className="py-2 text-center text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"

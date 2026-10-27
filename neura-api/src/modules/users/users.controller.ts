@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as usersService from "@/modules/users/users.service";
+import { isWeekStartsOn } from "@/utils/date";
 
 // GET /api/users/me
 export async function getMe(req: Request, res: Response) {
@@ -12,9 +13,9 @@ export async function getMe(req: Request, res: Response) {
   }
 }
 
-// PATCH /api/users/me  { name?, age?, job?, gender? }
+// PATCH /api/users/me  { name?, age?, job?, gender?, weekStartsOn? (6 | 0 | 1) }
 export async function updateMe(req: Request, res: Response) {
-  const { name, age, job, gender } = req.body;
+  const { name, age, job, gender, weekStartsOn } = req.body;
 
   if (name !== undefined && (typeof name !== "string" || !name.trim())) {
     return res.status(400).json({ error: "Name cannot be empty" });
@@ -22,9 +23,12 @@ export async function updateMe(req: Request, res: Response) {
   if (age !== undefined && age !== null && (typeof age !== "number" || age < 0 || age > 150)) {
     return res.status(400).json({ error: "Invalid age" });
   }
+  if (weekStartsOn !== undefined && !isWeekStartsOn(weekStartsOn)) {
+    return res.status(400).json({ error: "Week must start on Saturday, Sunday or Monday" });
+  }
 
   try {
-    res.json(await usersService.updateProfile(req.userId!, { name, age, job, gender }));
+    res.json(await usersService.updateProfile(req.userId!, { name, age, job, gender, weekStartsOn }));
   } catch {
     res.status(500).json({ error: "Failed to update profile" });
   }

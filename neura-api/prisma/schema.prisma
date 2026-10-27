@@ -25,6 +25,7 @@ model User {
   age           Int?
   job           String?
   gender        String?
+  weekStartsOn  Int       @default(1) // 0 = Sunday, 1 = Monday, 6 = Saturday
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]

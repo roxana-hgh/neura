@@ -3,6 +3,7 @@ import { isSameMonth, isWithinInterval } from "date-fns";
 import type { Task } from "@/features/tasks/types/task";
 import { useCalendarTasks } from "@/features/tasks/hooks/useCalendarTasks";
 import { useCalendarStore } from "@/features/tasks/stores/calendarStore";
+import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
 import { DayTasksModal } from "@/features/tasks/components/DayTasksModal";
 import { CalendarHeader } from "@/features/tasks/components/calendar/CalendarHeader";
 import { CalendarMonthView } from "@/features/tasks/components/calendar/CalendarMonthView";
@@ -32,8 +33,12 @@ export function CalendarPage() {
   const setView = useCalendarStore((s) => s.setView);
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const weekStartsOn = useWeekStartsOn();
 
-  const range = useMemo(() => getVisibleRange(view, cursor), [view, cursor]);
+  const range = useMemo(
+    () => getVisibleRange(view, cursor, weekStartsOn),
+    [view, cursor, weekStartsOn],
+  );
   const days = useMemo(() => getRangeDays(range), [range]);
   const { data: tasks, isLoading, isFetching } = useCalendarTasks(range);
 
@@ -108,6 +113,7 @@ export function CalendarPage() {
           key={dayKey(range.start)}
           cursor={cursor}
           days={days}
+          weekStartsOn={weekStartsOn}
           tasksByDay={tasksByDay}
           onSelectDay={setSelectedDate}
         />

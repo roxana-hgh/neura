@@ -2,7 +2,7 @@ import {
   startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear,
   addDays, addWeeks, addMonths, addYears, parseISO, differenceInCalendarDays,
 } from "date-fns";
-import { dayKey } from "@/utils/date";
+import { dayKey, type WeekStartsOn } from "@/utils/date";
 
 export type HabitView = "week" | "month" | "year" | "all";
 export const HABIT_VIEWS: HabitView[] = ["week", "month", "year", "all"];
@@ -29,11 +29,13 @@ export function habitLastKey(h: HabitDates): string | null {
   return h.durationDays != null ? shiftKey(habitStartKey(h), Math.max(1, h.durationDays) - 1) : null;
 }
 
-export function getRange(view: HabitView, baseKey: string, earliestKey: string, todayKey: string) {
+export function getRange(
+  view: HabitView, baseKey: string, earliestKey: string, todayKey: string, weekStartsOn: WeekStartsOn,
+) {
   const base = parseISO(baseKey);
   const toKeys = (start: Date, end: Date) => ({ start: dayKey(start), end: dayKey(end) });
   switch (view) {
-    case "week": return toKeys(startOfWeek(base, { weekStartsOn: 1 }), endOfWeek(base, { weekStartsOn: 1 }));
+    case "week": return toKeys(startOfWeek(base, { weekStartsOn }), endOfWeek(base, { weekStartsOn }));
     case "month": return toKeys(startOfMonth(base), endOfMonth(base));
     case "year": return toKeys(startOfYear(base), endOfYear(base));
     case "all": return { start: earliestKey < todayKey ? earliestKey : todayKey, end: todayKey };

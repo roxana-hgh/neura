@@ -243,7 +243,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 
 - **Data:** `useCalendarTasks(range)` uses `useQueries` to fetch `GET /tasks/calendar?year=&month=` once for each month the visible range touches. A month grid with its padding days, or a week that crosses a month boundary, can touch up to 3 months. Results are mapped with `mapTask` and merged. The query keys are `["tasks", "calendar", year, month]`, so every task mutation (which invalidates `["tasks"]`) refreshes the calendar.
 - **Logic** (`utils/calendar.ts`, pure functions):
-  - `getVisibleRange` / `shiftCursor` / `formatRangeTitle`: range and navigation. Weeks start on Monday (`WEEK_STARTS_ON = 1`).
+  - `getVisibleRange` / `shiftCursor` / `formatRangeTitle`: range and navigation. Weeks start on the user's chosen day (`weekStartsOn` argument, see "Week start" below).
   - `groupTasksByDay`: returns a `Map` keyed by `dayKey`. Within each day, open tasks come first, then high → low priority, then by title.
   - `isTaskOverdue`, `getCalendarStats`.
   - `PRIORITY_STYLES`: the single source of priority colors (high = rose, medium = amber, low = sky). It provides `dot`, `bar` and `badge` classes and a label. Reuse it for any priority color in the calendar.
@@ -259,6 +259,13 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - Each day has an "Add task" button. It uses `AddNewTask` with `initialDueDate` and a custom `trigger`.
 - **Header** (`CalendarHeader`): stats for the period (the month itself in Month view, not the padding days), a priority legend, the view toggle and navigation.
 - **Keyboard shortcuts:** `←`/`→` move to the previous/next period, `T` jumps to today, `M`/`W` switch views. Shortcuts are ignored while typing in a field or while a dialog is open.
+
+### Week start (Settings → Calendar)
+
+- `User.weekStartsOn` (6 = Saturday, 0 = Sunday, 1 = Monday, default Monday), edited via `PATCH /users/me`.
+- Frontend: read it with `useWeekStartsOn()` from `@/hooks/useWeekStartsOn` (shares the `["profile"]` cache); helpers in `@/lib/weekStart` (`WEEK_START_OPTIONS`, `getWeekdayLabels`). Never hard-code `weekStartsOn: 1`.
+- Used by the calendar (`getVisibleRange`), habits (week/month/year grids; `useHabits` sends it as `weekStartsOn` query param and includes it in the key) and the dashboard "this week" bucket.
+- API: `GET /habits?weekStartsOn=` (validated with `isWeekStartsOn` from `utils/date.ts`, falls back to Monday).
 
 ### Notes editor (`/note/:id`)
 
@@ -429,7 +436,7 @@ neura-api/
 | `/tasks` (subtasks) | `POST /:taskId/subtasks`, `PUT /:taskId/subtasks/:subtaskId`, `PATCH /:taskId/subtasks/:subtaskId/toggle`, `DELETE /:taskId/subtasks/:subtaskId` |
 | `/tasks/lists` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/notes` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
-| `/habits` | `GET /?view=&date=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
+| `/habits` | `GET /?view=&date=&today=&weekStartsOn=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
 | `/focus-sessions` | `GET /`, `GET /stats`, `POST /`, `PATCH /:id`, `DELETE /:id` |
 | `/users` | `GET /me`, `PATCH /me` |
 | `/assistant` | `POST /` with `{ mode, question, history, … }`; mode `daily_plan` powers the dashboard card |
@@ -439,7 +446,7 @@ neura-api/
 ### Data model (Prisma)
 
 - `User`
-  - Fields: name, email, image, age, job, gender
+  - Fields: name, email, image, age, job, gender, weekStartsOn (`Int`, default `1`; `6` Sat / `0` Sun / `1` Mon)
   - Relations: sessions, accounts, tasks, taskLists, notes, focusSessions, habits
 - Better Auth tables: `Session`, `Account`, `Verification`
 - `TaskList`: name, color, description, userId. Has many tasks.

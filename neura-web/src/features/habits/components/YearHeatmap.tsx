@@ -5,8 +5,8 @@ import { fromDayKey, getCellState, toDayKey } from "@/features/habits/lib/habitD
 import { HabitCell } from "@/features/habits/components/HabitCell";
 import { HabitCardHeader } from "@/features/habits/components/HabitCardHeader";
 import type { HabitActions } from "@/features/habits/components/HabitMenu";
-
-const WEEKDAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", "Sun"];
+import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
+import { getWeekdayLabels } from "@/lib/weekStart";
 
 interface ContributionGridProps {
   habit: Habit;
@@ -35,10 +35,13 @@ function monthLabels(weeks: string[][], start: string, end: string) {
 function ContributionGrid({ habit, start, end, today, onToggle }: ContributionGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const done = new Set(habit.entries);
+  const weekStartsOn = useWeekStartsOn();
+  // label every other row (1st, 3rd, 5th, 7th day of the week)
+  const weekdayLabels = getWeekdayLabels(weekStartsOn).map((w, i) => (i % 2 === 0 ? w : ""));
 
   const days = eachDayOfInterval({
-    start: startOfWeek(fromDayKey(start), { weekStartsOn: 1 }),
-    end: endOfWeek(fromDayKey(end), { weekStartsOn: 1 }),
+    start: startOfWeek(fromDayKey(start), { weekStartsOn }),
+    end: endOfWeek(fromDayKey(end), { weekStartsOn }),
   }).map(toDayKey);
   const weeks = Array.from({ length: days.length / 7 }, (_, i) => days.slice(i * 7, i * 7 + 7));
   const labels = monthLabels(weeks, start, end);
@@ -56,7 +59,7 @@ function ContributionGrid({ habit, start, end, today, onToggle }: ContributionGr
       <div className="inline-flex gap-1.5">
         <div className="sticky left-0 z-10 flex flex-col gap-0.75 bg-card pr-1 text-[9px] leading-3 text-muted-foreground">
           <span className="h-4" />
-          {WEEKDAY_LABELS.map((w, i) => (
+          {weekdayLabels.map((w, i) => (
             <span key={i} className="h-3">{w}</span>
           ))}
         </div>
