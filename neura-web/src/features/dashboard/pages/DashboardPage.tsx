@@ -43,6 +43,7 @@ import { useDailyPlan } from "@/features/assistant/hooks/useDailyPlan";
 import { MarkdownMessage } from "@/features/assistant/components/MarkdownMessage";
 import WeeklyOverviewChart from "@/features/dashboard/components/WeeklyOverviewChart";
 import QuickAccessFab from "@/features/dashboard/components/QuickAccessFab";
+import GoalsAndRemindersRow from "@/features/dashboard/components/GoalsAndRemindersRow";
 
 type TaskTab = "today" | "week" | "later";
 const MAX_TASKS = 5;
@@ -349,6 +350,8 @@ function Dashboard() {
 
         <FocusCard className="h-full" />
       </div>
+
+      <GoalsAndRemindersRow />
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <HabitHeatmapCard />

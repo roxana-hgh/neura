@@ -7,6 +7,8 @@ import {
   Stars,
   Calendar,
   CalendarCheck2,
+  Target,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -46,6 +48,16 @@ const items = [
     title: "Calendar",
     url: "/calendar",
     icon: Calendar,
+  },
+  {
+    title: "Goals",
+    url: "/goals",
+    icon: Target,
+  },
+  {
+    title: "Reminders",
+    url: "/reminders",
+    icon: Bell,
   },
 
   {

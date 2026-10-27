@@ -2,7 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 // datasource db {
 //   provider = "postgresql"
 //   url      = env("DATABASE_URL")
@@ -11,30 +10,32 @@ generator client {
 // // neon 
 datasource db {
   provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // uncomment next line if you use Prisma <5.10
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String         @unique
+  emailVerified Boolean        @default(false)
   image         String?
   age           Int?
   job           String?
   gender        String?
-  weekStartsOn  Int       @default(1) // 0 = Sunday, 1 = Monday, 6 = Saturday
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  weekStartsOn  Int            @default(1) // 0 = Sunday, 1 = Monday, 6 = Saturday
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   sessions      Session[]
   accounts      Account[]
   tasks         Task[]
   taskLists     TaskList[]
   notes         Note[]
   focusSessions FocusSession[]
-  habits Habit[]
+  habits        Habit[]
+  goals         Goal[]
+  reminders     Reminder[]
 }
 
 model Session {
@@ -88,20 +89,23 @@ model TaskList {
 }
 
 model Task {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  completed   Boolean   @default(false)
+  completed   Boolean    @default(false)
   completedAt DateTime?
-  priority    String    @default("medium")
+  priority    String     @default("medium")
   dueDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   listId      String?
-  list        TaskList? @relation(fields: [listId], references: [id], onDelete: SetNull)
+  list        TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
+  goalId      String?
+  goal        Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
   subtasks    SubTask[]
+  reminders   Reminder[]
 }
 
 model SubTask {
@@ -112,18 +116,19 @@ model SubTask {
   task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
-
 model Note {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String?
-  color       String   @default("default")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  color       String     @default("default")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId      String?
+  goal        Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  reminders   Reminder[]
 }
-
 
 enum FocusSessionTag {
   work
@@ -138,7 +143,7 @@ model FocusSession {
   name        String
   description String?
   tag         FocusSessionTag?
-  duration    Int              // actual focused seconds (logged, not just planned)
+  duration    Int // actual focused seconds (logged, not just planned)
   startTime   DateTime
   endTime     DateTime
   userId      String
@@ -154,7 +159,7 @@ model Habit {
   title        String
   color        String
   startDate    DateTime     @default(now())
-  durationDays Int?         // null = no due date, tracks forever
+  durationDays Int? // null = no due date, tracks forever
   isArchived   Boolean      @default(false)
   userId       String
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -174,4 +179,172 @@ model HabitEntry {
 
   @@unique([habitId, date])
   @@index([habitId])
+}
+
+// ── Goals ──────────────────────────────────────────────────────────────
+
+enum GoalPeriod {
+  weekly
+  monthly
+  quarterly
+  half_year
+  yearly
+  custom
+}
+
+enum GoalMetric {
+  numeric // current / target value
+  milestone // average of sub-goals
+  task // completed linked tasks / linked tasks
+  manual // self-assessed 0–100
+}
+
+enum GoalStatus {
+  active
+  paused
+  completed
+  cancelled
+}
+
+enum GoalLogType {
+  created
+  progress
+  note
+  status
+  extended
+  metric_changed
+}
+
+// A sub-goal is a Goal with parentId (one level deep only)
+model Goal {
+  id       String  @id @default(cuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId String?
+  parent   Goal?   @relation("SubGoals", fields: [parentId], references: [id], onDelete: Cascade)
+  subGoals Goal[]  @relation("SubGoals")
+  position Int     @default(0)
+
+  title           String
+  successCriteria String?
+  description     String?
+  category        String?
+  color           String  @default("blue")
+
+  period    GoalPeriod @default(monthly)
+  startDate DateTime // calendar day, stored as 00:00 UTC of "yyyy-MM-dd"
+  endDate   DateTime // calendar day (inclusive)
+
+  metric       GoalMetric @default(manual)
+  startValue   Float      @default(0)
+  targetValue  Float?
+  currentValue Float      @default(0)
+  unit         String?
+
+  status      GoalStatus @default(active)
+  completedAt DateTime?
+  archivedAt  DateTime? // independent of status
+
+  tasks     Task[]
+  notes     Note[]
+  reminders Reminder[]
+  logs      GoalLog[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId, status])
+  @@index([parentId])
+}
+
+model GoalLog {
+  id        String      @id @default(cuid())
+  goalId    String
+  goal      Goal        @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  type      GoalLogType
+  value     Float? // new value (numeric / manual)
+  note      String?
+  meta      Json? // { from, to } for status / extended / metric_changed
+  createdAt DateTime    @default(now())
+
+  @@index([goalId, createdAt])
+}
+
+// ── Reminders ──────────────────────────────────────────────────────────
+
+enum ReminderRepeat {
+  none
+  daily
+  weekly
+  monthly
+  yearly
+}
+
+enum ReminderStatus {
+  active
+  paused
+  completed
+  cancelled
+}
+
+enum ReminderOrigin {
+  manual
+  goal_auto // created by a goal preset; managed by the goal's lifecycle
+}
+
+enum ReminderAction {
+  done
+  skipped
+}
+
+model Reminder {
+  id              String  @id @default(cuid())
+  userId          String
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  titleCustomized Boolean @default(false)
+  description     String?
+
+  startAt      DateTime // first occurrence; recurrence is computed from it
+  scheduledAt  DateTime // current occurrence (snoozing doesn't move it)
+  snoozedUntil DateTime?
+  nextAt       DateTime // snoozedUntil ?? scheduledAt — used for sorting / "due"
+  timeZone     String // IANA zone the wall-clock time belongs to
+
+  repeat      ReminderRepeat @default(none)
+  interval    Int            @default(1)
+  weekdays    Int[] // weekly only: 0 = Sunday … 6 = Saturday
+  repeatUntil DateTime?
+
+  status      ReminderStatus @default(active)
+  suspendedBy String? // "goal" when a goal paused it (so resuming the goal restores it)
+  completedAt DateTime?
+
+  origin   ReminderOrigin @default(manual)
+  autoKind String? // goal_auto only: review | checkin | deadline
+
+  // at most one link
+  goalId String?
+  goal   Goal?   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  noteId String?
+  note   Note?   @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  logs      ReminderLog[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, status, nextAt])
+  @@index([goalId])
+}
+
+model ReminderLog {
+  id          String         @id @default(cuid())
+  reminderId  String
+  reminder    Reminder       @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  scheduledAt DateTime
+  action      ReminderAction
+  createdAt   DateTime       @default(now())
+
+  @@index([reminderId, createdAt])
 }

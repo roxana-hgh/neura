@@ -21,6 +21,7 @@ import {
   Trash2,
   Check,
   Trash,
+  Bell,
 } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
@@ -38,6 +39,7 @@ import {
 import { isBefore, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import EditTask from "@/features/tasks/components/EditTask";
+import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
 import AlertDialog from "@/components/shared/AlertDialog";
 
 interface IProps {
@@ -48,6 +50,7 @@ interface IProps {
 function TaskDetail({ task, trigger }: IProps) {
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
+  const [remindOpen, setRemindOpen] = useState(false);
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState<
@@ -513,6 +516,18 @@ function TaskDetail({ task, trigger }: IProps) {
                     className="task-action max-sm:flex flex items-center justify-self-end"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {!task.completed && (
+                      <Button
+                        size="icon-xs"
+                        aria-label="Remind me about this task"
+                        title="Remind me"
+                        className="text-muted-foreground/90"
+                        variant="ghost"
+                        onClick={() => setRemindOpen(true)}
+                      >
+                        <Bell />
+                      </Button>
+                    )}
                     <EditTask task={task} />
                     <Button
                       size="icon-xs"
@@ -530,6 +545,19 @@ function TaskDetail({ task, trigger }: IProps) {
           </div>
         </DialogContent>
       </Dialog>
+      <ReminderFormDialog
+        open={remindOpen}
+        onOpenChange={setRemindOpen}
+        lockLink
+        defaults={{
+          title: task.title,
+          link: { type: "task", id: String(task.id), title: task.title },
+          // the morning of the due date, when that's still ahead
+          ...(task.due_date && new Date(new Date(task.due_date).setHours(9, 0, 0, 0)) > new Date() && {
+            at: new Date(new Date(task.due_date).setHours(9, 0, 0, 0)),
+          }),
+        }}
+      />
       {alertOpen && (
         <AlertDialog
           title="Remove Task"

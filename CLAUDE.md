@@ -1,6 +1,6 @@
 # Neura
 
-Neura is a full-stack productivity app. It has tasks (with lists and subtasks), rich-text notes, habit tracking, a focus timer, a calendar, an analytics dashboard, and an AI assistant that can manage tasks and habits in natural language.
+Neura is a full-stack productivity app. It has tasks (with lists and subtasks), rich-text notes, habit tracking, goals (with sub-goals), reminders, a focus timer, a calendar, an analytics dashboard, and an AI assistant that can manage tasks and habits in natural language.
 
 This file is self-contained. It describes the whole project, so it is useful even without access to the repository (for example inside a Claude Project).
 
@@ -143,6 +143,25 @@ src/
 │   │   ├── hooks/                 # useAssistant (chat, modes, @mentions), useDailyPlan (dashboard card)
 │   │   ├── lib/                   # mentionItems (MentionItem, filterMentionItems)
 │   │   └── pages/                 # AssistantPage (uses tasks + habits hooks for @mentions)
+│   ├── goals/
+│   │   ├── components/            # GoalCard (+ GoalStatusBadge), GoalProgressBar, GoalFormDialog (create/edit goal or
+│   │   │                          # sub-goal; quick form + "More options"), GoalProgressPanel (+ UpdateProgressPopover),
+│   │   │                          # SubGoalsSection, GoalLinkSections (tasks, notes), GoalTimeline (history),
+│   │   │                          # GoalActionDialogs (CloseGoalDialog, ExtendGoalDialog, DeleteGoalDialog)
+│   │   ├── hooks/                 # useGoals (list, detail, lifecycle, progress, links, goal tasks)
+│   │   ├── lib/                   # goalPeriod (PERIOD_OPTIONS, periodRange, METRIC_OPTIONS, PRESET_OPTIONS, labels)
+│   │   ├── pages/                 # GoalsPage, GoalDetailPage
+│   │   ├── schemas/               # goal.schema
+│   │   ├── types/                 # goal.ts
+│   │   └── utils/                 # goalStyles (colors, status / pace / needs-review styles, progressValueLabel)
+│   ├── reminders/
+│   │   ├── components/            # ReminderFormDialog, ReminderItem, ReminderList (self-contained, filterable),
+│   │   │                          # ReminderQuickAdd, ReminderLinkPicker
+│   │   ├── hooks/                 # useReminders (list, counts, link options, complete/skip/snooze/pause/reopen)
+│   │   ├── lib/                   # reminderTime (formatWhen, describeRepeat, presets, grouping), linkIcons
+│   │   ├── pages/                 # RemindersPage
+│   │   ├── schemas/               # reminder.schema
+│   │   └── types/                 # reminder.ts
 │   ├── settings/
 │   │   ├── components/            # SettingsSection (layout), AccountSection, ProfileForm, ProfileAvatar,
 │   │   │                          # AppearanceSection (theme), SessionSection (sign out)
@@ -151,7 +170,8 @@ src/
 │   │   ├── schemas/               # profile.schema
 │   │   └── types/                 # user.ts: User
 │   └── dashboard/
-│       ├── components/            # WeeklyOverviewChart (focus minutes vs habit completion)
+│       ├── components/            # WeeklyOverviewChart (focus minutes vs habit completion),
+│       │                          # GoalsAndRemindersRow ("Goals in progress" + "Up next")
 │       └── pages/                 # DashboardPage (tasks, notes, lists, habits heatmap, charts, daily plan)
 ├── components/
 │   ├── ui/                        # shadcn/ui primitives: generated, keep stock (button, dialog, sidebar, chart, …)
@@ -187,6 +207,9 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 | `/notes/add`, `/note/:id/edit` | Legacy URLs, redirect / render `NoteEditorPage` |
 | `/habits` | `HabitsPage` |
 | `/focus` | `FocusTimerPage` |
+| `/goals` | `GoalsPage` |
+| `/goal/:id` | `GoalDetailPage` (also used for a sub-goal) |
+| `/reminders` | `RemindersPage` |
 | `/assistant` | `AssistantPage` |
 | `/settings` | `SettingsPage` |
 
@@ -208,6 +231,8 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - `dashboard` imports from all features
   - `layouts/SidebarNav` imports from `tasks`
   - `assistant/pages/AssistantPage` uses `tasks` and `habits` hooks for @mentions
+  - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
+  - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
 
 **Naming**
 - Components and pages: PascalCase files that match the component name. Pages end in `Page` (`TasksPage.tsx`).
@@ -259,6 +284,30 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - Each day has an "Add task" button. It uses `AddNewTask` with `initialDueDate` and a custom `trigger`.
 - **Header** (`CalendarHeader`): stats for the period (the month itself in Month view, not the padding days), a priority legend, the view toggle and navigation.
 - **Keyboard shortcuts:** `←`/`→` move to the previous/next period, `T` jumps to today, `M`/`W` switch views. Shortcuts are ignored while typing in a field or while a dialog is open.
+
+### Goals and reminders
+
+- **Goals** (`/goals`, `/goal/:id`) have a period (week / month / quarter / 6 months / year / custom) with start and end days, and a measure:
+  - `numeric`: `(current − start) / (target − start)`; works for decreasing targets
+  - `milestone`: average of the sub-goals (a sub-goal counts 100 once completed)
+  - `task`: completed / linked tasks, including the sub-goals' tasks
+  - `manual`: self-assessed 0–100
+
+  Progress, `pace` (vs. elapsed time) and `needsReview` are computed by the API. Reaching 100% never completes a goal automatically.
+- A **sub-goal** is a `Goal` with `parentId` (one level only). It uses the same endpoints.
+- **Status** is `active` / `paused` / `completed` / `cancelled`. Archiving is separate (`archivedAt`). A passed deadline is not a failure: an active goal past its end shows "Needs review" (amber) with Complete / Extend / Cancel.
+- **Reminders** (`/reminders`) are standalone and can link to one goal / sub-goal, task or note.
+  - Repeat: none / daily / weekly (with weekdays) / monthly / yearly, every N, optional end.
+  - Times are stored in UTC with the user's IANA `timeZone`. `nextOccurrence` (`reminders.utils.ts`) keeps the wall-clock time and counts from `startAt`.
+  - Snoozing moves `nextAt` only. Completing a recurring reminder logs it (`ReminderLog`) and moves to the next occurrence after now.
+  - There are no notifications: reminders are a list (Overdue / Today / … / Snoozed / Done).
+- **Goal ↔ reminder sync** (`goals.service.ts`):
+  - Goal presets create `origin: goal_auto` reminders (weekly review, monthly check-in, deadline).
+  - Pause / complete / cancel / archive pause the goal's reminders with `suspendedBy: "goal"`. On complete / cancel the user picks manual ones to keep.
+  - Resume / reopen restores only those (not the reminders of completed sub-goals).
+  - Extending moves the deadline reminder and the series that ran until the old end.
+  - Deleting removes auto reminders and deletes or detaches the manual ones.
+  - Reminders not linked to the goal are never touched.
 
 ### Week start (Settings → Calendar)
 
@@ -352,6 +401,12 @@ neura-api/
         │   └── focus-sessions.routes.ts / .controller.ts / .service.ts  # VALID_TAGS, isValidTag, stats
         ├── users/
         │   └── users.routes.ts / users.controller.ts / users.service.ts # Profile (/me)
+        ├── goals/
+        │   ├── goals.routes.ts / goals.controller.ts / goals.service.ts  # CRUD, lifecycle + reminder sync, progress, links
+        │   └── goals.utils.ts      # periodRange, goalProgress, goalPace, auto-reminder titles
+        ├── reminders/
+        │   ├── reminders.routes.ts / reminders.controller.ts / reminders.service.ts
+        │   └── reminders.utils.ts  # nextOccurrence (recurrence, @date-fns/tz), zonedTime
         └── assistant/
             ├── assistant.routes.ts / assistant.controller.ts  # 503 + Retry-After when every model is busy
             ├── assistant.service.ts   # Builds the user prompt, runs the tool loop, filters mutating actions
@@ -439,6 +494,8 @@ neura-api/
 | `/habits` | `GET /?view=&date=&today=&weekStartsOn=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
 | `/focus-sessions` | `GET /`, `GET /stats`, `POST /`, `PATCH /:id`, `DELETE /:id` |
 | `/users` | `GET /me`, `PATCH /me` |
+| `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks`, `GET /:id/link-options`, `POST /:id/links`, `DELETE /:id/links/:type/:targetId` |
+| `/reminders` | `GET /?view=upcoming\|snoozed\|done\|all&goal_id=&task_id=&note_id=`, `POST /`, `GET /counts`, `GET /link-options`, `PATCH /:id`, `DELETE /:id`, `POST /:id/complete` (`{ scope }`), `/skip`, `/reopen`, `/snooze` (`{ until }`), `/pause`, `/resume` |
 | `/assistant` | `POST /` with `{ mode, question, history, … }`; mode `daily_plan` powers the dashboard card |
 
 `GET /health` (no `/api` prefix) returns `{ status: "ok" }`.
@@ -459,6 +516,14 @@ neura-api/
   - Fields: name, description, tag (enum: `work`, `personal`, `study`, `break`, `other`), duration (actual focused seconds), startTime, endTime, userId
 - `Habit`: title, color, startDate, durationDays (null means tracked forever), isArchived, userId. Has many entries.
 - `HabitEntry`: date, habitId. Unique on `(habitId, date)`, so there is one completion per day.
+- `Goal`
+  - Fields: title, successCriteria, description, category, color, period, startDate / endDate (calendar days), metric, startValue / targetValue / currentValue / unit, status, completedAt, archivedAt, position
+  - Relations: parentId (sub-goals), tasks (`Task.goalId`), notes (`Note.goalId`), reminders, logs
+- `GoalLog`: type (`created`, `progress`, `note`, `status`, `extended`, `metric_changed`), value, note, meta.
+- `Reminder`
+  - Fields: title, description, startAt, scheduledAt, snoozedUntil, nextAt, timeZone, repeat / interval / weekdays / repeatUntil, status, suspendedBy, origin (`manual` / `goal_auto`), autoKind
+  - Relations: at most one of goalId (cascade) or taskId / noteId (set null)
+- `ReminderLog`: one row per completed (`done`) or `skipped` occurrence.
 
 All IDs are `cuid()` strings. Child rows are cascade-deleted with their user.
 

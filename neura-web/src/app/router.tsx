@@ -15,6 +15,9 @@ import { CalendarPage } from "@/features/tasks/pages/CalendarPage";
 import SettingPage from "@/features/settings/pages/SettingsPage";
 import AssistantPage from "@/features/assistant/pages/AssistantPage";
 import { HabitsPage } from "@/features/habits/pages/HabitsPage";
+import { GoalsPage } from "@/features/goals/pages/GoalsPage";
+import { GoalDetailPage } from "@/features/goals/pages/GoalDetailPage";
+import { RemindersPage } from "@/features/reminders/pages/RemindersPage";
 
 
 export const router = createBrowserRouter([
@@ -39,6 +42,9 @@ export const router = createBrowserRouter([
       { path: "settings", element: <SettingPage /> },
       { path: "focus", element: <FocusTimerPage /> },
       { path: "habits", element: <HabitsPage /> },
+      { path: "goals", element: <GoalsPage /> },
+      { path: "goal/:id", element: <GoalDetailPage /> },
+      { path: "reminders", element: <RemindersPage /> },
       { path: "assistant", element: <AssistantPage /> },
     ],
   },

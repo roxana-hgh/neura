@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowLeft, Check, Cloud, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bell, Check, Cloud, Loader2, MoreVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -19,6 +19,8 @@ interface NoteEditorHeaderProps {
   onBack: () => void;
   onRetry: () => void;
   onDelete: () => void;
+  /** Set once the note is saved (a reminder needs its id) */
+  onRemind?: () => void;
 }
 
 function NoteEditorHeader({
@@ -28,6 +30,7 @@ function NoteEditorHeader({
   onBack,
   onRetry,
   onDelete,
+  onRemind,
 }: NoteEditorHeaderProps) {
   return (
     <div className="flex h-14 items-center gap-1 px-2 sm:px-3">
@@ -101,6 +104,11 @@ function NoteEditorHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
+          {onRemind && (
+            <DropdownMenuItem onSelect={onRemind}>
+              <Bell /> Remind me
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem variant="destructive" onSelect={onDelete}>
             <Trash2 /> Delete note
           </DropdownMenuItem>

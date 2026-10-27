@@ -4,6 +4,7 @@ import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/r
 import { format } from "date-fns";
 import NoteToolbar from "@/features/notes/components/editor/NoteToolbar";
 import NoteEditorHeader from "@/features/notes/components/editor/NoteEditorHeader";
+import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
 import AlertDialog from "@/components/shared/AlertDialog";
 import { useNoteAutosave, type NoteDraft } from "@/features/notes/hooks/useNoteAutosave";
 import { useDeleteNote } from "@/features/notes/hooks/useNotes";
@@ -45,6 +46,7 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
     note && note.color in NOTE_COLORS ? note.color : "gray"
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [remindNoteId, setRemindNoteId] = useState<string | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   // Latest title/color for drafts built inside editor callbacks
@@ -146,6 +148,12 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
           onBack={goBack}
           onRetry={() => void flush()}
           onDelete={() => setConfirmDelete(true)}
+          onRemind={() => {
+            // a brand-new note gets its id on the first save
+            const id = getNoteId();
+            if (id) setRemindNoteId(id);
+            else toast.default("Type something first so the note is saved");
+          }}
         />
         {!isMobile && editor && (
           <div className="border-t px-3 lg:px-7">
@@ -233,6 +241,16 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
           onConfirm={handleDelete}
         />
       )}
+
+      <ReminderFormDialog
+        open={!!remindNoteId}
+        onOpenChange={(o) => !o && setRemindNoteId(null)}
+        lockLink
+        defaults={remindNoteId ? {
+          title: `Review: ${title.trim() || "Untitled"}`,
+          link: { type: "note", id: remindNoteId, title: title.trim() || "Untitled" },
+        } : undefined}
+      />
     </div>
   );
 }

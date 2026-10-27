@@ -10,6 +10,8 @@ import habitsRoutes from "@/modules/habits/habits.routes";
 import focusSessionsRoutes from "@/modules/focus-sessions/focus-sessions.routes";
 import usersRoutes from "@/modules/users/users.routes";
 import assistantRoutes from "@/modules/assistant/assistant.routes";
+import goalsRoutes from "@/modules/goals/goals.routes";
+import remindersRoutes from "@/modules/reminders/reminders.routes";
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.use("/api/habits", requireAuth, habitsRoutes);
 app.use("/api/focus-sessions", requireAuth, focusSessionsRoutes);
 app.use("/api/users", requireAuth, usersRoutes);
 app.use("/api/assistant", requireAuth, assistantRoutes);
+app.use("/api/goals", requireAuth, goalsRoutes);
+app.use("/api/reminders", requireAuth, remindersRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

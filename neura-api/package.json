@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
     "@prisma/client": "^6.19.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
