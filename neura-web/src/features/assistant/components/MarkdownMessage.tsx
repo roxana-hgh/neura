@@ -5,30 +5,56 @@ interface MarkdownMessageProps {
   content: string;
 }
 
+// Every block gets dir="auto" so Persian and English lines each pick their own direction
 export function MarkdownMessage({ content }: MarkdownMessageProps) {
   return (
-    <div className="space-y-1.5 text-sm leading-relaxed [&_p]:my-0">
+    <div className="space-y-2 wrap-break-word text-sm leading-relaxed">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          p: ({ children }) => <p className="my-0">{children}</p>,
+          p: ({ children }) => <p dir="auto" className="my-0">{children}</p>,
+          h1: ({ children }) => <h3 dir="auto" className="pt-1 text-base font-semibold">{children}</h3>,
+          h2: ({ children }) => <h3 dir="auto" className="pt-1 text-base font-semibold">{children}</h3>,
+          h3: ({ children }) => <h4 dir="auto" className="pt-1 text-sm font-semibold">{children}</h4>,
+          h4: ({ children }) => <h4 dir="auto" className="text-sm font-semibold">{children}</h4>,
           strong: ({ children }) => (
             <strong className="font-semibold text-foreground">{children}</strong>
           ),
           ul: ({ children }) => (
-            <ul className="my-1 space-y-1 pl-4 [&>li]:list-disc [&>li]:marker:text-primary">
+            <ul dir="auto" className="my-1 space-y-1 ps-5 [&>li]:list-disc [&>li]:marker:text-primary">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="my-1 space-y-1 pl-4 [&>li]:list-decimal [&>li]:marker:text-primary">
+            <ol dir="auto" className="my-1 space-y-1 ps-5 [&>li]:list-decimal [&>li]:marker:text-primary">
               {children}
             </ol>
           ),
-          li: ({ children }) => <li className="pl-0.5">{children}</li>,
-          code: ({ children }) => (
-            <code className="rounded bg-background/60 px-1 py-0.5 text-xs">{children}</code>
+          li: ({ children }) => <li dir="auto" className="ps-0.5">{children}</li>,
+          blockquote: ({ children }) => (
+            <blockquote dir="auto" className="border-s-2 border-primary/40 ps-3 text-muted-foreground">
+              {children}
+            </blockquote>
           ),
+          hr: () => <hr className="my-3 border-border" />,
+          pre: ({ children }) => (
+            <pre dir="ltr" className="no-scrollbar overflow-x-auto rounded-lg bg-muted p-3 text-xs [&_code]:bg-transparent [&_code]:p-0">
+              {children}
+            </pre>
+          ),
+          code: ({ children }) => (
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{children}</code>
+          ),
+          table: ({ children }) => (
+            <div className="no-scrollbar my-1 overflow-x-auto rounded-lg border">
+              <table dir="auto" className="w-full border-collapse text-xs">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-muted/60">{children}</thead>,
+          th: ({ children }) => (
+            <th className="border-b px-3 py-2 text-start font-semibold">{children}</th>
+          ),
+          td: ({ children }) => <td className="border-b px-3 py-2 align-top">{children}</td>,
           a: ({ children, href }) => (
             <a
               href={href}

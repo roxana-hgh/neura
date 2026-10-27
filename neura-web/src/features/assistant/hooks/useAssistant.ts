@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect } from "react";
+import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
+import { useSession } from "@/lib/auth-client";
+import { useAssistantStore } from "@/features/assistant/stores/assistantStore";
 
 export type AssistantMode =
   | "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom" | "daily_plan"
@@ -36,6 +38,10 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   actions?: ToolAction[];
+  createdAt?: number;
+  /** Failed reply: rendered as an error with a retry button */
+  error?: boolean;
+  retry?: { mode: AssistantMode; question: string; references?: MentionRef[] };
 }
 
 interface AskAssistantResponse {
@@ -59,65 +65,96 @@ const HABIT_ACTION_NAMES = new Set<HabitActionName>([
   "log_habit_completion",
 ]);
 
+const ASSISTANT_MUTATION_KEY = ["assistant"];
+
 async function askAssistant(payload: AskAssistantPayload) {
   const { data } = await api.post<AskAssistantResponse>("/assistant", payload);
   return data;
 }
 
 export function useAssistant() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messages = useAssistantStore((s) => s.messages);
+  const setMessages = useAssistantStore((s) => s.setMessages);
+  const ownerId = useAssistantStore((s) => s.userId);
+  const resetFor = useAssistantStore((s) => s.resetFor);
+  const { data: session } = useSession();
   const queryClient = useQueryClient();
 
+  // A stored conversation belongs to one account; drop it if someone else signs in
+  const userId = session?.user?.id;
+  useEffect(() => {
+    if (userId && ownerId !== userId) resetFor(userId);
+  }, [userId, ownerId, resetFor]);
+
+  // Results are written to the store inside mutationFn (not onSuccess/onError), so a reply
+  // still lands in the conversation if the user navigates away while it's in flight.
   const mutation = useMutation({
-    mutationFn: askAssistant,
-    onSuccess: ({ reply, actions }) => {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: reply, actions },
-      ]);
+    mutationKey: ASSISTANT_MUTATION_KEY,
+    mutationFn: async (payload: AskAssistantPayload) => {
+      const { setMessages } = useAssistantStore.getState();
+      try {
+        const { reply, actions } = await askAssistant(payload);
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: "assistant", content: reply, actions, createdAt: Date.now() },
+        ]);
 
-      if (actions.length > 0) {
-        const touchedTasks = actions.some((a) => !HABIT_ACTION_NAMES.has(a.name as HabitActionName));
-        const touchedHabits = actions.some((a) => HABIT_ACTION_NAMES.has(a.name as HabitActionName));
+        if (actions.length > 0) {
+          const touchedTasks = actions.some((a) => !HABIT_ACTION_NAMES.has(a.name as HabitActionName));
+          const touchedHabits = actions.some((a) => HABIT_ACTION_NAMES.has(a.name as HabitActionName));
 
-        // Adjust these keys if your tasks/habits hooks use different query keys.
-        if (touchedTasks) queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        if (touchedHabits) queryClient.invalidateQueries({ queryKey: ["habits"] });
+          if (touchedTasks) queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          if (touchedHabits) queryClient.invalidateQueries({ queryKey: ["habits"] });
+        }
+      } catch (error: any) {
+        const serverMessage = error?.response?.data?.message;
+        const { mode, question, references } = payload;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: serverMessage ?? "Sorry, I couldn't reach the assistant just now. Try again in a moment.",
+            createdAt: Date.now(),
+            error: true,
+            retry: { mode, question, references },
+          },
+        ]);
       }
     },
-   onError: (error: any) => {
-  const serverMessage = error?.response?.data?.message;
-  setMessages((prev) => [
-    ...prev,
-    {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: serverMessage ?? "Sorry, I couldn't reach the assistant just now. Try again in a moment.",
-    },
-  ]);
-},
   });
 
- const sendMessage = useCallback(
-  (text: string, mode: AssistantMode = "custom", references?: MentionRef[]) => {
-    const trimmed = text.trim();
-    if (!trimmed || mutation.isPending) return;
+  // Global, so the page knows a request is still running after a remount
+  const isPending = useIsMutating({ mutationKey: ASSISTANT_MUTATION_KEY }) > 0;
 
-    const history = messages.map(({ role, content }) => ({ role, content }));
+  const ask = useCallback(
+    (mode: AssistantMode, question: string, history: ChatMessage[], references?: MentionRef[]) => {
+      mutation.mutate({
+        mode,
+        question,
+        // failed replies are UI-only, never part of the model's context
+        history: history.filter((m) => !m.error).map(({ role, content }) => ({ role, content })),
+        references,
+        clientDate: format(new Date(), "EEEE, yyyy-MM-dd HH:mm"),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+    },
+    [mutation]
+  );
 
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: trimmed }]);
+  const sendMessage = useCallback(
+    (text: string, mode: AssistantMode = "custom", references?: MentionRef[]) => {
+      const trimmed = text.trim();
+      if (!trimmed || isPending) return;
 
-    mutation.mutate({
-      mode,
-      question: trimmed,
-      history,
-      references,
-      clientDate: format(new Date(), "EEEE, yyyy-MM-dd HH:mm"),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-  },
-  [messages, mutation]
-);
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "user", content: trimmed, createdAt: Date.now() },
+      ]);
+      ask(mode, trimmed, messages, references);
+    },
+    [messages, isPending, setMessages, ask]
+  );
 
   const sendQuickAction = useCallback(
     (mode: AssistantMode, message: string) => {
@@ -126,10 +163,32 @@ export function useAssistant() {
     [sendMessage]
   );
 
+  /** Re-sends the request behind a failed reply, replacing the error bubble */
+  const retry = useCallback(
+    (messageId: string) => {
+      if (isPending) return;
+      const index = messages.findIndex((m) => m.id === messageId);
+      const failed = messages[index];
+      if (!failed?.retry) return;
+
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      // history = everything before the user message that triggered the failure
+      ask(failed.retry.mode, failed.retry.question, messages.slice(0, Math.max(index - 1, 0)), failed.retry.references);
+    },
+    [messages, isPending, setMessages, ask]
+  );
+
+  const clearChat = useCallback(() => {
+    mutation.reset();
+    setMessages(() => []);
+  }, [mutation, setMessages]);
+
   return {
     messages,
     sendMessage,
     sendQuickAction,
-    isPending: mutation.isPending,
+    retry,
+    clearChat,
+    isPending,
   };
 }

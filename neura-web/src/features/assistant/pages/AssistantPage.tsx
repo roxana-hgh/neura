@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Sparkles, Send } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckSquare, Flame, SquarePen, X } from "lucide-react";
 import { useAssistant, type MentionRef } from "@/features/assistant/hooks/useAssistant";
 import { QuickActions } from "@/features/assistant/components/QuickActions";
-import { ChatMessage } from "@/features/assistant/components/ChatMessage";
+import { AssistantAvatar, ChatMessage } from "@/features/assistant/components/ChatMessage";
 import { TypingIndicator } from "@/features/assistant/components/TypingIndicator";
 import { MentionPicker } from "@/features/assistant/components/MentionPicker";
 import {
@@ -11,13 +11,15 @@ import {
   type MentionItem,
 } from "@/features/assistant/lib/mentionItems";
 import { Button } from "@/components/ui/button";
+import AlertDialog from "@/components/shared/AlertDialog";
+import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { useTasks } from "@/features/tasks/hooks/useTasks";
 import { useHabits } from "@/features/habits/hooks/useHabits";
 import type { Habit } from "@/features/habits/types/habit";
 
 export default function AssistantPage() {
-  const { messages, sendMessage, sendQuickAction, isPending } = useAssistant();
+  const { messages, sendMessage, sendQuickAction, retry, clearChat, isPending } = useAssistant();
   const { data: session } = useSession();
 
   const [input, setInput] = useState("");
@@ -25,10 +27,11 @@ export default function AssistantPage() {
   const [mentions, setMentions] = useState<MentionItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [menuDismissed, setMenuDismissed] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
 
   const { data: tasksData } = useTasks();
   const { data: habitsData } = useHabits("all",
@@ -75,10 +78,32 @@ export default function AssistantPage() {
   // Mentions that are still present in the text
   const activeMentions = mentions.filter((m) => input.includes(`"${m.title}"`));
 
-  // auto-scroll
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior });
+  };
+
+  // Jump to the end when the page opens with a restored conversation
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isPending]);
+    scrollToBottom("instant");
+  }, []);
+
+  // Follow new messages unless the user scrolled up to read; their own messages always scroll
+  const lastRole = messages[messages.length - 1]?.role;
+  useEffect(() => {
+    if (atBottom || lastRole === "user") scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, isPending]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+  };
+
+  // Focus the composer on desktop; on phones it would pop the keyboard over the suggestions
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 768px)").matches) textareaRef.current?.focus();
+  }, []);
 
   // auto-grow textarea
   useEffect(() => {
@@ -93,6 +118,18 @@ export default function AssistantPage() {
     setCaret(0);
     setMentions([]);
     setMenuDismissed(false);
+  };
+
+  const removeMention = (item: MentionItem) => {
+    setInput((prev) => prev.replace(`"${item.title}" `, "").replace(`"${item.title}"`, ""));
+    setMentions((prev) => prev.filter((m) => m.id !== item.id));
+    textareaRef.current?.focus();
+  };
+
+  const handleNewChat = () => {
+    clearChat();
+    resetComposer();
+    textareaRef.current?.focus();
   };
 
   const handleSend = () => {
@@ -141,7 +178,8 @@ export default function AssistantPage() {
         return;
       }
     }
-    if (e.key === "Enter" && !e.shiftKey) {
+    // isComposing: don't send while an IME is still composing a word
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -181,39 +219,94 @@ export default function AssistantPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = session?.user?.name?.split(" ")[0];
 
+  const hasMessages = messages.length > 0;
+  const canSend = !!input.trim() && !isPending;
+
   return (
-    <div className="mx-auto flex h-[calc(100dvh-5rem)] w-full max-w-2xl flex-col overflow-hidden">
-      {/* Messages — this is the only scroll container */}
-      <div ref={scrollRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-1 py-6 sm:px-4">
-        {messages.length === 0 ? (
-          <div className="flex min-h-full flex-col items-center justify-center gap-6 text-center animate-in fade-in duration-500">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <Sparkles className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">
-                {greeting}
-                {firstName ? `, ${firstName}` : ""}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                What should we tackle? Pick one below or just type — use <kbd className="rounded border bg-muted px-1 text-xs">/</kbd> to point at a task.
+    <div className="mx-auto flex h-[calc(100dvh-5rem)] w-full max-w-3xl flex-col overflow-hidden">
+      {/* Top bar */}
+      {hasMessages && (
+        <div className="flex items-center justify-between gap-2 border-b px-1 pb-2 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <AssistantAvatar />
+            <div className="min-w-0 leading-tight">
+              <p className="text-sm font-semibold">Neura Assistant</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {isPending ? "Working on it…" : "Manages your tasks & habits"}
               </p>
             </div>
-            <QuickActions onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
           </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
-            ))}
-            {isPending && <TypingIndicator />}
-          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setConfirmClear(true)}
+            disabled={isPending}
+            className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <SquarePen className="h-4 w-4" />
+            <span className="hidden sm:inline">New chat</span>
+          </Button>
+        </div>
+      )}
+
+      {/* Messages: this is the only scroll container */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="no-scrollbar h-full overflow-y-auto px-1 py-6 sm:px-4"
+        >
+          {!hasMessages ? (
+            <div className="flex min-h-full flex-col items-center justify-center gap-7 text-center animate-in fade-in duration-500">
+              <div className="relative">
+                <div className="absolute inset-0 -z-10 scale-150 rounded-full bg-primary/20 blur-2xl" />
+                <AssistantAvatar className="h-14 w-14 rounded-2xl [&_svg]:h-7 [&_svg]:w-7" />
+              </div>
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                  {greeting}
+                  {firstName ? `, ${firstName}` : ""}
+                </h1>
+                <p className="mx-auto max-w-md text-sm text-muted-foreground">
+                  I can plan your day, add or reschedule tasks and check in on your habits.
+                  Pick a starting point or just type. English and فارسی both work.
+                </p>
+              </div>
+              <QuickActions onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onRetry={retry}
+                  retryDisabled={isPending}
+                />
+              ))}
+              {isPending && <TypingIndicator />}
+            </div>
+          )}
+        </div>
+
+        {!atBottom && hasMessages && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Scroll to latest message"
+            onClick={() => scrollToBottom()}
+            className="absolute bottom-3 left-1/2 h-8 w-8 -translate-x-1/2 rounded-full bg-background shadow-md animate-in fade-in zoom-in-95"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
         )}
       </div>
 
       {/* Composer */}
       <div className="px-1 pb-3 pt-2 sm:px-4">
-        {messages.length > 0 && (
+        {hasMessages && (
           <div className="mb-2">
             {contextChips ? (
               <div className="flex flex-wrap gap-2 animate-in fade-in duration-200">
@@ -250,36 +343,93 @@ export default function AssistantPage() {
             />
           )}
 
-          <div className="flex items-end gap-2 rounded-3xl border bg-muted/40 p-1.5 pl-4 transition-colors focus-within:border-primary/40 focus-within:bg-background">
-            <textarea
-              ref={textareaRef}
-              dir="auto"
-              value={input}
-              rows={1}
-              disabled={isPending}
-              placeholder="Ask anything, or type / to pick a task…"
-              onChange={(e) => {
-                setInput(e.target.value);
-                setCaret(e.target.selectionStart);
-                setMenuDismissed(false);
-                setActiveIndex(0);
-              }}
-              onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
-              onKeyDown={handleKeyDown}
-              className="max-h-32 min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
-            />
-            <Button
-              type="button"
-              size="icon"
-              className="h-9 w-9 shrink-0 rounded-full"
-              onClick={handleSend}
-              disabled={isPending || !input.trim()}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+          <div
+            className={cn(
+              "rounded-3xl border bg-muted/40 p-1.5 shadow-sm transition-all",
+              "focus-within:border-primary/40 focus-within:bg-background focus-within:ring-4 focus-within:ring-primary/10"
+            )}
+          >
+            {activeMentions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-2.5 pt-1.5">
+                {activeMentions.map((m) => {
+                  const Icon = m.type === "habit" ? Flame : CheckSquare;
+                  return (
+                    <span
+                      key={`${m.type}-${m.id}`}
+                      className="inline-flex max-w-56 items-center gap-1 rounded-full border bg-background py-0.5 pl-2 pr-1 text-xs"
+                    >
+                      <Icon
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          m.type === "habit" ? "text-orange-500" : "text-primary"
+                        )}
+                      />
+                      <span dir="auto" className="truncate">{m.title}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${m.title}`}
+                        onClick={() => removeMention(m)}
+                        className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex items-end gap-2 pl-3">
+              <textarea
+                ref={textareaRef}
+                dir="auto"
+                value={input}
+                rows={1}
+                aria-label="Message the assistant"
+                placeholder={hasMessages ? "Reply, or type / to pick a task…" : "Ask anything, or type / to pick a task…"}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setCaret(e.target.selectionStart);
+                  setMenuDismissed(false);
+                  setActiveIndex(0);
+                }}
+                onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
+                onKeyDown={handleKeyDown}
+                className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+              />
+              <Button
+                type="button"
+                size="icon"
+                aria-label="Send message"
+                className={cn(
+                  "h-9 w-9 shrink-0 rounded-full transition-all",
+                  !canSend && "scale-95"
+                )}
+                onClick={handleSend}
+                disabled={!canSend}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
+
+        <p className="mt-1.5 hidden text-center text-[11px] text-muted-foreground md:block">
+          <kbd className="rounded border bg-muted px-1">Enter</kbd> to send ·{" "}
+          <kbd className="rounded border bg-muted px-1">Shift + Enter</kbd> for a new line ·{" "}
+          <kbd className="rounded border bg-muted px-1">/</kbd> to mention a task or habit
+        </p>
       </div>
+
+      <AlertDialog
+        open={confirmClear}
+        setOpen={setConfirmClear}
+        title="Start a new chat?"
+        description="This conversation will be cleared. Tasks and habits the assistant changed stay as they are."
+        acceptButtonText="New chat"
+        cancelButtonText="Cancel"
+        onConfirm={handleNewChat}
+      />
     </div>
   );
 }
