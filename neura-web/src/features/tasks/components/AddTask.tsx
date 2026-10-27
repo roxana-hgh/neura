@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TaskForm from "@/features/tasks/components/TaskForm";
 import { Plus } from "lucide-react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +20,13 @@ interface IProps {
   // Pass the current list's id when rendering this button inside a list page.
   // Leave undefined (or don't pass it) on the "All Tasks" page.
   defaultListId?: string | number | null;
-    initialDueDate?: Date; 
+    initialDueDate?: Date;
     isSmall?: boolean;
+    // Custom trigger element (replaces the default "Add Task" button)
+    trigger?: React.ReactNode;
 }
 
-function AddNewTask({ defaultListId, initialDueDate, isSmall = false  }: IProps) {
+function AddNewTask({ defaultListId, initialDueDate, isSmall = false, trigger }: IProps) {
   const [openModal, setOpenModal] = useState(false);
 
 const { mutate: createTask } = useCreateTask();
@@ -40,17 +43,20 @@ const handleSubmit = (values: TaskFormValues) => {
   });
 };
 
-  // Convert Date → "YYYY-MM-DD" string that TaskForm expects
+  // Convert Date → "YYYY-MM-DD" string that TaskForm expects.
+  // Format in local time: toISOString() would shift to the previous day in UTC+ zones.
   const initialValues = initialDueDate
-    ? { due_date: initialDueDate.toISOString().split("T")[0] } // ← new
+    ? { due_date: format(initialDueDate, "yyyy-MM-dd") }
     : undefined;
 
   return (
     <Dialog open={openModal} onOpenChange={setOpenModal}>
       <DialogTrigger asChild>
-        <Button type="button" size={isSmall ? "xs" : "sm"} variant="outline">
-          <span className={`hidden sm:block  ${isSmall ? "text-xs" : "text-sm"}`}>Add Task</span> <Plus  />
-        </Button>
+        {trigger ?? (
+          <Button type="button" size={isSmall ? "xs" : "sm"} variant="outline">
+            <span className={`hidden sm:block  ${isSmall ? "text-xs" : "text-sm"}`}>Add Task</span> <Plus  />
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>

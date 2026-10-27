@@ -94,15 +94,18 @@ src/
 │   │   └── pages/                 # LoginPage, SignUpPage
 │   ├── tasks/
 │   │   ├── components/            # AddTask, EditTask, TaskForm, TaskDetail, TaskSearch, NoTasks,
-│   │   │   │                      # DayTasksModal, TasksCompletedChart, Task.styles.css
+│   │   │   │                      # DayTasksModal, TasksCompletedChart, TaskViewToggle, Task.styles.css
+│   │   │   ├── calendar/          # CalendarHeader, CalendarMonthView, CalendarWeekView,
+│   │   │   │                      # CalendarWeekTaskCard, CalendarTaskChip (see "Calendar" below)
 │   │   │   ├── lists/             # AddNewList, EditList, ListForm, ListCardItem, NoList
-│   │   │   └── task-list/         # TasksList, TaskListItem, TaskListItemSummary
+│   │   │   └── task-list/         # TasksList, TaskListItem, TaskListItemSummary, TaskSections
 │   │   ├── hooks/                 # useTasks (tasks, lists, subtasks queries/mutations), useCalendarTasks
 │   │   ├── pages/                 # TasksPage, CalendarPage, AllListsPage, SingleListPage
 │   │   ├── schemas/               # task.schema, list.schema (zod)
-│   │   ├── stores/                # tasksStore (useTasksStore: lists cache + search/priority filters)
+│   │   ├── stores/                # tasksStore (useTasksStore: lists cache + search/priority filters + view mode),
+│   │   │                          # calendarStore (useCalendarStore: month/week view, persisted)
 │   │   ├── types/                 # task.ts: Task, SubTask, TaskList, TaskWithListName
-│   │   └── utils/                 # colorMapper, sortTasksByDueStatus, taskProgress, taskSelectors
+│   │   └── utils/                 # calendar, colorMapper, groupTasks, taskProgress, taskSelectors
 │   ├── notes/
 │   │   ├── components/            # AddEditNoteForm, NoteItem, NoteContent, SearchNote
 │   │   ├── hooks/                 # useNotes
@@ -221,6 +224,32 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 **API field naming**
 - The frontend sends snake_case fields for tasks (`due_date`, `list_id`). The API maps them to Prisma camelCase (`dueDate`, `listId`).
 - Check the route handler before adding new fields.
+
+**Dates**
+- Turn a local `Date` into a `"yyyy-MM-dd"` string with `format(date, "yyyy-MM-dd")` from date-fns, never `toISOString().split("T")[0]`. In zones ahead of UTC (for example Iran, UTC+3:30), `toISOString()` moves local midnight to the previous day.
+
+### Calendar (`/calendar`)
+
+`pages/CalendarPage` shows tasks by due date in a **Month** or **Week** view. The chosen view is stored in `useCalendarStore` (persisted in localStorage as `neura-calendar-view`).
+
+- **Data:** `useCalendarTasks(range)` uses `useQueries` to fetch `GET /tasks/calendar?year=&month=` once for each month the visible range touches. A month grid with its padding days, or a week that crosses a month boundary, can touch up to 3 months. Results are mapped with `mapTask` and merged. The query keys are `["tasks", "calendar", year, month]`, so every task mutation (which invalidates `["tasks"]`) refreshes the calendar.
+- **Logic** (`utils/calendar.ts`, pure functions):
+  - `getVisibleRange` / `shiftCursor` / `formatRangeTitle`: range and navigation. Weeks start on Monday (`WEEK_STARTS_ON = 1`).
+  - `groupTasksByDay`: returns a `Map` keyed by `dayKey`. Within each day, open tasks come first, then high → low priority, then by title.
+  - `isTaskOverdue`, `getCalendarStats`.
+  - `PRIORITY_STYLES`: the single source of priority colors (high = rose, medium = amber, low = sky). It provides `dot`, `bar` and `badge` classes and a label. Reuse it for any priority color in the calendar.
+- **Month view** (`CalendarMonthView`):
+  - Clicking a day opens `DayTasksModal`, where tasks can be edited, toggled and added.
+  - **Mobile (< sm):** each cell is too narrow for titles. It shows a count badge and a priority bar so the day can be read at a glance:
+    - The **count badge** shows the number of *open* tasks. Its color is the highest open priority. It is solid red if any task is overdue, and a green ✓ when every task is done.
+    - The **priority bar** has one segment per task, up to 4, colored by priority. Completed tasks are grey.
+  - **sm+:** `CalendarTaskChip` rows (2 on sm/md, 3 on lg, then "+N more") and an open-count badge next to the day number.
+- **Week view** (`CalendarWeekView`):
+  - md+ shows 7 columns. Mobile shows a stacked schedule, one card per day.
+  - Each task is a `CalendarWeekTaskCard`. Its checkbox toggles completion, and the card body opens `TaskDetail`.
+  - Each day has an "Add task" button. It uses `AddNewTask` with `initialDueDate` and a custom `trigger`.
+- **Header** (`CalendarHeader`): stats for the period (the month itself in Month view, not the padding days), a priority legend, the view toggle and navigation.
+- **Keyboard shortcuts:** `←`/`→` move to the previous/next period, `T` jumps to today, `M`/`W` switch views. Shortcuts are ignored while typing in a field or while a dialog is open.
 
 ### Known pre-existing issues (not regressions)
 
