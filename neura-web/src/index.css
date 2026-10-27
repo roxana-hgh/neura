@@ -375,4 +375,46 @@ body {
 }
 
 
+/* ── Scrollbar (thin, modern, transparent track) ─────────── */
+* {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 999px;
+  /* فاصله‌ی کوچک دور thumb که ظریف‌تر دیده بشه */
+  border: 1px solid transparent;
+  background-clip: content-box;
+  transition: background-color 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--foreground) 40%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: color-mix(in srgb, var(--foreground) 55%, transparent);
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+}
 
