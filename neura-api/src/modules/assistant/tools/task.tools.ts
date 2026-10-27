@@ -141,7 +141,11 @@ async function updateTask(args: any, userId: string) {
   if (args.title !== undefined) data.title = args.title;
   if (args.priority !== undefined) data.priority = args.priority;
   if (args.dueDate !== undefined) data.dueDate = new Date(args.dueDate);
-  if (args.completed !== undefined) data.completed = args.completed;
+  // Keep completedAt in sync (same as setTaskCompleted) — dashboard charts bucket by it
+  if (args.completed !== undefined && args.completed !== existing.completed) {
+    data.completed = args.completed;
+    data.completedAt = args.completed ? new Date() : null;
+  }
 
   const task = await prisma.task.update({
     where: { id: args.taskId },
