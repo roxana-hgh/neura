@@ -158,44 +158,78 @@ body {
   @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
 }
 
-/* src/index.css */
+/* ── Note editor (TipTap) ─────────────────────────────────── */
 .tiptap { outline: none; }
-.tiptap p { @apply mb-2 leading-relaxed; }
-.tiptap h1 { @apply text-2xl font-bold mb-3 mt-4; }
-.tiptap h2 { @apply text-xl font-bold mb-3 mt-4; }
-.tiptap h3 { @apply text-lg font-bold mb-2 mt-3; }
-.tiptap ul { @apply list-disc pl-6 mb-2; }
-.tiptap ol { @apply list-decimal pl-6 mb-2; }
-.tiptap li { @apply mb-1; }
-.tiptap blockquote { @apply border-l-4 border-border pl-4 italic text-muted-foreground my-2; }
-.tiptap code { @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono; }
-.tiptap pre { @apply bg-muted rounded-md p-4 my-2 overflow-x-auto; }
-.tiptap pre code { @apply bg-transparent p-0; }
-.tiptap img { @apply rounded-md max-w-full my-2; }
-.tiptap a { @apply text-primary underline; }
-.tiptap hr { @apply border-border my-4; }
+
+.note-prose {
+  @apply text-[17px] leading-[1.75] text-foreground sm:text-base sm:leading-[1.8];
+  caret-color: var(--color-primary);
+  word-break: break-word;
+}
+
+/* Each paragraph picks its own direction, so Persian and English lines mix naturally */
+.note-prose :is(p, h1, h2, h3, li, blockquote) { unicode-bidi: plaintext; }
+
+.note-prose > * + * { @apply mt-2; }
+.note-prose p { @apply min-h-[1lh]; }
+.note-prose h1 { @apply mt-7 mb-1 text-[26px] leading-tight font-bold tracking-tight; }
+.note-prose h2 { @apply mt-6 mb-1 text-[21px] leading-snug font-semibold tracking-tight; }
+.note-prose h3 { @apply mt-5 mb-0.5 text-lg leading-snug font-semibold; }
+.note-prose > :first-child { @apply mt-0; }
+
+.note-prose ul { @apply list-disc ps-6; }
+.note-prose ol { @apply list-decimal ps-6; }
+.note-prose li { @apply my-0.5; }
+.note-prose li > p { @apply m-0; }
+.note-prose li::marker { @apply text-muted-foreground; }
+
+.note-prose blockquote {
+  @apply my-3 border-s-[3px] border-primary/50 ps-4 text-muted-foreground italic;
+}
+.note-prose code {
+  @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.875em];
+}
+.note-prose pre {
+  @apply my-3 overflow-x-auto rounded-xl bg-muted p-4 font-mono text-sm leading-relaxed;
+  direction: ltr;
+}
+.note-prose pre code { @apply bg-transparent p-0 text-inherit; }
+.note-prose a { @apply text-primary underline underline-offset-2 decoration-primary/40; }
+.note-prose hr { @apply my-6 border-border; }
+.note-prose mark { @apply rounded-[3px] px-0.5 text-inherit; box-decoration-break: clone; }
+
+.note-prose img { @apply my-3 max-w-full rounded-xl; }
+.note-prose img.ProseMirror-selectednode { @apply outline-2 outline-offset-2 outline-primary; }
 
 /* Checklist */
-.tiptap ul[data-type="taskList"] { @apply list-none pl-0; }
-.tiptap ul[data-type="taskList"] li { @apply flex items-start gap-2; }
-.tiptap ul[data-type="taskList"] li > label { @apply mt-0.5; }
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+.note-prose ul[data-type="taskList"] { @apply list-none ps-0.5; }
+.note-prose ul[data-type="taskList"] li { @apply my-1 flex items-start gap-2.5; }
+.note-prose ul[data-type="taskList"] li > label { @apply mt-[0.3em] shrink-0 select-none; }
+.note-prose ul[data-type="taskList"] li > div { @apply min-w-0 flex-1; }
+.note-prose ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply text-muted-foreground line-through decoration-muted-foreground/60;
+}
+.note-prose ul[data-type="taskList"] ul[data-type="taskList"] { @apply mt-1; }
+
+.note-prose ul[data-type="taskList"] li > label input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-muted-foreground);
   background: transparent;
   cursor: pointer;
   position: relative;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:focus {
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ring) 10%, transparent);
+.note-prose ul[data-type="taskList"] li > label input[type="checkbox"]:active { transform: scale(0.9); }
+.note-prose ul[data-type="taskList"] li > label input[type="checkbox"]:focus-visible {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ring) 25%, transparent);
   outline: none;
 }
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]::after {
+.note-prose ul[data-type="taskList"] li > label input[type="checkbox"]::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -204,118 +238,22 @@ body {
   height: 5px;
   border-left: 2px solid transparent;
   border-bottom: 2px solid transparent;
-  transform: translate(-50%, -60%) rotate(-45deg);
-  transform-origin: center;
+  transform: translate(-50%, -65%) rotate(-45deg);
 }
-.tiptap ul[data-type="taskList"] li[data-checked="true"] > label input[type="checkbox"] {
+.note-prose ul[data-type="taskList"] li[data-checked="true"] > label input[type="checkbox"] {
   background: var(--color-primary);
   border-color: var(--color-primary);
 }
-.tiptap ul[data-type="taskList"] li[data-checked="true"] > label input[type="checkbox"]::after {
-  border-left-color: white;
-  border-bottom-color: white;
-}
-.tiptap ul[data-type="taskList"] li > div { @apply flex-1; }
-
-/* Placeholder */
-.tiptap p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  @apply text-muted-foreground float-left h-0 pointer-events-none;
-}
-
-/* src/index.css */
-.tiptap-render { @apply text-sm leading-relaxed; }
-.tiptap-render p { @apply mb-2 leading-relaxed; }
-.tiptap-render h1 { @apply text-2xl font-bold mb-3 mt-4; }
-.tiptap-render h2 { @apply text-xl font-bold mb-3 mt-4; }
-.tiptap-render h3 { @apply text-lg font-bold mb-2 mt-3; }
-.tiptap-render ul { @apply list-disc pl-6 mb-2; }
-.tiptap-render ol { @apply list-decimal pl-6 mb-2; }
-.tiptap-render li { @apply mb-1; }
-.tiptap-render blockquote { @apply border-l-4 border-border pl-4 italic text-muted-foreground my-2; }
-.tiptap-render code { @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono; }
-.tiptap-render pre { @apply bg-muted rounded-md p-4 my-2 overflow-x-auto; }
-.tiptap-render pre code { @apply bg-transparent p-0; }
-.tiptap-render img { @apply rounded-md max-w-full my-2; }
-.tiptap-render a { @apply text-primary underline hover:opacity-80; }
-.tiptap-render hr { @apply border-border my-4; }
-.tiptap-render strong { @apply font-bold; }
-.tiptap-render em { @apply italic; }
-
-/* Checklist rendering */
-.tiptap-render ul[data-type="taskList"] { @apply list-none pl-0; }
-.tiptap-render ul[data-type="taskList"] li { @apply flex items-start gap-2 mb-1; }
-.tiptap-render ul[data-type="taskList"] li > label { @apply mt-0.5 shrink-0; }
-.tiptap-render ul[data-type="taskList"] li > label input[type="checkbox"] { @apply cursor-default; }
-.tiptap-render ul[data-type="taskList"] li > div { @apply flex-1; }
-.tiptap-render ul[data-type="taskList"] li[data-checked="true"] > div { 
-  @apply line-through text-muted-foreground; 
-}
-
-/* Improved checkbox styling (shadcn-like) */
-.tiptap-render ul[data-type="taskList"] li > label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.tiptap-render ul[data-type="taskList"] li > label input[type="checkbox"] {
-  /* hide native appearance but keep accessibility */
-  -webkit-appearance: none;
-  appearance: none;
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  vertical-align: middle;
-  position: relative;
-  cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
-}
-
-.tiptap-render ul[data-type="taskList"] li > label input[type="checkbox"]:focus {
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ring) 10%, transparent);
-  outline: none;
-}
-
-.tiptap-render ul[data-type="taskList"] li > label input[type="checkbox"]::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 9px;
-  height: 5px;
-  border-left: 2px solid transparent;
-  border-bottom: 2px solid transparent;
-  transform: translate(-50%, -60%) rotate(-45deg);
-  transform-origin: center;
-  transition: border-color 0.12s ease, transform 0.12s ease;
-}
-
-.tiptap-render ul[data-type="taskList"] li[data-checked="true"] > label input[type="checkbox"] {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.tiptap-render ul[data-type="taskList"] li[data-checked="true"] > label input[type="checkbox"]::after {
-  border-left-color: white;
-  border-bottom-color: white;
-}
-
-.tiptap-render ul[data-type="taskList"] li > label span {
-  /* visual spacer for label; text sits here */
-  display: inline-block;
-  width: 0; /* keep span as marker element only */
+.note-prose ul[data-type="taskList"] li[data-checked="true"] > label input[type="checkbox"]::after {
+  border-left-color: var(--color-primary-foreground);
+  border-bottom-color: var(--color-primary-foreground);
 }
 
 /* Placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  @apply text-muted-foreground float-left h-0 pointer-events-none;
+  @apply pointer-events-none float-left h-0 text-muted-foreground/50;
 }
-
 
 
 @media (max-width: 500) {

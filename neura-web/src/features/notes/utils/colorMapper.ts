@@ -1,15 +1,48 @@
-import type { colors } from "@/types/color"
+import type { colors } from "@/types/color";
 
-
-export const NotesColorMap: Record<colors, string> = {
-  blue:   "bg-blue-100/5 text-blue-600 border-blue-200/20",
-  green:  "bg-green-100/8 text-green-600 border-green-200/20",
-  red:    "bg-red-100/8 text-red-600 border-red-200/20",
-  yellow: "bg-yellow-100/8 text-yellow-600 border-yellow-200/20",
-  orange: "bg-orange-100/8 text-orange-600 border-orange-200/20",
-  pink:   "bg-pink-100/8 text-pink-600 border-pink-200/20",
-  purple: "bg-purple-100/5 text-purple-700 border-purple-200/20",
-  gray:   "bg-gray-100/8 text-gray-600 border-gray-200/20",
+interface NoteColorStyle {
+  label: string;
+  /** Solid dot used in pickers and color tags */
+  swatch: string;
 }
 
-export const getNoteColorClass = (color: colors): string => NotesColorMap[color]
+export const NOTE_COLORS: Record<colors, NoteColorStyle> = {
+  gray: {
+    label: "Default",
+    swatch: "bg-zinc-400",
+  },
+  yellow: {
+    label: "Yellow",
+    swatch: "bg-yellow-400",
+  },
+  orange: {
+    label: "Orange",
+    swatch: "bg-orange-400",
+  },
+  red: {
+    label: "Red",
+    swatch: "bg-red-400",
+  },
+  pink: {
+    label: "Pink",
+    swatch: "bg-pink-400",
+  },
+  purple: {
+    label: "Purple",
+    swatch: "bg-purple-400",
+  },
+  blue: {
+    label: "Blue",
+    swatch: "bg-blue-400",
+  },
+  green: {
+    label: "Green",
+    swatch: "bg-green-400",
+  },
+};
+
+export const NOTE_COLOR_OPTIONS = Object.keys(NOTE_COLORS) as colors[];
+
+/** Older notes may carry "default" or an unknown value from the API */
+export const getNoteColor = (color: string | null | undefined): NoteColorStyle =>
+  NOTE_COLORS[color as colors] ?? NOTE_COLORS.gray;

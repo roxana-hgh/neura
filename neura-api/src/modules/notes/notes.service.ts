@@ -16,7 +16,7 @@ const toNoteData = ({ title, description, color }: NoteInput) => ({
 export function listNotes(userId: string) {
   return prisma.note.findMany({
     where: { userId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { updatedAt: "desc" },
   });
 }
 

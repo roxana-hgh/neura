@@ -1,25 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNotesStore } from "@/features/notes/stores/notesStore";
 import type { Note } from "@/features/notes/types/note";
+import { stripHtml } from "@/features/notes/utils/textPreview";
 import { api } from "@/lib/api";
 
+export const NOTES_LIST_KEY = ["notes", "list"] as const;
+
+const editedAt = (n: Note) => new Date(n.updatedAt ?? n.createdAt).getTime();
 
 export const useNotes = () => {
   const search = useNotesStore((s) => s.search);
 
-  const { data: notes = [], isLoading } = useQuery({
-    queryKey: ["notes", search],
+  const { data = [], isLoading } = useQuery({
+    queryKey: NOTES_LIST_KEY,
     queryFn: async () => {
       const { data } = await api.get<Note[]>("/notes");
       return data;
     },
   });
 
-  const filtered = notes.filter((n) =>
-    n.title.toLowerCase().includes(search.toLowerCase().trim())
-  );
+  // Most recently edited first; search matches the title and the body text
+  const q = search.toLowerCase().trim();
+  const notes = [...data]
+    .sort((a, b) => editedAt(b) - editedAt(a))
+    .filter(
+      (n) =>
+        !q ||
+        n.title.toLowerCase().includes(q) ||
+        (n.description && stripHtml(n.description).toLowerCase().includes(q))
+    );
 
-  return { notes: filtered, isLoading };
+  return { notes, total: data.length, isLoading };
 };
 
 export const useNote = (id: string) => {
@@ -33,28 +44,16 @@ export const useNote = (id: string) => {
   });
 };
 
-export const useCreateNote = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Pick<Note, "title" | "description" | "color">) =>
-      api.post("/notes", data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
-  });
-};
-
-export const useUpdateNote = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & Partial<Pick<Note, "title" | "description" | "color">>) =>
-      api.put(`/notes/${id}`, data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
-  });
-};
-
 export const useDeleteNote = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string | number) => api.delete(`/notes/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
+    mutationFn: (id: string) => api.delete(`/notes/${id}`),
+    onMutate: (id) => {
+      qc.setQueryData<Note[]>(NOTES_LIST_KEY, (old) =>
+        old?.filter((n) => String(n.id) !== id)
+      );
+      qc.removeQueries({ queryKey: ["notes", id], exact: true });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: NOTES_LIST_KEY }),
   });
 };

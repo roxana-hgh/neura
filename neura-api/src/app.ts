@@ -14,7 +14,8 @@ import assistantRoutes from "@/modules/assistant/assistant.routes";
 const app = express();
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+// Notes embed images as data URLs, so allow bodies larger than the 100kb default
+app.use(express.json({ limit: "10mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

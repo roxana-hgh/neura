@@ -107,13 +107,16 @@ src/
 │   │   ├── types/                 # task.ts: Task, SubTask, TaskList, TaskWithListName
 │   │   └── utils/                 # calendar, colorMapper, groupTasks, taskProgress, taskSelectors
 │   ├── notes/
-│   │   ├── components/            # AddEditNoteForm, NoteItem, NoteContent, SearchNote
-│   │   ├── hooks/                 # useNotes
-│   │   ├── pages/                 # AllNotesPage, SingleNotePage, AddEditNotePage (add + edit)
-│   │   ├── schemas/               # note.schema
+│   │   ├── components/            # NoteItem (grid card with preview/thumbnail)
+│   │   │   └── editor/            # NoteEditor (paper page, autosave), NoteEditorHeader (back, save status,
+│   │   │                          # color, delete), NoteToolbar (top on md+, fixed above the keyboard on mobile)
+│   │   ├── hooks/                 # useNotes (list + search, useNote, useDeleteNote), useNoteAutosave,
+│   │   │                          # useKeyboardInset (visualViewport keyboard height)
+│   │   ├── lib/                   # editorExtensions (TipTap config + text/highlight colors), noteImage (compress + insert)
+│   │   ├── pages/                 # AllNotesPage, NoteEditorPage (/note/new and /note/:id)
 │   │   ├── stores/                # notesStore (useNotesStore: search state)
-│   │   ├── types/                 # note.ts: Note
-│   │   └── utils/                 # colorMapper, textPreview (stripHtml)
+│   │   ├── types/                 # note.ts: Note, NoteInput
+│   │   └── utils/                 # colorMapper (NOTE_COLORS), textPreview (stripHtml, getNotePreview, formatNoteDate)
 │   ├── habits/
 │   │   ├── components/            # CreateHabitModal, EditHabitModal, HabitListModal, HabitViewTabs,
 │   │   │                          # WeekGrid, MonthCalendar, YearHeatmap, DaySquare, HabitHeatmapCard
@@ -150,8 +153,7 @@ src/
 ├── components/
 │   ├── ui/                        # shadcn/ui primitives: generated, keep stock (button, dialog, sidebar, chart, …)
 │   └── shared/
-│       ├── AlertDialog.tsx        # Confirm dialog used for deletes
-│       └── editor/                # TipTap Editor + Toolbar (BlocksToHtml.tsx is unused legacy code)
+│       └── AlertDialog.tsx        # Confirm dialog used for deletes
 ├── hooks/use-mobile.ts            # Shared hooks (shadcn alias "@/hooks")
 ├── lib/
 │   ├── api.ts                     # Axios instance: baseURL = VITE_API_URL + "/api", withCredentials
@@ -174,9 +176,8 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 | `/lists` | `AllListsPage` |
 | `/list/:id` | `SingleListPage` |
 | `/notes` | `AllNotesPage` |
-| `/note/:id` | `SingleNotePage` |
-| `/notes/add` | `AddEditNotePage` |
-| `/note/:id/edit` | `AddEditNotePage` |
+| `/note/:id` | `NoteEditorPage` (`/note/new` for a new note) |
+| `/notes/add`, `/note/:id/edit` | Legacy URLs, redirect / render `NoteEditorPage` |
 | `/habits` | `HabitsPage` |
 | `/focus` | `FocusTimerPage` |
 | `/assistant` | `AssistantPage` |
@@ -251,13 +252,20 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 - **Header** (`CalendarHeader`): stats for the period (the month itself in Month view, not the padding days), a priority legend, the view toggle and navigation.
 - **Keyboard shortcuts:** `←`/`→` move to the previous/next period, `T` jumps to today, `M`/`W` switch views. Shortcuts are ignored while typing in a field or while a dialog is open.
 
+### Notes editor (`/note/:id`)
+
+- There is no view/edit split or form: opening a note puts you straight into a full-page editor (title + TipTap body).
+- **Autosave** (`useNoteAutosave`): debounced 800 ms, saves never overlap, flushes on unmount / tab hide / Ctrl+S. The first save of `/note/new` POSTs and the URL is replaced with `/note/:id` without remounting the editor (`NoteEditorPage` keeps the same `key`). An empty title is saved as the body's first line, or "Untitled".
+- **Toolbar**: TipTap v3 doesn't re-render on transactions, so `NoteToolbar` reads state through `useEditorState`. Buttons call `preventDefault` on mousedown so the mobile keyboard stays open.
+- Images are downscaled (max 1600px, WebP/JPEG) and stored inline as data URLs; the API's JSON limit is 10 MB for this.
+- Each paragraph uses `unicode-bidi: plaintext`, so Persian and English lines get their own direction. Editor styles live under `.note-prose` in `index.css`.
+
 ### Known pre-existing issues (not regressions)
 
 - `tsc` reports about 16 errors that existed before the restructure:
   - zod v4 no longer supports `errorMap` in `z.enum`
-  - resolver type mismatches in `TaskForm`, `ListForm` and `AddEditNoteForm`
+  - resolver type mismatches in `TaskForm` and `ListForm`
   - a few unused variables
-  - `BlocksToHtml.tsx`
 - `vite build` still succeeds because Vite does not type-check.
 - ESLint reports about 21 pre-existing problems (react-hooks / react-refresh rules, unused vars).
 - The production bundle is a single chunk of about 2.2 MB. There is no code-splitting yet.
