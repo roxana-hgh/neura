@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { SidebarTrigger } from "../components/ui/sidebar";
-import { useThemeStore } from "../stores/themeStore";
+import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useThemeStore } from "@/stores/themeStore";
 
-import ProfileMenu from "./UserProfileMenu";
+import ProfileMenu from "@/layouts/UserProfileMenu";
 
 function Header() {
   const isDarkTheme = useThemeStore((state) => state.isDark);

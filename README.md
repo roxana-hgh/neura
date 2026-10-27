@@ -74,18 +74,39 @@ Neura is structured as a monorepo with two independently deployable applications
 neura/
 ├── neura-api/          # Express + Prisma backend
 │   ├── src/
-│   │   ├── lib/         # Prisma client, Better Auth config
-│   │   ├── routes/      # REST endpoints (tasks, notes, habits, focus sessions, assistant)
-│   │   └── index.ts     # App entry point
+│   │   ├── index.ts     # Entry point (starts the server)
+│   │   ├── app.ts       # Express app: middleware + route mounting
+│   │   ├── config/      # Environment config
+│   │   ├── lib/         # Prisma client, Better Auth, Groq client
+│   │   ├── middleware/  # Auth guard, error handling
+│   │   ├── utils/       # Shared helpers
+│   │   └── modules/     # One module per resource: routes → controller → service
+│   │       ├── tasks/  notes/  habits/  focus-sessions/  users/
+│   │       ├── assistant/  # Prompts, context, LLM tools
+│   │       └── auth/
 │   └── prisma/
 │       └── schema.prisma
 │
 ├── neura-web/           # React + Vite frontend
 │   └── src/
-│       ├── components/   # UI components (tasks, notes, habits, chat, timer, dashboard)
-│       ├── hooks/        # React Query hooks per domain
-│       ├── stores/        # Zustand stores (UI-only state)
-│       └── lib/           # Axios instance, auth client
+│       ├── app/           # App root + router
+│       ├── layouts/       # App shell: layout, header, sidebar menu
+│       ├── features/      # One self-contained module per feature
+│       │   ├── tasks/     #   components/ hooks/ pages/ schemas/ stores/ types/ utils/
+│       │   ├── notes/
+│       │   ├── habits/
+│       │   ├── focus/
+│       │   ├── assistant/
+│       │   ├── settings/
+│       │   ├── auth/
+│       │   └── dashboard/ #   Composes widgets from the other features
+│       ├── components/
+│       │   ├── ui/        # shadcn/ui primitives
+│       │   └── shared/    # Shared app components (AlertDialog, rich-text editor)
+│       ├── hooks/         # Shared hooks
+│       ├── lib/           # Axios instance, auth client, toast, utils
+│       ├── stores/        # Global Zustand stores (theme)
+│       └── types/         # Shared types
 │
 └── README.md
 ```

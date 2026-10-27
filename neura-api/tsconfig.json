@@ -6,7 +6,12 @@
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    /* Path alias: "@/x" -> src/x. Resolved by tsconfig-paths in dev and rewritten by tsc-alias in build. */
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*"]
 }

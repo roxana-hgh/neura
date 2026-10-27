@@ -1,8 +1,8 @@
 import { Outlet } from "react-router-dom";
-import { SidebarProvider } from "../components/ui/sidebar";
-import SidebarNav from "./Nav/SidebarNav";
-import Header from "./Header";
-import { Toaster } from "../components/ui/sonner";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import SidebarNav from "@/layouts/SidebarNav";
+import Header from "@/layouts/Header";
+import { Toaster } from "@/components/ui/sonner";
 
 function AppLayout() {
   return (

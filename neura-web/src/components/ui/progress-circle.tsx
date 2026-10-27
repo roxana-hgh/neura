@@ -3,7 +3,7 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "./popover";
+} from "@/components/ui/popover";
 
 type ProgressCircleProps = {
   percent: number;

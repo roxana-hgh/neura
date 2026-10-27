@@ -1,3 +1,5 @@
+import { env } from "@/config/env";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Limits per model (your org): 30 RPM, 1K RPD, 8K TPM, 200K TPD — each model has its own quota.
@@ -115,7 +117,7 @@ async function callGroqModel(model: string, messages: GroqMessage[], tools?: any
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model,
