@@ -40,6 +40,7 @@ import { formatDuration } from "@/features/focus/utils/time";
 import { useDailyPlan } from "@/features/assistant/hooks/useDailyPlan";
 import { MarkdownMessage } from "@/features/assistant/components/MarkdownMessage";
 import WeeklyOverviewChart from "@/features/dashboard/components/WeeklyOverviewChart";
+import QuickAccessFab from "@/features/dashboard/components/QuickAccessFab";
 
 type TaskTab = "today" | "week" | "later";
 const MAX_TASKS = 5;
@@ -93,7 +94,7 @@ function SectionHeading({ icon, title, to }: { icon: ReactNode; title: string; t
   );
 }
 
-function DailyPlanCard() {
+function DailyPlanCard({ className }: { className?: string }) {
   const dailyPlan = useDailyPlan();
 
   return (
@@ -115,7 +116,7 @@ function DailyPlanCard() {
           </Button>
         )
       }
-      className="relative overflow-hidden"
+      className={cn("relative overflow-hidden", className)}
       contentClassName="flex flex-col gap-3"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-primary/5 to-transparent" />
@@ -131,7 +132,7 @@ function DailyPlanCard() {
           Couldn't get a plan just now. Try again in a moment.
         </p>
       ) : dailyPlan.data ? (
-        <div className="no-scrollbar relative max-h-64 overflow-y-auto text-foreground">
+        <div className="no-scrollbar relative max-h-72 overflow-y-auto text-foreground">
           <MarkdownMessage content={dailyPlan.data} />
         </div>
       ) : (
@@ -155,29 +156,39 @@ function DailyPlanCard() {
   );
 }
 
-function FocusCard() {
+/** Tall card beside the tasks list: today's focus time centered, start button at the bottom */
+function FocusCard({ className }: { className?: string }) {
   const { data, isPending } = useFocusSessionStats("today");
   const sessions = data?.sessionCount ?? 0;
 
   return (
-    <SectionCard icon={<Timer className="size-4 text-amber-500" />} title="Focus" viewAllTo="/focus">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          {isPending ? (
-            <div className="h-8 w-20 animate-pulse rounded bg-muted" />
-          ) : (
-            <p className="text-2xl font-semibold tabular-nums tracking-tight">
-              {sessions ? formatDuration(data!.totalDuration) : "0m"}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {sessions ? `${sessions} ${sessions === 1 ? "session" : "sessions"} today` : "No sessions yet today"}
+    <SectionCard
+      icon={<Timer className="size-4 text-amber-500" />}
+      title="Focus"
+      viewAllTo="/focus"
+      className={cn("relative overflow-hidden", className)}
+      contentClassName="flex flex-col"
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-amber-500/5 to-transparent" />
+
+      <div className="relative flex flex-1 flex-col items-center justify-center py-6 text-center">
+        {isPending ? (
+          <div className="h-12 w-28 animate-pulse rounded-lg bg-muted" />
+        ) : (
+          <p className="text-4xl font-bold tabular-nums tracking-tight md:text-5xl">
+            {sessions ? formatDuration(data!.totalDuration) : "0m"}
           </p>
-        </div>
-        <Button asChild size="sm">
-          <Link to="/focus">Start focus</Link>
-        </Button>
+        )}
+        <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          {sessions ? `${sessions} ${sessions === 1 ? "session" : "sessions"} today` : "Focused today"}
+        </p>
       </div>
+
+      <Button asChild size="sm" className="relative w-full">
+        <Link to="/focus">
+          <Timer className="size-4" /> Start session
+        </Link>
+      </Button>
     </SectionCard>
   );
 }
@@ -211,17 +222,12 @@ function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pb-20">
       <PageHeader
         eyebrow={format(new Date(), "EEEE, MMMM d")}
         title={`${getGreeting()}${firstName ? `, ${firstName}` : ""}`}
         actions={
           <>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/assistant">
-                <Sparkles className="size-4" /> Ask assistant
-              </Link>
-            </Button>
             <AddNewTask
               trigger={
                 <Button type="button" size="sm">
@@ -232,6 +238,8 @@ function Dashboard() {
           </>
         }
       />
+
+      <DailyPlanCard />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
@@ -273,12 +281,12 @@ function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <SectionCard
           icon={<ListTodo className="size-4 text-muted-foreground" />}
           title="Tasks"
           viewAllTo="/tasks"
-          className="lg:col-span-2"
+          className="md:col-span-3"
           contentClassName="px-2 pb-2"
         >
           <Tabs value={tab} onValueChange={(v) => setTab(v as TaskTab)} className="mb-1 px-2">
@@ -336,13 +344,10 @@ function Dashboard() {
           )}
         </SectionCard>
 
-        <div className="flex flex-col gap-3">
-          <DailyPlanCard />
-          <FocusCard />
-        </div>
+        <FocusCard className="h-full" />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:[&>*:last-child]:col-span-2 xl:grid-cols-3 xl:[&>*:last-child]:col-span-1">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <HabitHeatmapCard />
         <WeeklyOverviewChart />
         <TasksCompletedChart />
@@ -369,6 +374,16 @@ function Dashboard() {
           </div>
         </section>
       )}
+
+      <QuickAccessFab
+        tasksHint={
+          tasksPending
+            ? undefined
+            : stats.overdue
+              ? `${stats.overdue} overdue · ${stats.dueToday} due today`
+              : `${stats.dueToday} due today · ${stats.open} open`
+        }
+      />
     </div>
   );
 }
