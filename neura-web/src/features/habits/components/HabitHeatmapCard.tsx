@@ -1,25 +1,12 @@
 import { Flame, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { addDays, format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useHabits } from "@/features/habits/hooks/useHabits";
-import { useToggleHabitEntry } from "@/features/habits/hooks/useHabits";
-import {
-  format,
-  isAfter,
-  isSameDay,
-  startOfDay,
-  addDays, parseISO
-} from "date-fns";
+import { useHabits, useToggleHabitEntry } from "@/features/habits/hooks/useHabits";
+import { fromDayKey, getCellState, toDayKey } from "@/features/habits/lib/habitDate";
+import { HabitCell } from "@/features/habits/components/HabitCell";
 
-const dateKey = (d: Date) => format(d, "yyyy-MM-dd");
-
-function TrendBadge({
-  current,
-  previous,
-}: {
-  current: number;
-  previous: number;
-}) {
+function TrendBadge({ current, previous }: { current: number; previous: number }) {
   const delta = current - previous;
   const isUp = delta >= 0;
   return (
@@ -36,20 +23,16 @@ function TrendBadge({
 }
 
 function HabitHeatmapCard() {
-  const today = startOfDay(new Date());
-  const { data, isPending } = useHabits("week", today);
+  const { data, isPending } = useHabits("week", new Date());
   const toggleEntry = useToggleHabitEntry();
 
   const days = data
-    ? Array.from({ length: 7 }, (_, i) =>
-      addDays(parseISO(data.rangeStart.slice(0, 10)), i)
-    )
+    ? Array.from({ length: 7 }, (_, i) => toDayKey(addDays(fromDayKey(data.rangeStart), i)))
     : [];
 
-  const activeHabits = data?.habits.filter((h) => !h.isArchived).slice(0, 4) ?? [];
-  const overflowCount = data
-    ? data.habits.filter((h) => !h.isArchived).length - activeHabits.length
-    : 0;
+  const allActive = data?.habits.filter((h) => !h.isArchived) ?? [];
+  const activeHabits = allActive.slice(0, 4);
+  const overflowCount = allActive.length - activeHabits.length;
 
   return (
     <div className="glass py-3 px-4 h-full flex flex-col">
@@ -57,12 +40,7 @@ function HabitHeatmapCard() {
         <div className="flex items-center gap-1.5">
           <Flame size={16} className="text-orange-400" />
           <h2 className="font-medium text-base">Habits</h2>
-          {data && (
-            <TrendBadge
-              current={data.currentPercent}
-              previous={data.previousPercent}
-            />
-          )}
+          {data && <TrendBadge current={data.currentPercent} previous={data.previousPercent} />}
         </div>
         <Link to="/habits">
           <Button size="sm" variant="ghost" className="cursor-pointer">
@@ -91,58 +69,42 @@ function HabitHeatmapCard() {
           {/* day-of-week header row */}
           <div className="grid grid-cols-[1fr_repeat(7,1.5rem)] gap-1 items-center px-0.5">
             <span />
-            {days.map((d) => (
+            {days.map((key) => (
               <span
-                key={dateKey(d)}
-                className="text-[10px] text-center text-muted-foreground uppercase"
+                key={key}
+                className={`text-[10px] text-center uppercase ${key === data!.today ? "text-primary font-semibold" : "text-muted-foreground"}`}
               >
-                {format(d, "EEEEE")}
+                {format(fromDayKey(key), "EEEEE")}
               </span>
             ))}
           </div>
 
-          {activeHabits.map((habit) => (
-            <div
-              key={habit.id}
-              className="grid grid-cols-[1fr_repeat(7,1.5rem)] gap-1 items-center px-0.5"
-            >
-              <span className="text-xs font-medium truncate flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: habit.color }}
-                />
-                <span className="truncate">{habit.title}</span>
-              </span>
-              {days.map((d) => {
-                const key = dateKey(d);
-                const done = habit.entries.includes(key);
-                const future = isAfter(startOfDay(d), today);
-                const isToday = isSameDay(d, today);
-                return (
-                  <button
-                    key={key}
-                    disabled={future}
-                    onClick={() =>
-                      toggleEntry.mutate({ habitId: habit.id, date: key })
-                    }
-                    className={`w-5 h-5 mx-auto rounded-md transition-colors ${future
-                        ? "bg-muted/30 cursor-not-allowed"
-                        : "cursor-pointer hover:opacity-80"
-                      } ${isToday && !done ? "ring-1 ring-offset-1 ring-muted-foreground/40" : ""}`}
-                    style={{
-                      backgroundColor: done ? habit.color : undefined,
-                    }}
-                  />
-                );
-              })}
-            </div>
-          ))}
+          {activeHabits.map((habit) => {
+            const done = new Set(habit.entries);
+            return (
+              <div key={habit.id} className="grid grid-cols-[1fr_repeat(7,1.5rem)] gap-1 items-center px-0.5">
+                <span className="text-xs font-medium truncate flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: habit.color }} />
+                  <span className="truncate">{habit.title}</span>
+                </span>
+                {days.map((key) => (
+                  <div key={key} className="flex justify-center">
+                    <HabitCell
+                      dayKey={key}
+                      state={getCellState(habit, key, data!.today, done.has(key))}
+                      color={habit.color}
+                      isToday={key === data!.today}
+                      onToggle={(k) => toggleEntry.mutate({ habitId: habit.id, date: k })}
+                      className="size-5 sm:size-5 rounded-md ring-offset-1"
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })}
 
           {overflowCount > 0 && (
-            <Link
-              to="/habits"
-              className="text-xs text-muted-foreground hover:text-foreground mt-1"
-            >
+            <Link to="/habits" className="text-xs text-muted-foreground hover:text-foreground mt-1">
               +{overflowCount} more habit{overflowCount > 1 ? "s" : ""}
             </Link>
           )}

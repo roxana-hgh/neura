@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid } from "recharts";
 
 
-import { eachDayOfInterval, format, isSameDay, startOfDay } from "date-fns";
+import { eachDayOfInterval, format, isSameDay, parseISO, startOfDay } from "date-fns";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useFocusSessions } from "@/features/focus/hooks/useFocusSessions";
 import { useHabits } from "@/features/habits/hooks/useHabits";
@@ -37,8 +37,8 @@ function WeeklyOverviewChart() {
     if (!habitsData) return [];
 
     const days = eachDayOfInterval({
-      start: new Date(habitsData.rangeStart),
-      end: new Date(habitsData.rangeEnd),
+      start: parseISO(habitsData.rangeStart),
+      end: parseISO(habitsData.rangeEnd),
     });
 
     const activeHabits = habitsData.habits.filter((h) => !h.isArchived);

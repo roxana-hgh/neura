@@ -1,93 +1,197 @@
-// HabitsPage.tsx
-import { useState } from "react";
-import { addWeeks, subWeeks, addMonths, subMonths, addYears, subYears, format } from "date-fns";
-import { Plus, ListChecks, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useHabits } from "@/features/habits/hooks/useHabits";
-import { HabitViewTabs } from "@/features/habits/components/HabitViewTabs";
-
-import { CreateHabitModal } from "@/features/habits/components/CreateHabitModal";
+import AlertDialog from "@/components/shared/AlertDialog";
+import { useDeleteHabit, useHabits, useToggleHabitEntry } from "@/features/habits/hooks/useHabits";
+import { useHabitsStore } from "@/features/habits/stores/habitsStore";
+import { formatRangeTitle, shiftAnchor } from "@/features/habits/lib/habitDate";
+import { HabitsHeader } from "@/features/habits/components/HabitsHeader";
+import { HabitsSummary } from "@/features/habits/components/HabitsSummary";
+import { HabitFormModal } from "@/features/habits/components/HabitFormModal";
 import { HabitListModal } from "@/features/habits/components/HabitListModal";
-import type { HabitView } from "@/features/habits/types/habit";
 import { WeekGrid } from "@/features/habits/components/WeekGrid";
 import { MonthCalendar } from "@/features/habits/components/MonthCalendar";
 import { YearHeatmap } from "@/features/habits/components/YearHeatmap";
-import Loader from "@/components/ui/loader";
+import type { Habit, HabitView } from "@/features/habits/types/habit";
+import { toast } from "@/lib/toast";
+
+const VIEW_KEYS: Record<string, HabitView> = { w: "week", m: "month", y: "year", a: "all" };
+
+// Ignore shortcuts while typing or while a dialog is open
+function shouldIgnoreShortcut(e: KeyboardEvent): boolean {
+  if (e.metaKey || e.ctrlKey || e.altKey) return true;
+  const el = e.target as HTMLElement | null;
+  if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return true;
+  return !!document.querySelector('[role="dialog"], [role="menu"]');
+}
+
+function Legend() {
+  const items = [
+    { label: "Done", className: "bg-primary" },
+    { label: "Not done", className: "bg-muted" },
+    { label: "Not tracked", className: "bg-muted/35" },
+    { label: "Upcoming", className: "border border-dashed border-border" },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-muted-foreground">
+      {items.map((i) => (
+        <span key={i.label} className="inline-flex items-center gap-1.5">
+          <span className={`size-3 rounded-[3px] ${i.className}`} />
+          {i.label}
+        </span>
+      ))}
+      <span>Click any past day to check it off or undo it.</span>
+    </div>
+  );
+}
 
 export function HabitsPage() {
-  const [view, setView] = useState<HabitView>("week");
-  const [anchorDate, setAnchorDate] = useState(new Date());
-  const [modalOpen, setModalOpen] = useState(false);
-  const [listModalOpen, setListModalOpen] = useState(false);
+  const view = useHabitsStore((s) => s.view);
+  const setView = useHabitsStore((s) => s.setView);
+  const [anchorDate, setAnchorDate] = useState(() => new Date());
 
-  const { data, isLoading } = useHabits(view, anchorDate);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formHabit, setFormHabit] = useState<Habit | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [deleting, setDeleting] = useState<Habit | null>(null);
 
-  const shift = (dir: 1 | -1) => {
-    setAnchorDate((d) => {
-      if (view === "week") return dir === 1 ? addWeeks(d, 1) : subWeeks(d, 1);
-      if (view === "month") return dir === 1 ? addMonths(d, 1) : subMonths(d, 1);
-      if (view === "year") return dir === 1 ? addYears(d, 1) : subYears(d, 1);
-      return d;
-    });
+  const { data, isLoading, isFetching, isPlaceholderData } = useHabits(view, anchorDate);
+  const toggleEntry = useToggleHabitEntry();
+  const deleteHabit = useDeleteHabit();
+
+  const openCreate = () => {
+    setFormHabit(null);
+    setFormOpen(true);
   };
+  const openEdit = (habit: Habit) => {
+    setFormHabit(habit);
+    setFormOpen(true);
+  };
+  const onToggle = (habitId: string, date: string) => toggleEntry.mutate({ habitId, date });
+  const confirmDelete = () => {
+    if (!deleting) return;
+    const { id, title } = deleting;
+    deleteHabit.mutate(id, { onSuccess: () => toast.success(`"${title}" deleted`) });
+  };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreShortcut(e)) return;
+      const key = e.key.toLowerCase();
+      if (e.key === "ArrowLeft") setAnchorDate((d) => shiftAnchor(view, d, -1));
+      else if (e.key === "ArrowRight") setAnchorDate((d) => shiftAnchor(view, d, 1));
+      else if (key === "t") setAnchorDate(new Date());
+      else if (key === "n") {
+        setFormHabit(null);
+        setFormOpen(true);
+      } else if (VIEW_KEYS[key]) setView(VIEW_KEYS[key]);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [view, setView]);
+
+  const isCurrentPeriod = !!data && data.rangeStart <= data.today && data.today <= data.rangeEnd;
+  const actions = { onEdit: openEdit, onDelete: setDeleting, onToggle };
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <HabitViewTabs view={view} onChange={setView} />
+      <HabitsHeader
+        title={data ? formatRangeTitle(view, data.rangeStart, data.rangeEnd) : "Habits"}
+        view={view}
+        isFetching={isFetching && (isPlaceholderData || !data)}
+        isCurrentPeriod={isCurrentPeriod}
+        onViewChange={setView}
+        onPrev={() => setAnchorDate((d) => shiftAnchor(view, d, -1))}
+        onNext={() => setAnchorDate((d) => shiftAnchor(view, d, 1))}
+        onToday={() => setAnchorDate(new Date())}
+        onManage={() => setListOpen(true)}
+        onCreate={openCreate}
+      />
 
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" variant="outline" className="flex items-center" onClick={() => setListModalOpen(true)}>
-            <span className="hidden sm:block text-sm">Manage</span>{" "}
-            <ListChecks size={12} />
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => setModalOpen(true)}>
-            <span className="hidden sm:block text-sm">Add Habit</span>{" "}
-            <Plus size={12} />
-          </Button>
+      {isLoading && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-21 animate-pulse rounded-xl border border-border bg-card" />
+            ))}
+          </div>
+          <div className="h-72 animate-pulse rounded-xl border border-border bg-card" />
         </div>
-      </div>
+      )}
 
       {data && (
         <>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center px-1 gap-2">
-              {view !== "all" && (
-                <>
-                  <Button variant="outline" size="icon-sm" onClick={() => shift(-1)}><ChevronLeftIcon size={24} /></Button>
-                  <Button variant="outline" size="icon-sm" onClick={() => shift(1)}><ChevronRightIcon size={24} /></Button>
-                </>
-              )}
-              <span className="font-semibold text-sm">
-                {format(new Date(data.rangeStart), "MMM d")} – {format(new Date(data.rangeEnd), "MMM d")}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className={data.currentPercent >= data.previousPercent ? "text-green-600" : "text-red-500"}>
-                {data.currentPercent >= data.previousPercent ? "↑" : "↓"} {Math.abs(data.currentPercent - data.previousPercent)}% from last {view}
-              </span>
-              <span className="text-muted-foreground">{data.currentPercent}% achieved</span>
-            </div>
-          </div>
-          <div className="md:px-3">
+          <HabitsSummary data={data} view={view} />
 
-            {view === "week" && (
-              <WeekGrid habits={data.habits} rangeStart={data.rangeStart} rangeEnd={data.rangeEnd} />
-            )}
-            {view === "month" && (
-              <MonthCalendar habits={data.habits} monthDate={anchorDate} />
-            )}
-            {(view === "year" || view === "all") && (
-              <YearHeatmap habits={data.habits} rangeStart={data.rangeStart} rangeEnd={data.rangeEnd} />
-            )}
-          </div>
+          {data.habits.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-6 py-14 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Sprout className="size-6" />
+              </div>
+              {isCurrentPeriod || view === "all" ? (
+                <>
+                  <div>
+                    <p className="font-medium">Build your first habit</p>
+                    <p className="text-sm text-muted-foreground">Pick something small you can do every day.</p>
+                  </div>
+                  <Button size="sm" onClick={openCreate}>
+                    <Plus className="size-4" /> New habit
+                  </Button>
+                </>
+              ) : (
+                <div>
+                  <p className="font-medium">No habits in this period</p>
+                  <p className="text-sm text-muted-foreground">
+                    None of your habits were running then. Edit a habit's start date to backfill it.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}>
+              {view === "week" && (
+                <WeekGrid habits={data.habits} rangeStart={data.rangeStart} today={data.today} {...actions} />
+              )}
+              {view === "month" && (
+                <MonthCalendar
+                  habits={data.habits}
+                  rangeStart={data.rangeStart}
+                  rangeEnd={data.rangeEnd}
+                  today={data.today}
+                  {...actions}
+                />
+              )}
+              {(view === "year" || view === "all") && (
+                <YearHeatmap
+                  habits={data.habits}
+                  view={view}
+                  rangeStart={data.rangeStart}
+                  rangeEnd={data.rangeEnd}
+                  today={data.today}
+                  {...actions}
+                />
+              )}
+            </div>
+          )}
+
+          {data.habits.length > 0 && <Legend />}
         </>
       )}
 
-      {isLoading && <div className="py-10"><Loader /></div>}
-
-      <CreateHabitModal open={modalOpen} onOpenChange={setModalOpen} />
-      <HabitListModal open={listModalOpen} onOpenChange={setListModalOpen} />
+      <HabitFormModal habit={formHabit} open={formOpen} onOpenChange={setFormOpen} />
+      <HabitListModal open={listOpen} onOpenChange={setListOpen} onEdit={openEdit} onDelete={setDeleting} />
+      <AlertDialog
+        open={!!deleting}
+        setOpen={(open) => !open && setDeleting(null)}
+        title="Delete habit?"
+        description={`"${deleting?.title ?? ""}" and its whole check-in history will be removed. This can't be undone.`}
+        acceptButtonText="Delete"
+        cancelButtonText="Cancel"
+        AcceptButtonVariant="danger"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

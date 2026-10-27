@@ -1,17 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api"
-import { format } from "date-fns";
+import { api } from "@/lib/api";
+import { toast } from "@/lib/toast";
+import { toDayKey } from "@/features/habits/lib/habitDate";
 import type { HabitsResponse, HabitView, CreateHabitInput, UpdateHabitInput } from "@/features/habits/types/habit";
-
-const dateKey = (d: Date) => format(d, "yyyy-MM-dd");
 
 export function useHabits(view: HabitView, date: Date) {
   return useQuery({
-    queryKey: ["habits", view, dateKey(date)],
+    queryKey: ["habits", view, toDayKey(date)],
     queryFn: async () => {
-      const { data } = await api.get<HabitsResponse>("/habits", { params: { view, date: dateKey(date) } });
+      // `today` is sent so the API judges "future" days and streaks in the user's time zone
+      const params = { view, date: toDayKey(date), today: toDayKey(new Date()) };
+      const { data } = await api.get<HabitsResponse>("/habits", { params });
       return data;
     },
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === view ? prev : undefined),
   });
 }
 
@@ -20,6 +22,7 @@ export function useCreateHabit() {
   return useMutation({
     mutationFn: async (input: CreateHabitInput) => (await api.post("/habits", input)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
+    onError: () => toast.error("Couldn't create the habit"),
   });
 }
 
@@ -28,6 +31,7 @@ export function useUpdateHabit() {
   return useMutation({
     mutationFn: async ({ id, ...rest }: UpdateHabitInput) => (await api.patch(`/habits/${id}`, rest)).data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
+    onError: () => toast.error("Couldn't save the habit"),
   });
 }
 
@@ -36,6 +40,7 @@ export function useDeleteHabit() {
   return useMutation({
     mutationFn: async (id: string) => { await api.delete(`/habits/${id}`); },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
+    onError: () => toast.error("Couldn't delete the habit"),
   });
 }
 
@@ -50,16 +55,25 @@ export function useToggleHabitEntry() {
       const previous = queryClient.getQueriesData<HabitsResponse>({ queryKey: ["habits"] });
 
       previous.forEach(([key, data]) => {
-        if (!data) return;
+        // only caches whose range contains the day know whether it was checked
+        if (!data || date < data.rangeStart || date > data.rangeEnd) return;
         queryClient.setQueryData<HabitsResponse>(key, {
           ...data,
           habits: data.habits.map((h) => {
             if (h.id !== habitId) return h;
             const has = h.entries.includes(date);
-            const entries = has ? h.entries.filter((d) => d !== date) : [...h.entries, date];
-            const completed = has ? h.stats.completed - 1 : h.stats.completed + 1;
+            const delta = has ? -1 : 1;
+            const entries = has ? h.entries.filter((d) => d !== date) : [...h.entries, date].sort();
+            const countable = date >= h.startKey && (h.lastKey === null || date <= h.lastKey) && date <= data.today;
+            const completed = h.stats.completed + (countable ? delta : 0);
             const percent = h.stats.total > 0 ? Math.round((completed / h.stats.total) * 100) : 0;
-            return { ...h, entries, stats: { ...h.stats, completed, percent } };
+            return {
+              ...h,
+              entries,
+              stats: { ...h.stats, completed, percent },
+              totalCompleted: h.totalCompleted + delta,
+              doneToday: date === data.today ? !has : h.doneToday,
+            };
           }),
         });
       });
@@ -68,6 +82,7 @@ export function useToggleHabitEntry() {
     },
     onError: (_err, _vars, context) => {
       context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      toast.error("Couldn't update that day");
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["habits"] }),
   });
