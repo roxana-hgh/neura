@@ -1,50 +1,71 @@
-import { ChevronDownIcon } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
 import TaskListItem from "@/features/tasks/components/task-list/TaskListItem";
-
-import { useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import NoTasks from "@/features/tasks/components/NoTasks";
+import { cn } from "@/lib/utils";
 
 interface Iprobs {
   label: string;
   tasks: Task[] | undefined;
   defaultOpen?: boolean;
   showCount?: boolean;
+  /** "danger" highlights the header, e.g. for overdue tasks */
+  tone?: "default" | "danger";
+  defaultListId?: string | number | null;
 }
 
-function TasksList({ label, tasks, defaultOpen = true, showCount = false }: Iprobs) {
+function TasksList({ label, tasks, defaultOpen = true, showCount = false, tone = "default", defaultListId }: Iprobs) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const count = tasks?.length ?? 0;
+
   return (
-    <div className="tasks-list py-3">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group w-full">
-        <CollapsibleTrigger asChild>
-          <div className="task-list-title border-b p-1 sm:p-2 font-bold text-lg flex justify-content-between items-center cursor-pointer">
-            <h2 className="text-base">{label}</h2>
-            {showCount && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                {tasks?.length ?? 0}
-              </span>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="tasks-list group w-full">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full cursor-pointer items-center gap-1.5 rounded-md px-1 py-1.5 text-left"
+        >
+          <ChevronRight
+            className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+          />
+          <h2
+            className={cn(
+              "text-xs font-semibold uppercase tracking-wide",
+              tone === "danger" ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground",
             )}
-            <ChevronDownIcon
-              size={15}
-              className="ml-auto transition-transform group-data-[state=open]:rotate-180"
-            />
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="flex flex-col items-start p-1 sm:p-2.5 pt-0 text-sm">
-          {tasks && tasks.length ? (
-            tasks.map((task) => <TaskListItem key={task.id} task={task} />)
-          ) : (
-             <NoTasks/>
+          >
+            {label}
+          </h2>
+          {showCount && (
+            <span
+              className={cn(
+                "rounded-full px-1.5 text-[11px] font-medium tabular-nums",
+                tone === "danger"
+                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {count}
+            </span>
           )}
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-1">
+        <div className="rounded-xl border border-border bg-card p-1">
+          {count ? (
+            tasks!.map((task) => <TaskListItem key={task.id} task={task} />)
+          ) : (
+            <NoTasks defaultListId={defaultListId} />
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

@@ -1,51 +1,61 @@
 import { Link } from "react-router-dom";
+import { FolderOpen } from "lucide-react";
 import type { TaskList } from "@/features/tasks/types/task";
-import { FolderOpen, List, ListChecksIcon } from "lucide-react";
-import { getListCardIconColorClass } from "@/features/tasks/utils/colorMapper";
-import ProgressCircle from "@/components/ui/progress-circle";
+import { getListCardIconColorClass, getListColorClass } from "@/features/tasks/utils/colorMapper";
 import { useTaskProgress } from "@/features/tasks/utils/taskProgress";
-
+import { cn } from "@/lib/utils";
 
 interface ListCardProps {
-    list : TaskList,
-    className?: string;
+  list: TaskList;
+  className?: string;
 }
 
+function ListCardItem({ list, className }: ListCardProps) {
+  const { totalTasks, completedTasks, percentTasks } = useTaskProgress(list.id ?? 0);
+  const allDone = totalTasks > 0 && completedTasks === totalTasks;
 
+  return (
+    <Link
+      to={`/list/${list.id}`}
+      className={cn(
+        "group flex min-w-0 flex-col rounded-xl border border-border bg-card p-4 transition-all",
+        "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className,
+      )}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <span className={cn("relative flex size-9 items-center justify-center rounded-lg", getListCardIconColorClass(list.color))}>
+          <span className="absolute inset-0 rounded-lg bg-current opacity-10" />
+          <FolderOpen className="relative size-4.5" />
+        </span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
+        </span>
+      </div>
 
-function ListCardItem({list, className} : ListCardProps ) {
-        const { totalTasks, completedTasks, percentTasks } = useTaskProgress(list.id ?? 0);
-    
-    return ( 
-       <div className={`glass p-3 ${className}`}>
-            <Link to={`/list/${list.id}`}>
-            <div className="flex mb-2 items-center justify-between">
-                <div className="icon">
-                    <span className={`${getListCardIconColorClass(list.color)} p-1 aspect-square w-fit block rounded-md `}>
-                        <FolderOpen size={20} />
-                    </span>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                     {/* flag , tag or date */}
-                </span>
-            </div>
-            <h5 className="font-semibold mb-2">
-                {list.name}
-            </h5>
-            <div className="text-sm text-muted-foreground line-clamp-2 mb-2 pb-1">
-              {list.description ?? ""}
-            </div>
-            <div className="border-t flex items-center gap-4 pt-3 pb-1">
-                <ProgressCircle percent={percentTasks} fill size={18} labelEnabled labelPosition="right" colorClass="text-black/50 dark:text-white/50" trackClass="bg-black/5 dark:bg-white/5" />
-                <div className="flex items-center gap-2">
-                    <ListChecksIcon size={18} /> <small className="text-xs"> {completedTasks}/{totalTasks} Tasks </small>
-                </div>
-            </div>
-            
-            </Link>
-            
+      <h3 dir="auto" className="truncate font-medium">{list.name}</h3>
+      <p dir="auto" className="mt-0.5 line-clamp-2 min-h-10 text-sm text-muted-foreground">
+        {list.description || "No description"}
+      </p>
+
+      <div className="mt-4 space-y-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="tabular-nums">
+            {completedTasks}/{totalTasks} done
+          </span>
+          <span className={cn("tabular-nums", allDone && "text-emerald-600 dark:text-emerald-400")}>
+            {percentTasks}%
+          </span>
         </div>
-     );
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn("h-full rounded-full transition-[width] duration-500", getListColorClass(list.color))}
+            style={{ width: `${percentTasks}%` }}
+          />
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 export default ListCardItem;

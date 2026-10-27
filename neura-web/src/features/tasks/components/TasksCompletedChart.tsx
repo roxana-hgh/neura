@@ -7,6 +7,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useTasksCompletedByDay } from "@/features/tasks/hooks/useTasks";
+import SectionCard from "@/components/shared/SectionCard";
 
 const chartConfig = {
   tasksCompleted: {
@@ -20,21 +21,16 @@ function TasksCompletedChart() {
   const weekTotal = data.reduce((sum, d) => sum + d.tasksCompleted, 0);
 
   return (
-    <div className="glass py-3 px-4 h-full flex flex-col">
-      <div className="flex items-center gap-1.5 mb-1">
-        <ListChecks size={16} className="text-blue-400" />
-        <h2 className="font-medium text-base">Tasks Completed</h2>
-      </div>
-      <p className="text-xs text-muted-foreground mb-2">
-        {weekTotal} finished this week
-      </p>
-
+    <SectionCard
+      icon={<ListChecks className="size-4 text-muted-foreground" />}
+      title="Tasks completed"
+      description={`${weekTotal} finished in the last 7 days`}
+      className="h-full"
+    >
       {isPending ? (
-        <div className="h-[180px] flex items-center justify-center text-sm text-muted-foreground">
-          Loading...
-        </div>
+        <div className="h-[220px] animate-pulse rounded-lg bg-muted/60" />
       ) : (
-        <ChartContainer config={chartConfig} className="h-[180px] w-full">
+        <ChartContainer config={chartConfig} className="h-[220px] w-full">
           <BarChart data={data}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
@@ -61,7 +57,7 @@ function TasksCompletedChart() {
           </BarChart>
         </ChartContainer>
       )}
-    </div>
+    </SectionCard>
   );
 }
 

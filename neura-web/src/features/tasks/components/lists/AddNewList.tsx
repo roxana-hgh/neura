@@ -49,8 +49,8 @@ const handleSubmit = (values: any) => {
             <Plus size={12} />
           </Button>
         ) : (
-          <Button type="button" size={isSmall ? "xs" : "sm"} variant="outline">
-            <span className={`hidden sm:block  ${isSmall ? "text-xs" : "text-sm"}`}>New List</span> <Plus />   
+          <Button type="button" size={isSmall ? "xs" : "sm"}>
+            <Plus className="size-4" /> New list
           </Button>
         )}
       </DialogTrigger>

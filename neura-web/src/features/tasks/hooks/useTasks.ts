@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import type { Task, TaskList } from "@/features/tasks/types/task";
 import { api } from "@/lib/api";
 import type { TaskFormValues } from "@/features/tasks/schemas/task.schema";
@@ -37,6 +37,8 @@ export function useTasks() {
       });
       return data.map(mapTask);
     },
+    // keep showing the last results while a new search loads
+    placeholderData: keepPreviousData,
   });
 }
 

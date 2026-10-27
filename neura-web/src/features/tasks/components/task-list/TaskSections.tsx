@@ -9,10 +9,12 @@ interface Iprops {
   tasks: Task[] | undefined;
   /** Label of the main section in the default (sorted) view */
   mainLabel?: string;
+  /** New tasks created from an empty section go to this list */
+  defaultListId?: string | number | null;
 }
 
 /** Renders tasks as collapsible sections according to the user's view mode. */
-function TaskSections({ tasks, mainLabel }: Iprops) {
+function TaskSections({ tasks, mainLabel, defaultListId }: Iprops) {
   const viewMode = useTasksStore((s) => s.viewMode);
 
   const sections = useMemo(
@@ -23,19 +25,28 @@ function TaskSections({ tasks, mainLabel }: Iprops) {
   const hasActive = sections.some((s) => s.key !== "completed" && s.tasks.length);
 
   return (
-    <>
-      {viewMode === "grouped" && !hasActive && <NoTasks />}
-      {sections.map((section) => (
-        <div className="mb-2" key={`${viewMode}-${section.key}`}>
-          <TasksList
-            tasks={section.tasks}
-            label={section.label}
-            defaultOpen={section.defaultOpen}
-            showCount
+    <div className="space-y-4">
+      {viewMode === "grouped" && !hasActive && (
+        <div className="rounded-xl border border-border bg-card p-1">
+          <NoTasks
+            title="You're all caught up"
+            description="No open tasks. Add one to plan what's next."
+            defaultListId={defaultListId}
           />
         </div>
+      )}
+      {sections.map((section) => (
+        <TasksList
+          key={`${viewMode}-${section.key}`}
+          tasks={section.tasks}
+          label={section.label}
+          defaultOpen={section.defaultOpen}
+          tone={section.key === "overdue" ? "danger" : "default"}
+          defaultListId={defaultListId}
+          showCount
+        />
       ))}
-    </>
+    </div>
   );
 }
 

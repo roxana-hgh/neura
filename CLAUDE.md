@@ -93,19 +93,21 @@ src/
 │   │   │                          # ProtectedRoute (requires session), GuestRoute (redirects if logged in)
 │   │   └── pages/                 # LoginPage, SignUpPage
 │   ├── tasks/
-│   │   ├── components/            # AddTask, EditTask, TaskForm, TaskDetail, TaskSearch, NoTasks,
+│   │   ├── components/            # AddTask, EditTask, TaskForm, TaskDetail, TaskSearch, NoTasks, TasksSummary,
 │   │   │   │                      # DayTasksModal, TasksCompletedChart, TaskViewToggle, Task.styles.css
 │   │   │   ├── calendar/          # CalendarHeader, CalendarMonthView, CalendarWeekView,
 │   │   │   │                      # CalendarWeekTaskCard, CalendarTaskChip (see "Calendar" below)
 │   │   │   ├── lists/             # AddNewList, EditList, ListForm, ListCardItem, NoList
-│   │   │   └── task-list/         # TasksList, TaskListItem, TaskListItemSummary, TaskSections
+│   │   │   └── task-list/         # TasksList, TaskListItem (`compact` for the dashboard), TaskSections,
+│   │   │                          # TaskSectionsSkeleton
 │   │   ├── hooks/                 # useTasks (tasks, lists, subtasks queries/mutations), useCalendarTasks
 │   │   ├── pages/                 # TasksPage, CalendarPage, AllListsPage, SingleListPage
 │   │   ├── schemas/               # task.schema, list.schema (zod)
 │   │   ├── stores/                # tasksStore (useTasksStore: lists cache + search/priority filters + view mode),
 │   │   │                          # calendarStore (useCalendarStore: month/week view, persisted)
 │   │   ├── types/                 # task.ts: Task, SubTask, TaskList, TaskWithListName
-│   │   └── utils/                 # calendar, colorMapper, groupTasks, taskProgress, taskSelectors
+│   │   └── utils/                 # calendar, colorMapper, groupTasks, taskProgress, taskSelectors,
+│   │                              # taskStats (getDueInfo labels, getTaskStats counts)
 │   ├── notes/
 │   │   ├── components/            # NoteItem (grid card with preview/thumbnail)
 │   │   │   └── editor/            # NoteEditor (paper page, autosave), NoteEditorHeader (back, save status,
@@ -142,7 +144,8 @@ src/
 │   │   ├── lib/                   # mentionItems (MentionItem, filterMentionItems)
 │   │   └── pages/                 # AssistantPage (uses tasks + habits hooks for @mentions)
 │   ├── settings/
-│   │   ├── components/            # AccountSection, ProfileForm, ProfileAvatar
+│   │   ├── components/            # SettingsSection (layout), AccountSection, ProfileForm, ProfileAvatar,
+│   │   │                          # AppearanceSection (theme), SessionSection (sign out)
 │   │   ├── hooks/                 # useProfile (GET/PATCH /users/me)
 │   │   ├── pages/                 # SettingsPage
 │   │   ├── schemas/               # profile.schema
@@ -153,7 +156,11 @@ src/
 ├── components/
 │   ├── ui/                        # shadcn/ui primitives: generated, keep stock (button, dialog, sidebar, chart, …)
 │   └── shared/
-│       └── AlertDialog.tsx        # Confirm dialog used for deletes
+│       ├── AlertDialog.tsx        # Confirm dialog used for deletes
+│       ├── PageHeader.tsx         # Page title block: eyebrow + title + description + actions
+│       ├── SectionCard.tsx        # Card with icon/title header and optional "View all" link
+│       ├── StatTile.tsx           # Small metric tile (label, value, hint)
+│       └── EmptyState.tsx         # Icon + title + description + action (dashed card or `compact`)
 ├── hooks/use-mobile.ts            # Shared hooks (shadcn alias "@/hooks")
 ├── lib/
 │   ├── api.ts                     # Axios instance: baseURL = VITE_API_URL + "/api", withCredentials
@@ -219,6 +226,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 
 **UI**
 - Use the shadcn primitives from `@/components/ui/*` and the `cn()` helper.
+- Pages share one visual language (modeled on Habits): `PageHeader` at the top, `StatTile` rows for numbers, `SectionCard` / `rounded-xl border border-border bg-card` for panels, `EmptyState` for empty lists, and `animate-pulse` skeletons instead of full-screen loaders. The primary page action is `Button size="sm"` with a leading `Plus` icon ("New task", "New list", "New habit"). Tasks, Dashboard and Settings no longer use the older `.glass` class.
 - Add new primitives with the shadcn CLI. `components.json` aliases: `@/components`, `@/components/ui`, `@/lib`, `@/lib/utils`, `@/hooks`.
 - Light/dark theming is done with CSS variables in `index.css`.
 

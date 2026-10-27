@@ -1,13 +1,13 @@
-import { Link } from "react-router-dom";
-import { useTasksStore } from "@/features/tasks/stores/tasksStore";
-import { getListColorClass } from "@/features/tasks/utils/colorMapper";
-import AddNewList from "@/features/tasks/components/lists/AddNewList";
-import { useTaskLists } from "@/features/tasks/hooks/useTasks";
 import { useEffect } from "react";
+import { useTasksStore } from "@/features/tasks/stores/tasksStore";
+import AddNewList from "@/features/tasks/components/lists/AddNewList";
+import ListCardItem from "@/features/tasks/components/lists/ListCardItem";
 import NoList from "@/features/tasks/components/lists/NoList";
+import { useTaskLists } from "@/features/tasks/hooks/useTasks";
+import PageHeader from "@/components/shared/PageHeader";
 
 function AllLists() {
-  const { data: lists } = useTaskLists();
+  const { data: lists, isPending } = useTaskLists();
   const setLists = useTasksStore((s) => s.setLists);
 
   useEffect(() => {
@@ -15,35 +15,33 @@ function AllLists() {
   }, [lists, setLists]);
 
   return (
-    <div className="lists-page container mx-auto ">
-      <div className="flex items-center justify-between mb-3">
-        <div className=" ">
-          <h3 className="font-bold text-xl mb-1">Your Lists</h3>
-          <p className="text-muted-foreground text-sm">
-            You can see all your Tasks List here
-          </p>
+    <div className="lists-page container mx-auto space-y-5">
+      <PageHeader
+        eyebrow="Tasks"
+        title="Lists"
+        description={
+          lists?.length
+            ? `${lists.length} ${lists.length === 1 ? "list" : "lists"} to keep your tasks organised.`
+            : "Keep related tasks together."
+        }
+        actions={<AddNewList />}
+      />
+
+      {isPending ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-44 animate-pulse rounded-xl border border-border bg-card" />
+          ))}
         </div>
-        <AddNewList />
-      </div>
-      <div className="mb-3 py-4">
-        <ul className="">
-          {lists &&
-            lists.length > 0 &&
-            lists?.map((list) => (
-              <li key={list.id} className="py-2 ">
-                <Link to={`/list/${list.id}`}>
-                  <div className=" flex items-center gap-3">
-                    <span
-                      className={`p-2 rounded-full ${getListColorClass(list.color)}`}
-                    ></span>
-                    <h6 className="text-base font-medium ">{list.name}</h6>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          {lists && lists.length < 1 && <NoList />}
-        </ul>
-      </div>
+      ) : lists && lists.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {lists.map((list) => (
+            <ListCardItem key={list.id} list={list} />
+          ))}
+        </div>
+      ) : (
+        <NoList />
+      )}
     </div>
   );
 }

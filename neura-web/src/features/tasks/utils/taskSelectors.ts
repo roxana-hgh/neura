@@ -24,6 +24,8 @@ export const useTasksByList = (listId: string) => {
       });
       return data.map(mapTask);
     },
+    // keep results while searching inside the same list, never across lists
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[2] === listId ? prev : undefined),
   });
 };
 

@@ -1,7 +1,9 @@
-import { Flame, ChevronRight } from "lucide-react";
+import { Flame, Sprout } from "lucide-react";
 import { Link } from "react-router-dom";
 import { addDays, format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import SectionCard from "@/components/shared/SectionCard";
+import EmptyState from "@/components/shared/EmptyState";
 import { useHabits, useToggleHabitEntry } from "@/features/habits/hooks/useHabits";
 import { fromDayKey, getCellState, toDayKey } from "@/features/habits/lib/habitDate";
 import { HabitCell } from "@/features/habits/components/HabitCell";
@@ -11,9 +13,10 @@ function TrendBadge({ current, previous }: { current: number; previous: number }
   const isUp = delta >= 0;
   return (
     <span
-      className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${isUp
-          ? "text-emerald-500 bg-emerald-500/10"
-          : "text-red-500 bg-red-500/10"
+      title="vs last week"
+      className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${isUp
+          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+          : "bg-red-500/10 text-red-600 dark:text-red-400"
         }`}
     >
       {isUp ? "+" : ""}
@@ -35,35 +38,31 @@ function HabitHeatmapCard() {
   const overflowCount = allActive.length - activeHabits.length;
 
   return (
-    <div className="glass py-3 px-4 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <div className="flex items-center gap-1.5">
-          <Flame size={16} className="text-orange-400" />
-          <h2 className="font-medium text-base">Habits</h2>
-          {data && <TrendBadge current={data.currentPercent} previous={data.previousPercent} />}
-        </div>
-        <Link to="/habits">
-          <Button size="sm" variant="ghost" className="cursor-pointer">
-            <span className="text-xs flex items-center gap-0.5">
-              View All <ChevronRight size={12} />
-            </span>
-          </Button>
-        </Link>
-      </div>
-
+    <SectionCard
+      icon={<Flame className="size-4 text-orange-500" />}
+      title="Habits this week"
+      action={data && <TrendBadge current={data.currentPercent} previous={data.previousPercent} />}
+      viewAllTo="/habits"
+      className="h-full"
+    >
       {isPending ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground py-6">
-          Loading habits...
+        <div className="space-y-3 py-1">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-5 animate-pulse rounded bg-muted" />
+          ))}
         </div>
       ) : activeHabits.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-2 py-6">
-          <p className="text-sm text-muted-foreground">No habits yet.</p>
-          <Link to="/habits">
-            <Button size="xs" className="cursor-pointer">
-              Create a habit
+        <EmptyState
+          compact
+          icon={Sprout}
+          title="No habits yet"
+          description="Small daily wins add up."
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link to="/habits">Create a habit</Link>
             </Button>
-          </Link>
-        </div>
+          }
+        />
       ) : (
         <div className="flex flex-col gap-2.5 mt-1">
           {/* day-of-week header row */}
@@ -110,7 +109,7 @@ function HabitHeatmapCard() {
           )}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }
 

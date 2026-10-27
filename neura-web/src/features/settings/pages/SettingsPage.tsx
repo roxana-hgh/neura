@@ -1,14 +1,23 @@
+import PageHeader from "@/components/shared/PageHeader";
 import AccountSection from "@/features/settings/components/AccountSection";
-
+import AppearanceSection from "@/features/settings/components/AppearanceSection";
+import SessionSection from "@/features/settings/components/SessionSection";
 
 function SettingsPage() {
   return (
-    <div className=" container mx-auto ">
-      <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Manage your account and preferences.</p>
+    <div className="container mx-auto max-w-5xl space-y-8">
+      <PageHeader
+        eyebrow="Settings"
+        title="Account & preferences"
+        description="Manage your profile and how Neura looks."
+      />
 
-      <div className="mt-8">
+      <div className="space-y-6 md:space-y-8">
         <AccountSection />
+        <div className="border-t border-border" />
+        <AppearanceSection />
+        <div className="border-t border-border" />
+        <SessionSection />
       </div>
     </div>
   );

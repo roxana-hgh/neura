@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { Activity } from "lucide-react";
+import SectionCard from "@/components/shared/SectionCard";
 import { Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid } from "recharts";
 
 
@@ -12,11 +14,11 @@ const dateKey = (d: Date) => format(d, "yyyy-MM-dd");
 const chartConfig = {
   focusMinutes: {
     label: "Focus (min)",
-    color: "var(--muted-foreground)",
+    color: "var(--chart-3)",
   },
   habitPercent: {
     label: "Habits %",
-    color: "var(--accent-foreground)",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
@@ -70,14 +72,17 @@ function WeeklyOverviewChart() {
   }, [habitsData, sessionsData]);
 
   const isPending = habitsPending || sessionsPending;
+  const totalFocus = chartData.reduce((sum, d) => sum + d.focusMinutes, 0);
 
   return (
-    <div className="glass py-3 px-4 h-full">
-      <h2 className="font-medium text-base mb-3">This Week</h2>
+    <SectionCard
+      icon={<Activity className="size-4 text-muted-foreground" />}
+      title="Focus & habits"
+      description={`${totalFocus} min focused this week`}
+      className="h-full"
+    >
       {isPending ? (
-        <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">
-          Loading...
-        </div>
+        <div className="h-[220px] animate-pulse rounded-lg bg-muted/60" />
       ) : (
         <ChartContainer config={chartConfig} className="h-[220px] w-full">
           <ComposedChart data={chartData}>
@@ -126,7 +131,7 @@ function WeeklyOverviewChart() {
           </ComposedChart>
         </ChartContainer>
       )}
-    </div>
+    </SectionCard>
   );
 }
 
