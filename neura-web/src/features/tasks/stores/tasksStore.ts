@@ -1,5 +1,7 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { TaskList } from "@/features/tasks/types/task";
+import type { TaskViewMode } from "@/features/tasks/utils/groupTasks";
 
 export interface TaskStoreState {
   // ── Lists ──────────────────────────────────
@@ -8,6 +10,9 @@ export interface TaskStoreState {
   // ── Filter state ───────────────────────────
   search: string;
   priorities: Set<string>;
+
+  // ── View state (persisted) ─────────────────
+  viewMode: TaskViewMode;
 
   // ── List actions ───────────────────────────
   setLists: (lists: TaskList[]) => void;
@@ -19,13 +24,19 @@ export interface TaskStoreState {
   setSearch: (value: string) => void;
   togglePriority: (priority: string) => void;
   clearFilters: () => void;
+
+  // ── View actions ───────────────────────────
+  setViewMode: (mode: TaskViewMode) => void;
 }
 
-export const useTasksStore = create<TaskStoreState>((set) => ({
+export const useTasksStore = create<TaskStoreState>()(
+  persist(
+    (set) => ({
   // ── Initial state ──────────────────────────
   lists: [],
   search: "",
   priorities: new Set<string>(),
+  viewMode: "sorted",
 
   // ── List actions ───────────────────────────
   setLists: (lists) => set({ lists }),
@@ -54,4 +65,14 @@ export const useTasksStore = create<TaskStoreState>((set) => ({
     }),
 
   clearFilters: () => set({ search: "", priorities: new Set<string>() }),
-}));
+
+  // ── View actions ───────────────────────────
+  setViewMode: (viewMode) => set({ viewMode }),
+    }),
+    {
+      name: "neura-tasks-view",
+      // only the view preference is persisted; lists come from the API
+      partialize: (state) => ({ viewMode: state.viewMode }),
+    },
+  ),
+);

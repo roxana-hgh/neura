@@ -13,19 +13,26 @@ import NoTasks from "@/features/tasks/components/NoTasks";
 interface Iprobs {
   label: string;
   tasks: Task[] | undefined;
+  defaultOpen?: boolean;
+  showCount?: boolean;
 }
 
-function TasksList({ label, tasks }: Iprobs) {
-  const [isOpen, setIsOpen] = useState(true);
+function TasksList({ label, tasks, defaultOpen = true, showCount = false }: Iprobs) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
     <div className="tasks-list py-3">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group w-full">
         <CollapsibleTrigger asChild>
-          <div className="task-list-title border-b p-1 sm:p-2 font-bold text-lg flex justify-content-between items-center">
+          <div className="task-list-title border-b p-1 sm:p-2 font-bold text-lg flex justify-content-between items-center cursor-pointer">
             <h2 className="text-base">{label}</h2>
+            {showCount && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {tasks?.length ?? 0}
+              </span>
+            )}
             <ChevronDownIcon
               size={15}
-              className="ml-auto group-data-[state=open]:rotate-180"
+              className="ml-auto transition-transform group-data-[state=open]:rotate-180"
             />
           </div>
         </CollapsibleTrigger>

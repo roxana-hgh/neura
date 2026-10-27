@@ -1,20 +1,20 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTasksByList } from "@/features/tasks/utils/taskSelectors";
 import AddNewTask from "@/features/tasks/components/AddTask";
-import TasksList from "@/features/tasks/components/task-list/TasksList";
+import TaskSections from "@/features/tasks/components/task-list/TaskSections";
+import TaskViewToggle from "@/features/tasks/components/TaskViewToggle";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 import EditList from "@/features/tasks/components/lists/EditList";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import AlertDialog from "@/components/shared/AlertDialog";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   useDeleteList,
   useTaskList,
 } from "@/features/tasks/hooks/useTasks";
 import Loader from "@/components/ui/loader";
-import { sortTasksByDueStatus } from "@/features/tasks/utils/sortTasksByDueStatus";
 
 function SingleList() {
   const params = useParams();
@@ -24,11 +24,6 @@ function SingleList() {
 
   const { data: list, isPending : isLoading } = useTaskList(listId);
   const { data: Tasks,  isPending :isTasksLoading } = useTasksByList(listId);
-
-    const sortedTasks = useMemo(
-    () => (Tasks ? sortTasksByDueStatus(Tasks) : []),
-    [Tasks],
-  );
 
 
   const [alertOpen, setAlertOpen] = useState(false);
@@ -67,6 +62,7 @@ function SingleList() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                <TaskViewToggle />
                 <AddNewTask defaultListId={list?.id} />
                 {list && <EditList list={list} />}
                 <Button
@@ -82,7 +78,7 @@ function SingleList() {
             <div className="mb-3">
               
               {!isTasksLoading ? (
-                <TasksList tasks={sortedTasks} label={list?.name ?? " "} />) 
+                <TaskSections tasks={Tasks} mainLabel={list?.name ?? " "} />) 
               : (
                 <div className="py-5">
                   <Loader />
