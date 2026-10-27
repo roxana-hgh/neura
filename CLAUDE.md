@@ -27,7 +27,7 @@ Each app is installed and deployed on its own (Render, scoped to its subdirector
 | neura-web | `npm run dev` / `build` / `lint` / `preview` | Vite dev server (port 5173), production build, ESLint |
 | neura-web | `npx tsc -p tsconfig.app.json --noEmit` | Type-check. `vite build` does **not** type-check |
 | neura-api | `npm run dev` | API with auto-reload (port 3000 by default); `ts-node-dev` with `tsconfig-paths` for the `@/` alias |
-| neura-api | `npm run build` / `start` | `prisma generate` + `tsc` + `tsc-alias` (rewrites `@/` in `dist/`), then `node dist/index.js` |
+| neura-api | `npm run build` / `start` | `prisma generate` + `tsc` + `tsc-alias` (rewrites `@/` in `dist/`); fails on type errors. Then `node dist/index.js` |
 | neura-api | `npx tsc --noEmit` | Type-check (must be 0 errors) |
 | neura-api | `npx prisma migrate dev` / `npx prisma generate` | DB migrations / client generation |
 
@@ -37,6 +37,7 @@ Each app is installed and deployed on its own (Render, scoped to its subdirector
 - **neura-api/.env**:
   - `DATABASE_URL`, `DIRECT_URL`: Postgres on Neon
   - `BETTER_AUTH_URL`
+  - `BETTER_AUTH_SECRET`: read by Better Auth directly; required when `NODE_ENV=production`, otherwise the server crashes
   - `CORS_ORIGIN`: the deployed frontend URL
   - `GROQ_API_KEY`
   - `PORT`
@@ -361,9 +362,18 @@ neura-api/
   2. If the tool changes data, add its name to `MUTATING_TOOLS` in `assistant.prompts.ts`.
   3. For habit tools, also add the name to `HABIT_TOOL_NAMES`.
 
+**Dependencies and deploy (Render)**
+- Render installs with production settings, so **devDependencies are not installed** during the build.
+- Every package the build needs must be in `dependencies`: `typescript`, `tsc-alias`, `@types/express`, `@types/cors`, `@types/node`, and any new `@types/*` package.
+- Only dev-only tools stay in `devDependencies`: `ts-node-dev`, `tsconfig-paths`.
+- If a new import compiles locally but Render fails with `TS7016: Could not find a declaration file`, its `@types` package is in the wrong section.
+
 **Verification**
 - `npx tsc --noEmit` in `neura-api` must report 0 errors.
-- The `build` script still runs `tsc || true`, so a type error will not fail a deploy. Check types yourself.
+- The `build` script is `prisma generate && tsc && tsc-alias`. A type error fails the deploy, and Render keeps the previous version running.
+- To reproduce Render locally, use a fresh copy:
+  - Install with `NODE_ENV=production npm ci`.
+  - Run `npm run build`. Prisma needs `DATABASE_URL` set, even to a dummy value.
 
 ### API (all prefixed with `/api`, all require auth except `/api/auth/*`)
 

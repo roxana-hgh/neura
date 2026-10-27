@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
-    "build": "npx prisma generate && (tsc || true) && tsc-alias",
+    "build": "npx prisma generate && tsc && tsc-alias",
     "start": "node dist/index.js"
   },
   "keywords": [],
@@ -14,20 +14,20 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
     "better-auth": "^1.6.20",
     "cors": "^2.8.6",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "tsc-alias": "^1.9.9",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.0.0",
     "ts-node-dev": "^2.0.0",
-    "tsc-alias": "^1.9.9",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^6.0.3"
+    "tsconfig-paths": "^4.2.0"
   }
 }
