@@ -86,7 +86,8 @@ src/
 │   └── router.tsx                 # All routes (see "Routes" below)
 ├── layouts/
 │   ├── AppLayout.tsx              # SidebarProvider + SidebarNav + Header + <Outlet/> + Toaster
-│   ├── Header.tsx                 # Top bar, user menu (theme is set in Settings → Appearance)
+│   ├── Header.tsx                 # Top bar: 3-column grid (sidebar trigger · centred logo on mobile · bell + user menu)
+│   ├── NeuraLogo.tsx              # Brain mark tile, shared by SidebarNav and Header
 │   ├── SidebarNav.tsx             # Main navigation menu (also lists task lists, "add list")
 │   └── UserProfileMenu.tsx        # Avatar dropdown, sign out
 ├── features/

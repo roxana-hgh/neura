@@ -29,7 +29,7 @@ function ctaDismissed() {
 function SectionLabel({ children, tone }: { children: React.ReactNode; tone?: "danger" }) {
   return (
     <p className={cn(
-      "px-3 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
+      "px-3 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
       tone === "danger" && "text-rose-600 dark:text-rose-400",
     )}>
       {children}
@@ -39,22 +39,24 @@ function SectionLabel({ children, tone }: { children: React.ReactNode; tone?: "d
 
 function TaskRow({ task, overdue, onDone }: { task: InboxTask; overdue?: boolean; onDone: () => void }) {
   return (
-    <div className="group flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-muted/60">
-      <button
-        type="button"
-        onClick={onDone}
-        aria-label={`Complete ${task.title}`}
-        className="flex size-[18px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-muted-foreground/40 text-transparent transition-colors hover:border-primary hover:text-primary"
-      >
-        <Check className="size-3" />
-      </button>
-      <span className="min-w-0 flex-1 truncate text-sm">{task.title}</span>
+    <div className="mx-1 flex h-9 items-center gap-2.5 rounded-md px-2 hover:bg-muted/60">
+      <span className="flex size-6 shrink-0 items-center justify-center">
+        <button
+          type="button"
+          onClick={onDone}
+          aria-label={`Complete ${task.title}`}
+          className="flex size-4 cursor-pointer items-center justify-center rounded-full border border-muted-foreground/40 text-transparent transition-colors hover:border-primary hover:text-primary"
+        >
+          <Check className="size-2.5" />
+        </button>
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[13px]">{task.title}</span>
       {overdue && (
-        <span className="shrink-0 text-xs text-rose-600 dark:text-rose-400">
+        <span className="shrink-0 text-[11px] tabular-nums text-rose-600 dark:text-rose-400">
           {format(new Date(task.dueDate), "MMM d")}
         </span>
       )}
-      <span className={cn("size-1.5 shrink-0 rounded-full", PRIORITY_STYLES[task.priority]?.dot)} />
+      <span className={cn("mr-1 size-1.5 shrink-0 rounded-full", PRIORITY_STYLES[task.priority]?.dot)} />
     </div>
   );
 }
@@ -91,11 +93,11 @@ function NotificationCenter() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative size-8" aria-label={`Notifications${count ? `, ${count} items` : ""}`}>
-          {urgent ? <BellRing className="size-[18px]" /> : <Bell className="size-[18px]" />}
+          {urgent ? <BellRing className="size-4" /> : <Bell className="size-4" />}
           {count > 0 && (
             <span className={cn(
-              "absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none text-white",
-              urgent ? "bg-rose-500" : "bg-primary text-primary-foreground",
+              "absolute top-0.5 right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] font-semibold leading-none ring-2 ring-background",
+              urgent ? "bg-rose-500 text-white" : "bg-primary text-primary-foreground",
             )}>
               {count > 9 ? "9+" : count}
             </span>
@@ -103,21 +105,29 @@ function NotificationCenter() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="end" sideOffset={8} className="w-[22rem] max-w-[calc(100vw-1rem)] p-0">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-          <p className="text-sm font-semibold">Notifications</p>
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        collisionPadding={8}
+        className="w-[min(20rem,calc(100vw-1rem))] overflow-hidden p-0"
+      >
+        <div className="flex h-10 items-center justify-between border-b border-border px-3">
+          <p className="text-[13px] font-semibold">
+            Notifications
+            {count > 0 && <span className="ml-1.5 font-normal text-muted-foreground">{count}</span>}
+          </p>
           <Link to="/reminders" onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:text-foreground">
             All reminders
           </Link>
         </div>
 
-        <div className="max-h-[min(26rem,65vh)] overflow-y-auto pb-2">
+        <div className="max-h-[min(24rem,60vh)] overflow-y-auto overscroll-contain pb-1.5">
           {count === 0 ? (
-            <div className="flex flex-col items-center px-6 py-10 text-center">
-              <span className="mb-3 flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <CheckCheck className="size-5" />
+            <div className="flex flex-col items-center px-6 py-7 text-center">
+              <span className="mb-2 flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CheckCheck className="size-4" />
               </span>
-              <p className="text-sm font-medium">You're all caught up</p>
+              <p className="text-[13px] font-medium">You're all caught up</p>
               <p className="mt-0.5 text-xs text-muted-foreground">Nothing due right now. Enjoy the calm.</p>
             </div>
           ) : (
@@ -126,26 +136,28 @@ function NotificationCenter() {
                 <>
                   <SectionLabel>Reminders</SectionLabel>
                   {reminders.map((r) => (
-                    <div key={r.id} className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-muted/60">
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                        <BellRing className="size-3.5" />
+                    <div key={r.id} className="mx-1 flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/60">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                        <BellRing className="size-3" />
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{r.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{dueLabel(r.nextAt)}</p>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <p className="truncate text-[13px] font-medium">{r.title}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{dueLabel(r.nextAt)}</p>
                       </div>
-                      <Button
-                        variant="ghost" size="icon" className="size-7" title="Snooze 10 min"
-                        onClick={() => snoozeReminder.mutate({ id: r.id, until: addMinutes(new Date(), 10) })}
-                      >
-                        <Clock className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" className="size-7 text-primary" title="Done"
-                        onClick={() => completeReminder.mutate({ id: r.id })}
-                      >
-                        <Check className="size-4" />
-                      </Button>
+                      <div className="flex shrink-0 items-center">
+                        <Button
+                          variant="ghost" size="icon" className="size-7 text-muted-foreground" title="Snooze 10 min" aria-label="Snooze 10 min"
+                          onClick={() => snoozeReminder.mutate({ id: r.id, until: addMinutes(new Date(), 10) })}
+                        >
+                          <Clock className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon" className="size-7 text-primary" title="Done" aria-label="Done"
+                          onClick={() => completeReminder.mutate({ id: r.id })}
+                        >
+                          <Check className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </>
@@ -167,7 +179,7 @@ function NotificationCenter() {
                     <TaskRow key={t.id} task={t} overdue onDone={() => toggleTask.mutate({ id: t.id, completed: true })} />
                   ))}
                   {overdue.length > 10 && (
-                    <Link to="/tasks" onClick={() => setOpen(false)} className="block px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+                    <Link to="/tasks" onClick={() => setOpen(false)} className="block px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground">
                       +{overdue.length - 10} more in Tasks
                     </Link>
                   )}
@@ -178,17 +190,22 @@ function NotificationCenter() {
         </div>
 
         {showCta && (
-          <div className="flex items-start gap-3 border-t border-border bg-muted/40 px-3 py-3">
-            <BellRing className="mt-0.5 size-4 shrink-0 text-primary" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Never miss a reminder</p>
-              <p className="text-xs text-muted-foreground">Get notified even when Neura is closed.</p>
-              <Button size="sm" className="mt-2 h-7" disabled={enablePush.isPending} onClick={() => enablePush.mutate()}>
-                Turn on
-              </Button>
+          <div className="flex items-center gap-2.5 border-t border-border bg-muted/40 px-3 py-2">
+            <BellRing className="size-4 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-[13px] font-medium">Never miss a reminder</p>
+              <p className="truncate text-[11px] text-muted-foreground">Even when Neura is closed</p>
             </div>
-            <button type="button" onClick={dismissCta} aria-label="Not now" className="cursor-pointer text-muted-foreground hover:text-foreground">
-              <X className="size-4" />
+            <Button size="xs" className="h-7 shrink-0 px-2.5" disabled={enablePush.isPending} onClick={() => enablePush.mutate()}>
+              Turn on
+            </Button>
+            <button
+              type="button"
+              onClick={dismissCta}
+              aria-label="Not now"
+              className="-mr-1 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
             </button>
           </div>
         )}
