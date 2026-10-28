@@ -21,6 +21,8 @@ router.delete("/:id/logs/:logId", goals.deleteLog);
 router.get("/:id/reminders", goals.getLinkedReminders);
 
 router.post("/:id/tasks", goals.createTask);
+router.patch("/:id/tasks/:taskId", goals.updateTask);
+router.delete("/:id/tasks/:taskId", goals.deleteTask);
 router.get("/:id/link-options", goals.getLinkOptions);
 router.post("/:id/links", goals.addLink);
 router.delete("/:id/links/:type/:targetId", goals.removeLink);

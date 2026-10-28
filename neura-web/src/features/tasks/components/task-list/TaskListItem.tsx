@@ -9,6 +9,7 @@ import { PRIORITY_STYLES } from "@/features/tasks/utils/calendar";
 import { DUE_TONE_STYLES, getDueInfo } from "@/features/tasks/utils/taskStats";
 import EditTask from "@/features/tasks/components/EditTask";
 import TaskDetail from "@/features/tasks/components/TaskDetail";
+import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
 import AlertDialog from "@/components/shared/AlertDialog";
 import { useDeleteTask, useToggleTask } from "@/features/tasks/hooks/useTasks";
 import { cn } from "@/lib/utils";
@@ -112,6 +113,8 @@ function TaskListItem({ task, compact = false }: Iprops) {
                     <span className="truncate">{list.name}</span>
                   </span>
                 )}
+
+                {task.goal && <TaskGoalBadge goal={task.goal} className="max-w-56 text-[11px]" />}
               </div>
             </div>
           }

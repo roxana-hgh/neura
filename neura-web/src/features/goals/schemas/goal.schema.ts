@@ -30,3 +30,14 @@ export const goalFormSchema = z
   });
 
 export type GoalFormValues = z.infer<typeof goalFormSchema>;
+
+/** Edit form for a task on the goal page. `dueDate` is "" or "yyyy-MM-dd". */
+export const goalTaskFormSchema = z.object({
+  title: z.string().trim().min(1, "Give the task a name").max(100, "Title is too long"),
+  description: z.string().max(1000, "Too long"),
+  priority: z.enum(["low", "medium", "high"]),
+  dueDate: z.union([z.literal(""), z.string().regex(DAY_KEY, "Pick a valid date")]),
+  showInTasks: z.boolean(),
+});
+
+export type GoalTaskFormValues = z.infer<typeof goalTaskFormSchema>;

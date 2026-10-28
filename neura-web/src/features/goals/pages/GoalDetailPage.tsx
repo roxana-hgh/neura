@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import EmptyState from "@/components/shared/EmptyState";
 import SectionCard from "@/components/shared/SectionCard";
 import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
@@ -150,15 +151,21 @@ export function GoalDetailPage() {
 
           <div className="flex shrink-0 items-center gap-1.5">
             {closed ? (
-              <Button size="sm" variant="outline" onClick={() => changeStatus("active")}><RotateCcw className="size-4" /> Reopen</Button>
+              <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => changeStatus("active")}>
+                {setStatus.isPending ? <Spinner /> : <RotateCcw className="size-4" />} Reopen
+              </Button>
             ) : goal.status === "paused" ? (
-              <Button size="sm" variant="outline" onClick={() => changeStatus("active")}><Play className="size-4" /> Resume</Button>
+              <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => changeStatus("active")}>
+                {setStatus.isPending ? <Spinner /> : <Play className="size-4" />} Resume
+              </Button>
             ) : (
               <Button size="sm" onClick={() => setDialog("complete")}><CircleCheck className="size-4" /> Mark complete</Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon-sm" aria-label="More actions"><MoreHorizontal className="size-4" /></Button>
+                <Button variant="outline" size="icon-sm" aria-label="More actions" disabled={setStatus.isPending || archive.isPending}>
+                  {setStatus.isPending || archive.isPending ? <Spinner /> : <MoreHorizontal className="size-4" />}
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-48">
                 <DropdownMenuItem onSelect={() => setDialog("edit")}><Pencil /> Edit</DropdownMenuItem>

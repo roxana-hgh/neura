@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { formatWhen } from "@/features/reminders/lib/reminderTime";
 import {
   useDeleteGoal, useExtendGoal, useGoalLinkedReminders, useSetGoalStatus,
@@ -124,6 +125,7 @@ export function CloseGoalDialog({ goal, open, onOpenChange, status }: BaseProps 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Not now</Button>
           <Button onClick={confirm} disabled={setStatus.isPending} variant={completing ? "default" : "outline"}>
+            {setStatus.isPending && <Spinner />}
             {completing ? "Mark complete" : "Cancel goal"}
           </Button>
         </DialogFooter>
@@ -202,7 +204,7 @@ export function ExtendGoalDialog({ goal, open, onOpenChange }: BaseProps) {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={confirm} disabled={!valid || extend.isPending}>Save</Button>
+          <Button onClick={confirm} disabled={!valid || extend.isPending}>{extend.isPending && <Spinner />} Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -253,7 +255,9 @@ export function DeleteGoalDialog({ goal, open, onOpenChange, onDeleted }: BasePr
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={confirm} disabled={remove.isPending} className="bg-red-500 text-white hover:bg-red-600">Delete</Button>
+          <Button onClick={confirm} disabled={remove.isPending} className="bg-red-500 text-white hover:bg-red-600">
+            {remove.isPending && <Spinner />} Delete
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

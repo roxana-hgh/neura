@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format, formatDistanceToNowStrict, parseISO } from "date-fns";
 import { CalendarClock, Flag, History, MessageSquare, Ruler, Sparkles, TrendingUp, X } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import SectionCard from "@/components/shared/SectionCard";
 import { useAddGoalNote, useDeleteGoalLog } from "@/features/goals/hooks/useGoals";
 import { METRIC_LABEL } from "@/features/goals/lib/goalPeriod";
@@ -45,21 +46,23 @@ export function GoalTimeline({ goal, logs }: { goal: GoalBase; logs: GoalLog[] }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!note.trim()) return;
+    if (!note.trim() || addNote.isPending) return;
     addNote.mutate({ id: goal.id, note: note.trim() }, { onSuccess: () => setNote("") });
   };
 
   return (
     <SectionCard icon={<History className="size-4 text-primary" />} title="History">
-      <form onSubmit={submit} className="mb-3">
+      <form onSubmit={submit} className="relative mb-3">
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
+          readOnly={addNote.isPending}
           maxLength={1000}
           placeholder="Write a quick update…"
           aria-label="Add a note to the history"
-          className="h-9 w-full rounded-lg border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
+          className="h-9 w-full rounded-lg border border-border bg-transparent px-3 pr-9 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50 read-only:text-muted-foreground"
         />
+        {addNote.isPending && <Spinner className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground" />}
       </form>
       <ol className="relative space-y-3 border-l border-border pl-4">
         {logs.map((log) => {
@@ -77,7 +80,9 @@ export function GoalTimeline({ goal, logs }: { goal: GoalBase; logs: GoalLog[] }
                     {formatDistanceToNowStrict(new Date(log.createdAt), { addSuffix: true })}
                   </p>
                 </div>
-                {log.type === "note" && (
+                {log.type === "note" && (deleteLog.isPending && deleteLog.variables?.logId === log.id ? (
+                  <Spinner className="size-3 text-muted-foreground" />
+                ) : (
                   <button
                     type="button"
                     onClick={() => deleteLog.mutate({ id: goal.id, logId: log.id })}
@@ -86,7 +91,7 @@ export function GoalTimeline({ goal, logs }: { goal: GoalBase; logs: GoalLog[] }
                   >
                     <X className="size-3" />
                   </button>
-                )}
+                ))}
               </div>
             </li>
           );

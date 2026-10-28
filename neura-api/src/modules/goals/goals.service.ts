@@ -459,6 +459,11 @@ export async function setArchived(userId: string, id: string, archived: boolean,
  */
 export async function deleteGoal(userId: string, id: string, keepReminders: boolean) {
   const goal = await findOwned(userId, id);
+  // tasks are kept (unlinked), so the ones that lived only on the goal page move to the Tasks page
+  await prisma.task.updateMany({
+    where: { userId, goalId: { in: await familyIds(goal) }, showInTasks: false },
+    data: { showInTasks: true },
+  });
   if (keepReminders) {
     await prisma.reminder.updateMany({
       where: { goalId: { in: await familyIds(goal) }, origin: "manual" },
@@ -470,15 +475,56 @@ export async function deleteGoal(userId: string, id: string, keepReminders: bool
 
 // ── Links (tasks, notes) ────────────────────────────────────────────────
 
+export interface GoalTaskUpdate {
+  title?: string;
+  description?: string | null;
+  priority?: string;
+  dueDate?: string | null;
+  showInTasks?: boolean;
+}
+
+/** `where` for one task of the goal or its sub-goals (so the goal page can only touch its own tasks). */
+async function goalTaskWhere(userId: string, id: string, taskId: string) {
+  const goal = await findOwned(userId, id);
+  return { id: taskId, userId, goalId: { in: await familyIds(goal) } };
+}
+
+/**
+ * Partial update of one of the goal's (or its sub-goals') tasks: title, description, priority, due date,
+ * and whether it also shows in the Tasks page / calendar. Fields that aren't sent are left alone.
+ */
+export async function updateTask(userId: string, id: string, taskId: string, input: GoalTaskUpdate) {
+  const result = await prisma.task.updateMany({
+    where: await goalTaskWhere(userId, id, taskId),
+    data: {
+      ...(input.title !== undefined && { title: input.title.trim() }),
+      ...(input.description !== undefined && { description: input.description?.trim() || null }),
+      ...(input.priority !== undefined && { priority: input.priority }),
+      ...(input.dueDate !== undefined && { dueDate: input.dueDate ? new Date(input.dueDate) : null }),
+      ...(input.showInTasks !== undefined && { showInTasks: input.showInTasks }),
+    },
+  });
+  if (!result.count) throw notFound("Task not found");
+}
+
+/** Deletes one of the goal's tasks (subtasks cascade, reminders on it are unlinked). */
+export async function deleteTask(userId: string, id: string, taskId: string) {
+  const result = await prisma.task.deleteMany({ where: await goalTaskWhere(userId, id, taskId) });
+  if (!result.count) throw notFound("Task not found");
+}
+
 /** Creates a task that belongs to this goal (or sub-goal). */
 export async function createTask(
-  userId: string, id: string, input: { title: string; priority?: string; dueDate?: string | null },
+  userId: string, id: string,
+  input: { title: string; priority?: string; dueDate?: string | null; showInTasks?: boolean },
 ) {
   await findOwned(userId, id);
   return prisma.task.create({
     data: {
       userId, goalId: id, title: input.title.trim(), priority: input.priority ?? "medium",
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
+      // tasks added from a goal stay on the goal's page unless the user asks for them in Tasks too
+      showInTasks: input.showInTasks ?? false,
     },
     include: { subtasks: true },
   });
@@ -489,8 +535,9 @@ export async function link(userId: string, id: string, type: "task" | "note", ta
   const goalId = attach ? id : null;
   // detaching only clears a link that points at this goal
   const where = attach ? { id: targetId, userId } : { id: targetId, userId, goalId: id };
+  // a detached task would otherwise be invisible everywhere, so it moves to the Tasks page
   const result = type === "task"
-    ? await prisma.task.updateMany({ where, data: { goalId } })
+    ? await prisma.task.updateMany({ where, data: attach ? { goalId } : { goalId, showInTasks: true } })
     : await prisma.note.updateMany({ where, data: { goalId } });
   if (!result.count) throw notFound(type === "task" ? "Task not found" : "Note not found");
 }

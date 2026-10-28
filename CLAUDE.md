@@ -84,7 +84,7 @@ src/
 │   └── router.tsx                 # All routes (see "Routes" below)
 ├── layouts/
 │   ├── AppLayout.tsx              # SidebarProvider + SidebarNav + Header + <Outlet/> + Toaster
-│   ├── Header.tsx                 # Top bar, theme toggle, user menu
+│   ├── Header.tsx                 # Top bar, user menu (theme is set in Settings → Appearance)
 │   ├── SidebarNav.tsx             # Main navigation menu (also lists task lists, "add list")
 │   └── UserProfileMenu.tsx        # Avatar dropdown, sign out
 ├── features/
@@ -307,6 +307,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - Resume / reopen restores only those (not the reminders of completed sub-goals).
   - Extending moves the deadline reminder and the series that ran until the old end.
   - Deleting removes auto reminders and deletes or detaches the manual ones.
+- **Goal tasks on the Tasks page:** a task linked to a goal shows a `TaskGoalBadge` (a link to the goal). The "Goals" toggle (`tasksStore.hideGoalTasks`, persisted) hides those tasks. On the goal page, the "Goal only / In Tasks" toggle next to the add input and the row menu control `showInTasks`. Each task on the goal page can also be edited (`GoalTaskDialog`; click the title or use the menu) and deleted. These go through the goal endpoints above, which only accept tasks of that goal or its sub-goals, not through `PUT /tasks/:id`, which replaces every field.
   - Reminders not linked to the goal are never touched.
 
 ### Week start (Settings → Calendar)
@@ -494,7 +495,7 @@ neura-api/
 | `/habits` | `GET /?view=&date=&today=&weekStartsOn=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
 | `/focus-sessions` | `GET /`, `GET /stats`, `POST /`, `PATCH /:id`, `DELETE /:id` |
 | `/users` | `GET /me`, `PATCH /me` |
-| `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks`, `GET /:id/link-options`, `POST /:id/links`, `DELETE /:id/links/:type/:targetId` |
+| `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks` (`show_in_tasks`, default false), `PATCH /:id/tasks/:taskId` (partial: `title`, `description`, `priority`, `due_date`, `show_in_tasks`), `DELETE /:id/tasks/:taskId`, `GET /:id/link-options`, `POST /:id/links`, `DELETE /:id/links/:type/:targetId` |
 | `/reminders` | `GET /?view=upcoming\|snoozed\|done\|all&goal_id=&task_id=&note_id=`, `POST /`, `GET /counts`, `GET /link-options`, `PATCH /:id`, `DELETE /:id`, `POST /:id/complete` (`{ scope }`), `/skip`, `/reopen`, `/snooze` (`{ until }`), `/pause`, `/resume` |
 | `/assistant` | `POST /` with `{ mode, question, history, … }`; mode `daily_plan` powers the dashboard card |
 
@@ -509,7 +510,8 @@ neura-api/
 - `TaskList`: name, color, description, userId. Has many tasks.
 - `Task`
   - Fields: title, description, completed, completedAt, priority (`"low" | "medium" | "high"`, default `"medium"`), dueDate
-  - Relations: userId, listId (optional; set to null when the list is deleted), subtasks
+  - Relations: userId, listId (optional; set to null when the list is deleted), goalId (optional), subtasks
+  - `showInTasks` (default `true`): tasks created from a goal page default to `false` and appear only on that goal. `GET /tasks` and `/tasks/calendar` return only `showInTasks: true`, each with its `goal` (`id`, `title`, `parent`). Unlinking a task or deleting its goal sets the flag back to `true`, so the task stays visible.
 - `SubTask`: title, completed, taskId (cascade delete)
 - `Note`: title, description (HTML from TipTap), color, userId
 - `FocusSession`

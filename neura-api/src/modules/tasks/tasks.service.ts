@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "@/utils/http-error";
 
+/** Subtasks + the goal (and parent goal, for sub-goals) the task belongs to, for the "from goal" badge. */
+const taskInclude = {
+  subtasks: true,
+  goal: { select: { id: true, title: true, parent: { select: { id: true, title: true } } } },
+} as const;
+
 export interface TaskFilters {
   search?: string;
   priorities?: string[];
@@ -29,6 +35,7 @@ export function listTasks(userId: string, { search, priorities, listId, unassign
   return prisma.task.findMany({
     where: {
       userId,
+      showInTasks: true,
       ...(listId && { listId }),
       ...(unassigned && { listId: null }),
       ...(search && {
@@ -38,7 +45,7 @@ export function listTasks(userId: string, { search, priorities, listId, unassign
         priority: { in: priorities },
       }),
     },
-    include: { subtasks: true },
+    include: taskInclude,
     orderBy: { dueDate: { sort: "asc", nulls: "last" } },
   });
 }
@@ -51,9 +58,10 @@ export function listTasksForMonth(userId: string, year: number, month: number) {
   return prisma.task.findMany({
     where: {
       userId,
+      showInTasks: true,
       dueDate: { gte: start, lte: end },
     },
-    include: { subtasks: true },
+    include: taskInclude,
     orderBy: { dueDate: "asc" },
   });
 }
@@ -61,7 +69,7 @@ export function listTasksForMonth(userId: string, year: number, month: number) {
 export async function getTask(userId: string, id: string) {
   const task = await prisma.task.findFirst({
     where: { id, userId },
-    include: { subtasks: true },
+    include: taskInclude,
   });
   if (!task) throw notFound("Task not found");
   return task;
@@ -76,7 +84,7 @@ export async function assertTaskOwner(userId: string, taskId: string) {
 export function createTask(userId: string, input: TaskInput) {
   return prisma.task.create({
     data: { ...toTaskData(input), userId },
-    include: { subtasks: true },
+    include: taskInclude,
   });
 }
 
@@ -84,7 +92,7 @@ export function updateTask(userId: string, id: string, input: TaskInput) {
   return prisma.task.update({
     where: { id, userId },
     data: toTaskData(input),
-    include: { subtasks: true },
+    include: taskInclude,
   });
 }
 
@@ -95,7 +103,7 @@ export function setTaskCompleted(userId: string, id: string, completed: boolean)
       completed,
       completedAt: completed ? new Date() : null,
     },
-    include: { subtasks: true },
+    include: taskInclude,
   });
 }
 

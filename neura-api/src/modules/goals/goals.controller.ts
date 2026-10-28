@@ -182,7 +182,7 @@ export async function deleteGoal(req: Request<IdParams>, res: Response) {
 
 // POST /api/goals/:id/tasks  { title, priority?, due_date? }
 export async function createTask(req: Request<IdParams>, res: Response) {
-  const { title, priority, due_date } = req.body ?? {};
+  const { title, priority, due_date, show_in_tasks } = req.body ?? {};
   if (typeof title !== "string" || !title.trim()) {
     res.status(400).json({ error: "Title is required" });
     return;
@@ -191,8 +191,51 @@ export async function createTask(req: Request<IdParams>, res: Response) {
     res.status(400).json({ error: "Invalid priority" });
     return;
   }
-  const task = await goalsService.createTask(req.userId!, req.params.id, { title, priority, dueDate: due_date ?? null });
+  if (show_in_tasks !== undefined && typeof show_in_tasks !== "boolean") {
+    res.status(400).json({ error: "show_in_tasks must be a boolean" });
+    return;
+  }
+  const task = await goalsService.createTask(req.userId!, req.params.id, {
+    title, priority, dueDate: due_date ?? null, showInTasks: show_in_tasks,
+  });
   res.status(201).json(task);
+}
+
+type TaskParams = { id: string; taskId: string };
+
+// PATCH /api/goals/:id/tasks/:taskId  { title?, description?, priority?, due_date?, show_in_tasks? }
+export async function updateTask(req: Request<TaskParams>, res: Response) {
+  const { title, description, priority, due_date, show_in_tasks } = req.body ?? {};
+  if (title !== undefined && (typeof title !== "string" || !title.trim())) {
+    res.status(400).json({ error: "Title is required" });
+    return;
+  }
+  if (description !== undefined && description !== null && typeof description !== "string") {
+    res.status(400).json({ error: "Invalid description" });
+    return;
+  }
+  if (priority !== undefined && !["low", "medium", "high"].includes(priority)) {
+    res.status(400).json({ error: "Invalid priority" });
+    return;
+  }
+  if (due_date !== undefined && due_date !== null && (typeof due_date !== "string" || isNaN(Date.parse(due_date)))) {
+    res.status(400).json({ error: "Invalid due_date" });
+    return;
+  }
+  if (show_in_tasks !== undefined && typeof show_in_tasks !== "boolean") {
+    res.status(400).json({ error: "show_in_tasks must be a boolean" });
+    return;
+  }
+  await goalsService.updateTask(req.userId!, req.params.id, req.params.taskId, {
+    title, description, priority, dueDate: due_date, showInTasks: show_in_tasks,
+  });
+  res.status(204).send();
+}
+
+// DELETE /api/goals/:id/tasks/:taskId
+export async function deleteTask(req: Request<TaskParams>, res: Response) {
+  await goalsService.deleteTask(req.userId!, req.params.id, req.params.taskId);
+  res.status(204).send();
 }
 
 // GET /api/goals/:id/link-options

@@ -10,6 +10,8 @@ export interface TaskStoreState {
   // ── Filter state ───────────────────────────
   search: string;
   priorities: Set<string>;
+  /** Hide tasks that belong to a goal from the Tasks page (persisted) */
+  hideGoalTasks: boolean;
 
   // ── View state (persisted) ─────────────────
   viewMode: TaskViewMode;
@@ -24,6 +26,7 @@ export interface TaskStoreState {
   setSearch: (value: string) => void;
   togglePriority: (priority: string) => void;
   clearFilters: () => void;
+  toggleHideGoalTasks: () => void;
 
   // ── View actions ───────────────────────────
   setViewMode: (mode: TaskViewMode) => void;
@@ -36,6 +39,7 @@ export const useTasksStore = create<TaskStoreState>()(
   lists: [],
   search: "",
   priorities: new Set<string>(),
+  hideGoalTasks: false,
   viewMode: "sorted",
 
   // ── List actions ───────────────────────────
@@ -66,13 +70,15 @@ export const useTasksStore = create<TaskStoreState>()(
 
   clearFilters: () => set({ search: "", priorities: new Set<string>() }),
 
+  toggleHideGoalTasks: () => set((state) => ({ hideGoalTasks: !state.hideGoalTasks })),
+
   // ── View actions ───────────────────────────
   setViewMode: (viewMode) => set({ viewMode }),
     }),
     {
       name: "neura-tasks-view",
-      // only the view preference is persisted; lists come from the API
-      partialize: (state) => ({ viewMode: state.viewMode }),
+      // only view preferences are persisted; lists come from the API
+      partialize: (state) => ({ viewMode: state.viewMode, hideGoalTasks: state.hideGoalTasks }),
     },
   ),
 );

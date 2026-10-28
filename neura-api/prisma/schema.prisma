@@ -104,6 +104,8 @@ model Task {
   list        TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
   goalId      String?
   goal        Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  /// false = only on its goal's page (default for tasks added from a goal), hidden from Tasks / Calendar
+  showInTasks Boolean    @default(true)
   subtasks    SubTask[]
   reminders   Reminder[]
 }

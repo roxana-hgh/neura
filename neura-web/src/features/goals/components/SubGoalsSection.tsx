@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import SectionCard from "@/components/shared/SectionCard";
 import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
 import { DeleteGoalDialog } from "@/features/goals/components/GoalActionDialogs";
@@ -28,13 +29,16 @@ function SubGoalRow({ sub, goal, onEdit, onRemind, onDelete }: {
 
   return (
     <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-muted/40 sm:px-3">
-      <Checkbox
-        className="mt-0.5"
-        checked={done}
-        disabled={setStatus.isPending}
-        onCheckedChange={(c) => setStatus.mutate({ id: sub.id, status: c ? "completed" : "active" })}
-        aria-label={done ? `Mark "${sub.title}" as not done` : `Mark "${sub.title}" as done`}
-      />
+      {setStatus.isPending ? (
+        <Spinner className="mt-0.5 shrink-0 text-muted-foreground" />
+      ) : (
+        <Checkbox
+          className="mt-0.5"
+          checked={done}
+          onCheckedChange={(c) => setStatus.mutate({ id: sub.id, status: c ? "completed" : "active" })}
+          aria-label={done ? `Mark "${sub.title}" as not done` : `Mark "${sub.title}" as done`}
+        />
+      )}
       <div className="min-w-0 flex-1">
         <button type="button" onClick={onEdit} className="block w-full cursor-pointer text-left">
           <p className={cn("text-sm", done && "text-muted-foreground line-through")}>{sub.title}</p>
@@ -99,8 +103,11 @@ export function SubGoalsSection({ goal }: { goal: GoalDetail }) {
 
   const add = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    createGoal.mutate({ title: title.trim(), parent_id: goal.id }, { onSuccess: () => setTitle("") });
+    const value = title.trim();
+    if (!value || createGoal.isPending) return;
+    // Clear right away; the pending row below shows the step until the list catches up.
+    setTitle("");
+    createGoal.mutate({ title: value, parent_id: goal.id }, { onError: () => setTitle(value) });
   };
 
   const done = goal.subGoals.filter((s) => s.status === "completed").length;
@@ -128,10 +135,20 @@ export function SubGoalsSection({ goal }: { goal: GoalDetail }) {
             onDelete={() => setDeleting(sub)}
           />
         ))}
+        {createGoal.isPending && createGoal.variables?.parent_id === goal.id && (
+          <div className="flex items-center gap-3 px-2 py-2.5 sm:px-3" aria-live="polite">
+            <Spinner className="shrink-0 text-muted-foreground" />
+            <p className="truncate text-sm text-muted-foreground">{createGoal.variables.title}</p>
+          </div>
+        )}
       </div>
 
       <form onSubmit={add} className="mt-1 flex items-center gap-3 px-2 py-1.5 sm:px-3">
-        <Plus className="size-4 shrink-0 text-muted-foreground" />
+        {createGoal.isPending ? (
+          <Spinner className="shrink-0 text-muted-foreground" />
+        ) : (
+          <Plus className="size-4 shrink-0 text-muted-foreground" />
+        )}
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}

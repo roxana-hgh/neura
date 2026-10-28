@@ -24,6 +24,7 @@ import {
   Bell,
 } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
+import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 
@@ -218,6 +219,7 @@ function TaskDetail({ task, trigger }: IProps) {
                   </Label>
                 </div>
               </DialogTitle>
+              {task.goal && <TaskGoalBadge goal={task.goal} className="mt-1 w-fit text-xs" />}
             </DialogHeader>
 
             <div className="px-6 py-4 space-y-4">

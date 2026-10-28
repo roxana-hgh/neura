@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
 import { useCreateGoal, useUpdateGoal } from "@/features/goals/hooks/useGoals";
@@ -375,6 +376,7 @@ export function GoalFormDialog({ open, onOpenChange, goal, parent, initialTitle 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={isPending}>
+              {isPending && <Spinner />}
               {isPending ? "Saving…" : isEdit ? "Save changes" : parent ? "Add sub-goal" : "Create goal"}
             </Button>
           </DialogFooter>

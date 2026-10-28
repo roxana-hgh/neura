@@ -60,8 +60,20 @@ export interface GoalTask {
   title: string;
   completed: boolean;
   priority: "low" | "medium" | "high";
+  description: string | null;
   dueDate: string | null;
   goalId: string | null;
+  /** false = only shown here, not on the Tasks page / calendar */
+  showInTasks: boolean;
+}
+
+/** Body of PATCH /goals/:id/tasks/:taskId (snake_case like the task endpoints). */
+export interface GoalTaskInput {
+  title?: string;
+  description?: string | null;
+  priority?: "low" | "medium" | "high";
+  due_date?: string | null;
+  show_in_tasks?: boolean;
 }
 
 export interface GoalDetail extends Goal {

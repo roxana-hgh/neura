@@ -20,6 +20,7 @@ export const mapTask = (raw: any): Task => ({
   due_date: raw.dueDate ?? null,
   list_id: raw.listId ?? null,
   subtasks: raw.subtasks ?? null,
+  goal: raw.goal ?? null,
 });
 
 export function useTasks() {

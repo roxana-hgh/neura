@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { format } from "date-fns";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
-import type { Goal, GoalDetail, GoalInput, GoalStatus, LinkedReminder } from "@/features/goals/types/goal";
+import type { Goal, GoalDetail, GoalInput, GoalStatus, GoalTaskInput, LinkedReminder } from "@/features/goals/types/goal";
 
 /** The client's calendar day, so "needs review" and pace follow the user's time zone. */
 const today = () => format(new Date(), "yyyy-MM-dd");
@@ -12,8 +12,18 @@ const today = () => format(new Date(), "yyyy-MM-dd");
  * so refresh those caches too.
  */
 function invalidate(qc: QueryClient) {
-  qc.invalidateQueries({ queryKey: ["goals"] });
-  qc.invalidateQueries({ queryKey: ["reminders"] });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: ["goals"] }),
+    qc.invalidateQueries({ queryKey: ["reminders"] }),
+  ]);
+}
+
+/** Goal + task caches, for changes to a goal's tasks. Awaited so `isPending` lasts until the list shows the change. */
+function invalidateWithTasks(qc: QueryClient) {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: ["goals"] }),
+    qc.invalidateQueries({ queryKey: ["tasks"] }),
+  ]);
 }
 
 export function useGoals(archived = false) {
@@ -93,6 +103,7 @@ export function useDeleteGoal() {
     },
     onSuccess: (_d, { id }) => {
       qc.removeQueries({ queryKey: ["goals", "detail", id] });
+      // Not awaited: the caller navigates away right after, no need to wait for the refetch.
       invalidate(qc);
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
@@ -155,10 +166,7 @@ export function useGoalLink() {
       if (attach) await api.post(`/goals/${id}/links`, { type, target_id: targetId });
       else await api.delete(`/goals/${id}/links/${type}/${targetId}`);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["goals"] });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-    },
+    onSuccess: () => invalidateWithTasks(qc),
     onError: () => toast.error("Couldn't update the link"),
   });
 }
@@ -166,13 +174,49 @@ export function useGoalLink() {
 export function useCreateGoalTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ goalId, title, dueDate }: { goalId: string; title: string; dueDate?: string | null }) =>
-      (await api.post(`/goals/${goalId}/tasks`, { title, due_date: dueDate ?? null })).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["goals"] });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-    },
+    mutationFn: async ({ goalId, title, dueDate, showInTasks = false }: {
+      goalId: string; title: string; dueDate?: string | null; showInTasks?: boolean;
+    }) => (await api.post(`/goals/${goalId}/tasks`, { title, due_date: dueDate ?? null, show_in_tasks: showInTasks })).data,
+    onSuccess: () => invalidateWithTasks(qc),
     onError: () => toast.error("Couldn't create the task"),
+  });
+}
+
+/** Shows / hides a goal task on the Tasks page and calendar. */
+export function useSetGoalTaskVisibility() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ goalId, taskId, showInTasks }: { goalId: string; taskId: string; showInTasks: boolean }) => {
+      await api.patch(`/goals/${goalId}/tasks/${taskId}`, { show_in_tasks: showInTasks });
+    },
+    onSuccess: (_d, { showInTasks }) => {
+      toast.default(showInTasks ? "Task added to your Tasks list" : "Task removed from your Tasks list");
+      return invalidateWithTasks(qc);
+    },
+    onError: () => toast.error("Couldn't update the task"),
+  });
+}
+
+/** Edits a goal task (only the fields sent change). `goalId` is the goal whose page it's edited from. */
+export function useUpdateGoalTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ goalId, taskId, ...input }: { goalId: string; taskId: string } & GoalTaskInput) => {
+      await api.patch(`/goals/${goalId}/tasks/${taskId}`, input);
+    },
+    onSuccess: () => invalidateWithTasks(qc),
+    onError: () => toast.error("Couldn't save the task"),
+  });
+}
+
+export function useDeleteGoalTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ goalId, taskId }: { goalId: string; taskId: string }) => {
+      await api.delete(`/goals/${goalId}/tasks/${taskId}`);
+    },
+    onSuccess: () => Promise.all([invalidateWithTasks(qc), qc.invalidateQueries({ queryKey: ["reminders"] })]),
+    onError: () => toast.error("Couldn't delete the task"),
   });
 }
 
@@ -182,10 +226,7 @@ export function useToggleGoalTask() {
   return useMutation({
     mutationFn: async ({ id, completed }: { id: string; completed: boolean }) =>
       (await api.patch(`/tasks/${id}/toggle`, { completed })).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["goals"] });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-    },
+    onSuccess: () => invalidateWithTasks(qc),
     onError: () => toast.error("Couldn't update the task"),
   });
 }

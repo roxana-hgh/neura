@@ -18,6 +18,14 @@ export interface Task {
   priority: "low" | "medium" | "high";
   subtasks: SubTask[] | null;
   list_id: string | number | null; // null = not assigned to any list
+  /** The goal (or sub-goal, with its parent) this task belongs to. */
+  goal: TaskGoal | null;
+}
+
+export interface TaskGoal {
+  id: string;
+  title: string;
+  parent: { id: string; title: string } | null;
 }
 
 export interface TaskList {

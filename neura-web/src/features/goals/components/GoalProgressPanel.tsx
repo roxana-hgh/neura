@@ -3,6 +3,7 @@ import { Minus, Plus, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
 import ProgressCircle from "@/components/ui/progress-circle";
 import { useRecordProgress } from "@/features/goals/hooks/useGoals";
 import { METRIC_LABEL } from "@/features/goals/lib/goalPeriod";
@@ -116,7 +117,9 @@ export function UpdateProgressPopover({ goal, trigger }: { goal: GoalBase; trigg
           </div>
         )}
         <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Note (optional)" className="h-8" />
-        <Button size="sm" className="w-full" onClick={save} disabled={!valid || record.isPending}>Save</Button>
+        <Button size="sm" className="w-full" onClick={save} disabled={!valid || record.isPending}>
+          {record.isPending && <Spinner />} Save
+        </Button>
       </PopoverContent>
     </Popover>
   );
