@@ -115,7 +115,7 @@ export function SidebarNav() {
       <SidebarHeader>
         <Link to={"/"} className="">
           <div className="logo-sec flex items-center gap-2  ">
-            <NeuraLogo />
+            <NeuraLogo  />
             <span className="group-data-[collapsible=icon]:hidden">
               <h2 className="text-2xl font-bold ">Neura</h2>
             </span>

@@ -12,7 +12,7 @@ export const toast = {
       ...options,
       unstyled: true,
       classNames: {
-        toast: "flex items-center gap-3 w-full p-4 rounded-lg border font-sans text-sm border-green-500 bg-green-500/10 text-green-600 dark:text-green-400",
+        toast: "flex items-center gap-3 w-full p-4 rounded-lg border font-sans text-sm border-green-500 bg-green-500/12 backdrop-blur-sm text-green-600 dark:text-green-400",
         icon: "text-green-500",
       },
     }),
@@ -22,7 +22,7 @@ export const toast = {
       ...options,
       unstyled: true,
       classNames: {
-        toast: "flex items-center gap-3 w-full p-4 rounded-lg border font-sans text-sm border-red-500 bg-red-500/10 text-red-600 dark:text-red-400",
+        toast: "flex items-center gap-3 w-full p-4 rounded-lg border font-sans text-sm border-red-500 bg-red-500/12 backdrop-blur-sm text-red-600 dark:text-red-400",
         icon: "text-red-500",
       },
     }),
