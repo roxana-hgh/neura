@@ -37,6 +37,9 @@ model User {
   goals         Goal[]
   reminders     Reminder[]
   brainstorms   Brainstorm[]
+
+  pushSubscriptions    PushSubscription[]
+  notificationSettings NotificationSettings?
 }
 
 model Session {
@@ -322,6 +325,7 @@ model Reminder {
   status      ReminderStatus @default(active)
   suspendedBy String? // "goal" when a goal paused it (so resuming the goal restores it)
   completedAt DateTime?
+  firedAt     DateTime? // the nextAt a push was last sent for (so each occurrence / snooze fires once)
 
   origin   ReminderOrigin @default(manual)
   autoKind String? // goal_auto only: review | checkin | deadline
@@ -382,4 +386,34 @@ model Brainstorm {
   updatedAt DateTime @updatedAt
 
   @@index([userId, status, createdAt])
+}
+
+/// One per browser / device that allowed push notifications.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// What gets pushed, and when (hours are in the user's time zone).
+model NotificationSettings {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeZone       String   @default("UTC")
+  reminders      Boolean  @default(true)
+  taskDigest     Boolean  @default(true) // morning: tasks due today + overdue
+  taskDigestHour Int      @default(9)
+  taskNudge      Boolean  @default(true) // evening: tasks due today still open
+  taskNudgeHour  Int      @default(19)
+  digestSentOn   String? // "yyyy-MM-dd" in timeZone: once a day
+  nudgeSentOn    String?
+  updatedAt      DateTime @updatedAt
 }

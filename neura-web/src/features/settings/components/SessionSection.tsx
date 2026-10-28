@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { detachPushOnSignOut } from "@/features/notifications/lib/push";
 import { Button } from "@/components/ui/button";
 import SettingsSection from "@/features/settings/components/SettingsSection";
 
@@ -13,6 +14,7 @@ function SessionSection() {
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
+      await detachPushOnSignOut();
       await authClient.signOut();
       navigate("/login");
     } finally {

@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
+import { detachPushOnSignOut } from "@/features/notifications/lib/push";
 import { useNavigate } from "react-router-dom";
 
 function ProfileMenu() {
@@ -16,6 +17,7 @@ function ProfileMenu() {
   const { data: session } = authClient.useSession();
 
   const handleLogout = async () => {
+    await detachPushOnSignOut();
     await authClient.signOut();
     navigate("/login");
   };

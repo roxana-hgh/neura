@@ -28,4 +28,5 @@ export const toast = {
     }),
   default: (msg: string, options?: ToastOptions) =>
     sonnerToast(msg, { ...defaults, ...options }),
+  dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 };

@@ -190,7 +190,7 @@ export async function updateReminder(userId: string, id: string, input: Reminder
     || input.interval !== undefined || input.weekdays !== undefined || input.repeatUntil !== undefined;
   if (scheduleTouched) {
     const at = input.scheduledAt ?? existing.scheduledAt;
-    Object.assign(data, { startAt: at, scheduledAt: at, nextAt: at, snoozedUntil: null });
+    Object.assign(data, { startAt: at, scheduledAt: at, nextAt: at, snoozedUntil: null, firedAt: null });
     // rescheduling a finished one-off brings it back
     if (existing.status === "completed") Object.assign(data, { status: "active", completedAt: null });
   }

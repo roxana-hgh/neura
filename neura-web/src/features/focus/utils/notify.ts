@@ -1,6 +1,8 @@
 // Feedback when a focus session ends: a short chime, plus a system notification
 // when the tab is in the background.
 
+import { showLocalNotification } from "@/features/notifications/lib/push";
+
 let audioCtx: AudioContext | null = null;
 
 /** Call from a user gesture (Start) so the browser lets us play the chime later. */
@@ -41,13 +43,9 @@ export function announceSessionComplete(minutes: number) {
     // Audio is a nice-to-have
   }
   if (document.visibilityState !== "hidden") return;
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  try {
-    new Notification("Focus session complete", {
-      body: `Nice work, ${minutes} ${minutes === 1 ? "minute" : "minutes"} of focus. Come back to log it.`,
-      tag: "neura-focus",
-    });
-  } catch {
-    // Some mobile browsers only allow notifications from a service worker
-  }
+  void showLocalNotification("Focus session complete ✨", {
+    body: `${minutes} ${minutes === 1 ? "minute" : "minutes"} of deep work. Come back to log it.`,
+    tag: "neura-focus",
+    url: "/focus",
+  });
 }

@@ -10,6 +10,12 @@ export const env = {
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   CORS_ORIGIN: process.env.CORS_ORIGIN, // deployed frontend
   GROQ_API_KEY: process.env.GROQ_API_KEY,
+  // Web Push (generate with `npx web-push generate-vapid-keys`). Push is off when unset.
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT || "mailto:admin@neura.app",
+  // Lets an external scheduler call POST /api/notifications/dispatch (optional)
+  CRON_SECRET: process.env.CRON_SECRET,
 };
 
 // Origins allowed for CORS and Better Auth (local dev + deployed frontend)

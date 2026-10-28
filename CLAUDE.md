@@ -40,6 +40,8 @@ Each app is installed and deployed on its own (Render, scoped to its subdirector
   - `BETTER_AUTH_SECRET`: read by Better Auth directly; required when `NODE_ENV=production`, otherwise the server crashes
   - `CORS_ORIGIN`: the deployed frontend URL
   - `GROQ_API_KEY`
+  - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`: Web Push (`npx web-push generate-vapid-keys`). Push is off when unset; the private key also signs notification action tokens
+  - `CRON_SECRET`: optional, lets an external scheduler call `POST /api/notifications/dispatch`
   - `PORT`
   - `NODE_ENV`
 
@@ -162,6 +164,12 @@ src/
 │   │   ├── pages/                 # RemindersPage
 │   │   ├── schemas/               # reminder.schema
 │   │   └── types/                 # reminder.ts
+│   ├── notifications/
+│   │   ├── components/            # NotificationCenter (header bell + popover), NotificationWatcher (in-app toasts,
+│   │   │                          # mounted in AppLayout), NotificationsSection (Settings → Notifications)
+│   │   ├── hooks/                 # useNotifications (inbox, settings, push state, enable/disable, test)
+│   │   ├── lib/                   # push (SW registration, subscribe, showLocalNotification), notificationText
+│   │   └── types/                 # notification.ts
 │   ├── brainstorms/
 │   │   ├── components/            # BrainstormCapture (Enter to save), BrainstormItem (inline edit, actions),
 │   │   │                          # BrainstormEditor, BrainstormConvertDialogs (→ task / reminder), BrainstormReview (reset)
@@ -243,6 +251,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
   - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
   - `brainstorms` uses `tasks` (`TaskForm`, `useCreateTask`) and `reminders/ReminderFormDialog` (`onSaved`) to convert items
+  - `notifications` uses `reminders` (complete / snooze hooks, `Reminder` type), `tasks` (`useToggleTask`, `PRIORITY_STYLES`) and `settings/SettingsSection`; `settings` renders `NotificationsSection`; `focus/notify` and the sign-out handlers use `notifications/lib/push`
 
 **Naming**
 - Components and pages: PascalCase files that match the component name. Pages end in `Page` (`TasksPage.tsx`).
@@ -310,7 +319,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - Repeat: none / daily / weekly (with weekdays) / monthly / yearly, every N, optional end.
   - Times are stored in UTC with the user's IANA `timeZone`. `nextOccurrence` (`reminders.utils.ts`) keeps the wall-clock time and counts from `startAt`.
   - Snoozing moves `nextAt` only. Completing a recurring reminder logs it (`ReminderLog`) and moves to the next occurrence after now.
-  - There are no notifications: reminders are a list (Overdue / Today / … / Snoozed / Done).
+  - Reminders are a list (Overdue / Today / … / Snoozed / Done) and also notify (see "Notifications").
 - **Goal ↔ reminder sync** (`goals.service.ts`):
   - Goal presets create `origin: goal_auto` reminders (weekly review, monthly check-in, deadline).
   - Pause / complete / cancel / archive pause the goal's reminders with `suspendedBy: "goal"`. On complete / cancel the user picks manual ones to keep.
@@ -319,6 +328,19 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - Deleting removes auto reminders and deletes or detaches the manual ones.
 - **Goal tasks on the Tasks page:** a task linked to a goal shows a `TaskGoalBadge` (a link to the goal). The "Goals" toggle (`tasksStore.hideGoalTasks`, persisted) hides those tasks. On the goal page, the "Goal only / In Tasks" toggle next to the add input and the row menu control `showInTasks`. Each task on the goal page can also be edited (`GoalTaskDialog`; click the title or use the menu) and deleted. These go through the goal endpoints above, which only accept tasks of that goal or its sub-goals, not through `PUT /tasks/:id`, which replaces every field.
   - Reminders not linked to the goal are never touched.
+
+### Notifications
+
+Two layers; the second is optional per device.
+- **In-app** (always on): `NotificationWatcher` polls `GET /notifications/inbox?today=` every 60 s (and after any successful mutation / a service worker message) and shows a persistent toast for each newly due reminder with Done / Snooze 10m. Announced reminders are remembered in localStorage as `id@nextAt`, so a snooze or the next occurrence toasts again. The header bell (`NotificationCenter`) lists due reminders, tasks due today and overdue tasks.
+- **Web Push** (app closed; Android / desktop Chromium; iOS not targeted):
+  - `public/sw.js` handles only `push` and `notificationclick`. It has **no fetch handler and caches nothing**, uses `skipWaiting` + `clients.claim`, and is registered with `updateViaCache: "none"` and `?api=<VITE_API_URL>`. Never add caching to it.
+  - When a Neura tab is focused, the SW skips the system notification and messages the tab instead (the in-app toast shows it).
+  - Permission is only requested from a click (bell CTA or Settings → Notifications). Sign-out deletes the server-side subscription but keeps the browser one; `syncSubscription` re-registers it on the next sign-in.
+  - Buttons on a push (Done / Snooze / Mark done) POST a signed **action token** to the public `POST /api/notifications/action` (no cookie in the SW). Reminder tokens carry the occurrence's `nextAt`, so a stale button does nothing.
+- **Server** (`modules/notifications`): `notifications.dispatch.ts` runs every 30 s in-process (`startNotificationScheduler` in `index.ts`) and via the optional cron endpoint. Every send is claimed atomically first (`Reminder.firedAt = nextAt`; `NotificationSettings.digestSentOn` / `nudgeSentOn` = local day), so nothing is pushed twice.
+  - Reminders: active, `nextAt` within the last 6 h, not yet fired.
+  - Morning brief (`taskDigestHour`, default 9) = open tasks due today + overdue; evening nudge (`taskNudgeHour`, default 19) = today's still-open tasks. Hours are in `NotificationSettings.timeZone`; a missed brief is still sent within 3 h, and nothing is sent when nothing is due.
 
 ### Brainstorms (`/brainstorms`)
 
@@ -393,6 +415,7 @@ neura-api/
     ├── lib/                        # Clients for external systems
     │   ├── prisma.ts               # Prisma client singleton
     │   ├── auth.ts                 # Better Auth instance (prismaAdapter, email+password, trustedOrigins, cookie attrs)
+    │   ├── web-push.ts             # VAPID setup, sendPush (→ "sent" | "gone" | "failed"), pushEnabled
     │   └── groq.ts                 # Groq client: model pool, rate-limit fallback/cooldown,
     │                               # runAssistantTurn (tool loop), AssistantBusyError
     ├── middleware/
@@ -424,6 +447,11 @@ neura-api/
         ├── goals/
         │   ├── goals.routes.ts / goals.controller.ts / goals.service.ts  # CRUD, lifecycle + reminder sync, progress, links
         │   └── goals.utils.ts      # periodRange, goalProgress, goalPace, auto-reminder titles
+        ├── notifications/
+        │   ├── notifications.routes.ts / .controller.ts / .service.ts  # subscription, settings, inbox, test, actions
+        │   ├── notifications.public.routes.ts  # /action (signed token) + /dispatch (x-cron-secret), no session
+        │   ├── notifications.dispatch.ts       # dispatchDue (reminders + task briefs), startNotificationScheduler
+        │   └── notifications.utils.ts          # action tokens (HMAC), push payload type, notification copy
         ├── brainstorms/
         │   └── brainstorms.routes.ts / .controller.ts / .service.ts  # inbox, keep, process (→ task / reminder), restore
         ├── reminders/
@@ -519,6 +547,7 @@ neura-api/
 | `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks` (`show_in_tasks`, default false), `PATCH /:id/tasks/:taskId` (partial: `title`, `description`, `priority`, `due_date`, `show_in_tasks`), `DELETE /:id/tasks/:taskId`, `GET /:id/link-options`, `POST /:id/links`, `DELETE /:id/links/:type/:targetId` |
 | `/reminders` | `GET /?view=upcoming\|snoozed\|done\|all&goal_id=&task_id=&note_id=`, `POST /`, `GET /counts`, `GET /link-options`, `PATCH /:id`, `DELETE /:id`, `POST /:id/complete` (`{ scope }`), `/skip`, `/reopen`, `/snooze` (`{ until }`), `/pause`, `/resume` |
 | `/brainstorms` | `GET /?status=inbox\|processed`, `POST /` (`{ content }`), `DELETE /processed`, `PATCH /:id`, `DELETE /:id`, `POST /:id/keep`, `POST /:id/process` (`{ task_id }` \| `{ reminder_id }` \| `{}` to dismiss), `POST /:id/restore` |
+| `/notifications` | `GET /public-key`, `POST /subscription` (`{ subscription, time_zone }`), `DELETE /subscription` (`{ endpoint }`), `GET /settings`, `PATCH /settings` (`reminders`, `task_digest`, `task_digest_hour`, `task_nudge`, `task_nudge_hour`, `time_zone`), `POST /test`, `GET /inbox?today=`. Public (no session): `POST /action` (`{ token }`), `POST /dispatch` (header `x-cron-secret`) |
 | `/assistant` | `POST /` with `{ mode, question, history, … }`; mode `daily_plan` powers the dashboard card |
 
 `GET /health` (no `/api` prefix) returns `{ status: "ok" }`.
@@ -548,6 +577,9 @@ neura-api/
   - Fields: title, description, startAt, scheduledAt, snoozedUntil, nextAt, timeZone, repeat / interval / weekdays / repeatUntil, status, suspendedBy, origin (`manual` / `goal_auto`), autoKind
   - Relations: at most one of goalId (cascade) or taskId / noteId (set null)
 - `ReminderLog`: one row per completed (`done`) or `skipped` occurrence.
+- `PushSubscription`: endpoint (unique per browser), p256dh, auth, userAgent, userId. Deleted when the push service answers 404/410.
+- `NotificationSettings` (1:1 with User, `userId` is the id): timeZone, reminders, taskDigest / taskDigestHour, taskNudge / taskNudgeHour, digestSentOn / nudgeSentOn.
+- `Reminder.firedAt`: the `nextAt` a push was last sent for. Reset when the reminder is rescheduled.
 - `Brainstorm`: content, status (`inbox` / `processed`), reviewedAt (null = new), processedAt, convertedTo (`task` / `reminder` / null = dismissed), taskId / reminderId (set null when the target is deleted).
 
 All IDs are `cuid()` strings. Child rows are cascade-deleted with their user.

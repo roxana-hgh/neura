@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 import ProfileMenu from "@/layouts/UserProfileMenu";
+import NotificationCenter from "@/features/notifications/components/NotificationCenter";
 
 function Header() {
   return (
@@ -19,6 +20,7 @@ function Header() {
       </div>
 
       <div className="md:px-3 flex items-center gap-1 md:gap-3">
+        <NotificationCenter />
         <ProfileMenu />
       </div>
     </header>

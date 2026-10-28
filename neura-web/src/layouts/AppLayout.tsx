@@ -3,6 +3,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import SidebarNav from "@/layouts/SidebarNav";
 import Header from "@/layouts/Header";
 import { Toaster } from "@/components/ui/sonner";
+import NotificationWatcher from "@/features/notifications/components/NotificationWatcher";
 
 function AppLayout() {
   return (
@@ -14,6 +15,7 @@ function AppLayout() {
           <Outlet />
         </main>
          <Toaster />
+         <NotificationWatcher />
       </div>
     </SidebarProvider>
   );
