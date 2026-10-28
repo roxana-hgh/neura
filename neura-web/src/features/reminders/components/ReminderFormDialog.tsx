@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 export interface ReminderDefaults {
   title?: string;
+  description?: string;
   at?: Date;
   link?: ReminderLink | null;
 }
@@ -34,6 +35,8 @@ interface ReminderFormDialogProps {
   defaults?: ReminderDefaults;
   /** Keep the link fixed (e.g. created from a goal or task) */
   lockLink?: boolean;
+  /** Called with the saved reminder (e.g. to record what a brainstorm became) */
+  onSaved?: (reminder: Reminder) => void;
 }
 
 const UNIT: Record<Exclude<ReminderRepeat, "none">, string> = { daily: "day", weekly: "week", monthly: "month", yearly: "year" };
@@ -63,7 +66,7 @@ function defaultValues(reminder: Reminder | null | undefined, defaults: Reminder
   const at = defaults?.at ?? quickTimePresets().find((p) => p.label === "Tomorrow 9:00")!.at();
   return {
     title: defaults?.title ?? "",
-    description: "",
+    description: defaults?.description ?? "",
     date: format(at, "yyyy-MM-dd"),
     time: format(at, "HH:mm"),
     repeat: "none",
@@ -74,7 +77,7 @@ function defaultValues(reminder: Reminder | null | undefined, defaults: Reminder
   };
 }
 
-export function ReminderFormDialog({ open, onOpenChange, reminder, defaults, lockLink }: ReminderFormDialogProps) {
+export function ReminderFormDialog({ open, onOpenChange, reminder, defaults, lockLink, onSaved }: ReminderFormDialogProps) {
   const isEdit = !!reminder;
   const createReminder = useCreateReminder();
   const updateReminder = useUpdateReminder();
@@ -95,7 +98,7 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, defaults, loc
     if (!open) return;
     reset(defaultValues(reminder, defaults));
     setLink(reminder ? linkOf(reminder) : defaults?.link ?? null);
-    setShowDetails(!!reminder?.description);
+    setShowDetails(reminder ? !!reminder.description : !!defaults?.description);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, reminder]);
 
@@ -146,12 +149,12 @@ export function ReminderFormDialog({ open, onOpenChange, reminder, defaults, loc
       // unchanged schedule isn't sent, so editing a title doesn't restart a series
       updateReminder.mutate(
         { id: reminder.id, ...base, ...(scheduleChanged && schedule), ...(linkChanged && linkFields) },
-        { onSuccess: () => { toast.success("Reminder updated"); onOpenChange(false); } },
+        { onSuccess: (saved) => { toast.success("Reminder updated"); onSaved?.(saved); onOpenChange(false); } },
       );
     } else {
       createReminder.mutate(
         { ...base, ...schedule, ...linkFields },
-        { onSuccess: () => { toast.success("Reminder created"); onOpenChange(false); } },
+        { onSuccess: (saved) => { toast.success("Reminder created"); onSaved?.(saved); onOpenChange(false); } },
       );
     }
   };

@@ -12,6 +12,7 @@ import usersRoutes from "@/modules/users/users.routes";
 import assistantRoutes from "@/modules/assistant/assistant.routes";
 import goalsRoutes from "@/modules/goals/goals.routes";
 import remindersRoutes from "@/modules/reminders/reminders.routes";
+import brainstormsRoutes from "@/modules/brainstorms/brainstorms.routes";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/users", requireAuth, usersRoutes);
 app.use("/api/assistant", requireAuth, assistantRoutes);
 app.use("/api/goals", requireAuth, goalsRoutes);
 app.use("/api/reminders", requireAuth, remindersRoutes);
+app.use("/api/brainstorms", requireAuth, brainstormsRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -1,6 +1,6 @@
 # Neura
 
-Neura is a full-stack productivity app. It has tasks (with lists and subtasks), rich-text notes, habit tracking, goals (with sub-goals), reminders, a focus timer, a calendar, an analytics dashboard, and an AI assistant that can manage tasks and habits in natural language.
+Neura is a full-stack productivity app. It has tasks (with lists and subtasks), rich-text notes, habit tracking, goals (with sub-goals), reminders, a brainstorm inbox, a focus timer, a calendar, an analytics dashboard, and an AI assistant that can manage tasks and habits in natural language.
 
 This file is self-contained. It describes the whole project, so it is useful even without access to the repository (for example inside a Claude Project).
 
@@ -162,6 +162,13 @@ src/
 │   │   ├── pages/                 # RemindersPage
 │   │   ├── schemas/               # reminder.schema
 │   │   └── types/                 # reminder.ts
+│   ├── brainstorms/
+│   │   ├── components/            # BrainstormCapture (Enter to save), BrainstormItem (inline edit, actions),
+│   │   │                          # BrainstormEditor, BrainstormConvertDialogs (→ task / reminder), BrainstormReview (reset)
+│   │   ├── hooks/                 # useBrainstorms (list, create/update/delete, keep, process, restore, clear)
+│   │   ├── lib/                   # brainstormText (suggestFields, groupByCaptureDay, reviewQueue, timeAgo)
+│   │   ├── pages/                 # BrainstormsPage
+│   │   └── types/                 # brainstorm.ts
 │   ├── settings/
 │   │   ├── components/            # SettingsSection (layout), AccountSection, ProfileForm, ProfileAvatar,
 │   │   │                          # AppearanceSection (theme), SessionSection (sign out)
@@ -172,6 +179,7 @@ src/
 │   └── dashboard/
 │       ├── components/            # WeeklyOverviewChart (focus minutes vs habit completion),
 │       │                          # GoalsAndRemindersRow ("Goals in progress" + "Up next")
+│       │                          # QuickAccessFab (floating speed-dial: Assistant, Brainstorms, Reminders, Tasks + live hints)
 │       └── pages/                 # DashboardPage (tasks, notes, lists, habits heatmap, charts, daily plan)
 ├── components/
 │   ├── ui/                        # shadcn/ui primitives: generated, keep stock (button, dialog, sidebar, chart, …)
@@ -210,6 +218,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 | `/goals` | `GoalsPage` |
 | `/goal/:id` | `GoalDetailPage` (also used for a sub-goal) |
 | `/reminders` | `RemindersPage` |
+| `/brainstorms` | `BrainstormsPage` |
 | `/assistant` | `AssistantPage` |
 | `/settings` | `SettingsPage` |
 
@@ -233,6 +242,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - `assistant/pages/AssistantPage` uses `tasks` and `habits` hooks for @mentions
   - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
   - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
+  - `brainstorms` uses `tasks` (`TaskForm`, `useCreateTask`) and `reminders/ReminderFormDialog` (`onSaved`) to convert items
 
 **Naming**
 - Components and pages: PascalCase files that match the component name. Pages end in `Page` (`TasksPage.tsx`).
@@ -309,6 +319,15 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - Deleting removes auto reminders and deletes or detaches the manual ones.
 - **Goal tasks on the Tasks page:** a task linked to a goal shows a `TaskGoalBadge` (a link to the goal). The "Goals" toggle (`tasksStore.hideGoalTasks`, persisted) hides those tasks. On the goal page, the "Goal only / In Tasks" toggle next to the add input and the row menu control `showInTasks`. Each task on the goal page can also be edited (`GoalTaskDialog`; click the title or use the menu) and deleted. These go through the goal endpoints above, which only accept tasks of that goal or its sub-goals, not through `PUT /tasks/:id`, which replaces every field.
   - Reminders not linked to the goal are never touched.
+
+### Brainstorms (`/brainstorms`)
+
+A quick-capture inbox: "your brain is for having ideas, not holding them".
+- **Capture:** type and press Enter (Shift+Enter = new line); focus stays for the next thought. `N` focuses the box.
+- **Inbox:** grouped Today / Yesterday / Earlier this week / Older. Click the text to edit inline. Row actions: Task, Remind, Done (let go, with Undo), Delete (confirm).
+- **Convert:** `BrainstormConvertDialogs` prefills `TaskForm` / `ReminderFormDialog` with `suggestFields` (first line = title, rest = description, clipped to each form's limits). After the task / reminder is created, `POST /brainstorms/:id/process` records it and the item leaves the inbox.
+- **Reset** (`BrainstormReview`, inline on the page): **daily** = items with `reviewedAt` null (new since the last reset), **weekly** = the whole inbox. One item at a time, oldest first, from a snapshot: T task, R reminder, K keep (sets `reviewedAt`), D done, E edit, ←/→ move, Delete.
+- **Sorted** tab: processed items with what they became; Back to inbox, Delete, Clear history.
 
 ### Week start (Settings → Calendar)
 
@@ -405,6 +424,8 @@ neura-api/
         ├── goals/
         │   ├── goals.routes.ts / goals.controller.ts / goals.service.ts  # CRUD, lifecycle + reminder sync, progress, links
         │   └── goals.utils.ts      # periodRange, goalProgress, goalPace, auto-reminder titles
+        ├── brainstorms/
+        │   └── brainstorms.routes.ts / .controller.ts / .service.ts  # inbox, keep, process (→ task / reminder), restore
         ├── reminders/
         │   ├── reminders.routes.ts / reminders.controller.ts / reminders.service.ts
         │   └── reminders.utils.ts  # nextOccurrence (recurrence, @date-fns/tz), zonedTime
@@ -497,6 +518,7 @@ neura-api/
 | `/users` | `GET /me`, `PATCH /me` |
 | `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks` (`show_in_tasks`, default false), `PATCH /:id/tasks/:taskId` (partial: `title`, `description`, `priority`, `due_date`, `show_in_tasks`), `DELETE /:id/tasks/:taskId`, `GET /:id/link-options`, `POST /:id/links`, `DELETE /:id/links/:type/:targetId` |
 | `/reminders` | `GET /?view=upcoming\|snoozed\|done\|all&goal_id=&task_id=&note_id=`, `POST /`, `GET /counts`, `GET /link-options`, `PATCH /:id`, `DELETE /:id`, `POST /:id/complete` (`{ scope }`), `/skip`, `/reopen`, `/snooze` (`{ until }`), `/pause`, `/resume` |
+| `/brainstorms` | `GET /?status=inbox\|processed`, `POST /` (`{ content }`), `DELETE /processed`, `PATCH /:id`, `DELETE /:id`, `POST /:id/keep`, `POST /:id/process` (`{ task_id }` \| `{ reminder_id }` \| `{}` to dismiss), `POST /:id/restore` |
 | `/assistant` | `POST /` with `{ mode, question, history, … }`; mode `daily_plan` powers the dashboard card |
 
 `GET /health` (no `/api` prefix) returns `{ status: "ok" }`.
@@ -526,6 +548,7 @@ neura-api/
   - Fields: title, description, startAt, scheduledAt, snoozedUntil, nextAt, timeZone, repeat / interval / weekdays / repeatUntil, status, suspendedBy, origin (`manual` / `goal_auto`), autoKind
   - Relations: at most one of goalId (cascade) or taskId / noteId (set null)
 - `ReminderLog`: one row per completed (`done`) or `skipped` occurrence.
+- `Brainstorm`: content, status (`inbox` / `processed`), reviewedAt (null = new), processedAt, convertedTo (`task` / `reminder` / null = dismissed), taskId / reminderId (set null when the target is deleted).
 
 All IDs are `cuid()` strings. Child rows are cascade-deleted with their user.
 

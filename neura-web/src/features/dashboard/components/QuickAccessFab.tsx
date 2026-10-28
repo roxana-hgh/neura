@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ListTodo, Sparkles, X, Zap } from "lucide-react";
+import { Bell, Lightbulb, ListTodo, Sparkles, X, Zap } from "lucide-react";
+import { useReminderCounts } from "@/features/reminders/hooks/useReminders";
+import { useBrainstorms } from "@/features/brainstorms/hooks/useBrainstorms";
+import { isNew } from "@/features/brainstorms/lib/brainstormText";
 import { cn } from "@/lib/utils";
 
 interface QuickAccessItem {
@@ -19,6 +22,23 @@ interface QuickAccessFabProps {
 /** Floating speed-dial (bottom-right), same look as the Notes "new note" button */
 function QuickAccessFab({ tasksHint }: QuickAccessFabProps) {
   const [open, setOpen] = useState(false);
+  const { data: reminderCounts } = useReminderCounts();
+  const { data: inbox } = useBrainstorms("inbox");
+
+  const remindersHint = reminderCounts
+    ? reminderCounts.overdue
+      ? `${reminderCounts.overdue} overdue`
+      : reminderCounts.today
+        ? `${reminderCounts.today} later today`
+        : "Nothing due today"
+    : undefined;
+
+  const freshCount = inbox?.filter(isNew).length ?? 0;
+  const brainstormsHint = inbox
+    ? inbox.length
+      ? `${inbox.length} in inbox${freshCount ? ` · ${freshCount} new` : ""}`
+      : "Jot down a thought"
+    : undefined;
 
   const items: QuickAccessItem[] = [
     {
@@ -27,6 +47,20 @@ function QuickAccessFab({ tasksHint }: QuickAccessFabProps) {
       hint: "Plan or change things by chat",
       icon: <Sparkles className="size-4.5" />,
       iconClass: "bg-primary text-primary-foreground",
+    },
+    {
+      to: "/brainstorms",
+      label: "Brainstorms",
+      hint: brainstormsHint,
+      icon: <Lightbulb className="size-4.5" />,
+      iconClass: "bg-violet-500 text-white",
+    },
+    {
+      to: "/reminders",
+      label: "Reminders",
+      hint: remindersHint,
+      icon: <Bell className="size-4.5" />,
+      iconClass: "bg-amber-500 text-white",
     },
     {
       to: "/tasks",

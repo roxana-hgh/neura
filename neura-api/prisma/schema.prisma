@@ -36,6 +36,7 @@ model User {
   habits        Habit[]
   goals         Goal[]
   reminders     Reminder[]
+  brainstorms   Brainstorm[]
 }
 
 model Session {
@@ -89,25 +90,26 @@ model TaskList {
 }
 
 model Task {
-  id          String     @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   description String?
-  completed   Boolean    @default(false)
+  completed   Boolean      @default(false)
   completedAt DateTime?
-  priority    String     @default("medium")
+  priority    String       @default("medium")
   dueDate     DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   listId      String?
-  list        TaskList?  @relation(fields: [listId], references: [id], onDelete: SetNull)
+  list        TaskList?    @relation(fields: [listId], references: [id], onDelete: SetNull)
   goalId      String?
-  goal        Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  goal        Goal?        @relation(fields: [goalId], references: [id], onDelete: SetNull)
   /// false = only on its goal's page (default for tasks added from a goal), hidden from Tasks / Calendar
-  showInTasks Boolean    @default(true)
+  showInTasks Boolean      @default(true)
   subtasks    SubTask[]
   reminders   Reminder[]
+  brainstorms Brainstorm[]
 }
 
 model SubTask {
@@ -332,9 +334,10 @@ model Reminder {
   noteId String?
   note   Note?   @relation(fields: [noteId], references: [id], onDelete: SetNull)
 
-  logs      ReminderLog[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  logs        ReminderLog[]
+  brainstorms Brainstorm[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@index([userId, status, nextAt])
   @@index([goalId])
@@ -349,4 +352,34 @@ model ReminderLog {
   createdAt   DateTime       @default(now())
 
   @@index([reminderId, createdAt])
+}
+
+// ── Brainstorms ────────────────────────────────────────────────────────
+// A quick-capture inbox: jot things down now, review them in a daily / weekly reset
+// and turn them into a task or reminder (or dismiss them).
+
+enum BrainstormStatus {
+  inbox
+  processed
+}
+
+model Brainstorm {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content String
+
+  status      BrainstormStatus @default(inbox)
+  reviewedAt  DateTime? // last time it was kept during a review
+  processedAt DateTime?
+  convertedTo String? // task | reminder; null = dismissed (kept even if the target is deleted)
+  taskId      String?
+  task        Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  reminderId  String?
+  reminder    Reminder?        @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status, createdAt])
 }

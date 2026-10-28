@@ -46,7 +46,7 @@ import QuickAccessFab from "@/features/dashboard/components/QuickAccessFab";
 import GoalsAndRemindersRow from "@/features/dashboard/components/GoalsAndRemindersRow";
 
 type TaskTab = "today" | "week" | "later";
-const MAX_TASKS = 5;
+const MAX_TASKS = 3;
 
 function getGreeting() {
   const hour = new Date().getHours();

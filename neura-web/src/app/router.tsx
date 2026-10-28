@@ -18,6 +18,7 @@ import { HabitsPage } from "@/features/habits/pages/HabitsPage";
 import { GoalsPage } from "@/features/goals/pages/GoalsPage";
 import { GoalDetailPage } from "@/features/goals/pages/GoalDetailPage";
 import { RemindersPage } from "@/features/reminders/pages/RemindersPage";
+import { BrainstormsPage } from "@/features/brainstorms/pages/BrainstormsPage";
 
 
 export const router = createBrowserRouter([
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       { path: "goals", element: <GoalsPage /> },
       { path: "goal/:id", element: <GoalDetailPage /> },
       { path: "reminders", element: <RemindersPage /> },
+      { path: "brainstorms", element: <BrainstormsPage /> },
       { path: "assistant", element: <AssistantPage /> },
     ],
   },
