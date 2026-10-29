@@ -20,7 +20,7 @@ interface HabitCellProps {
 const SIZE_CLASS = {
   xs: "size-3 rounded-[3px]",
   md: "w-full aspect-square rounded-lg text-xs font-medium",
-  lg: "size-9 sm:size-10 rounded-xl",
+  lg: "size-7 sm:size-8.5 rounded-xl",
 };
 
 const STATE_TEXT: Record<CellState, string> = {

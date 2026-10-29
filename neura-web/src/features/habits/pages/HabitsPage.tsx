@@ -136,9 +136,10 @@ export function HabitsPage() {
                     <p className="font-medium">Build your first habit</p>
                     <p className="text-sm text-muted-foreground">Pick something small you can do every day.</p>
                   </div>
-                  <Button size="sm" onClick={openCreate}>
-                    <Plus className="size-4" /> New habit
-                  </Button>
+               
+                  <Button type="button" onClick={openCreate} className="flex items-center gap-0.5" size="sm">
+                  <Plus className="size-3.5" /> <span className="text-xs">New habit</span>
+                </Button>
                 </>
               ) : (
                 <div>

@@ -75,7 +75,7 @@ export const BrainstormCapture = forwardRef<HTMLTextAreaElement>(function Brains
           )}
         </p>
         <Button type="submit" size="sm" disabled={!text.trim()}>
-          Capture <CornerDownLeft className="size-3.5" />
+          <span className="text-xs">Capture</span> <CornerDownLeft className="size-3.5" />
         </Button>
       </div>
     </form>

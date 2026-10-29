@@ -42,7 +42,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 function DetailsCard({ goal, onEdit }: { goal: GoalDetail; onEdit: () => void }) {
   return (
     <SectionCard
-      icon={<Target className="size-4 text-primary" />}
+      icon={<Target className="size-3.5 text-primary" />}
       title="Details"
       action={<Button variant="ghost" size="icon-sm" onClick={onEdit} aria-label="Edit goal"><Pencil className="size-3.5" /></Button>}
     >
@@ -152,19 +152,19 @@ export function GoalDetailPage() {
           <div className="flex shrink-0 items-center gap-1.5">
             {closed ? (
               <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => changeStatus("active")}>
-                {setStatus.isPending ? <Spinner /> : <RotateCcw className="size-4" />} Reopen
+                {setStatus.isPending ? <Spinner /> : <RotateCcw className="size-3.5" />} Reopen
               </Button>
             ) : goal.status === "paused" ? (
               <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => changeStatus("active")}>
-                {setStatus.isPending ? <Spinner /> : <Play className="size-4" />} Resume
+                {setStatus.isPending ? <Spinner /> : <Play className="size-3.5" />} Resume
               </Button>
             ) : (
-              <Button size="sm" onClick={() => setDialog("complete")}><CircleCheck className="size-4" /> Mark complete</Button>
+              <Button size="sm" onClick={() => setDialog("complete")}><CircleCheck className="size-3.5" /> <span className="text-xs">Mark complete</span></Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon-sm" aria-label="More actions" disabled={setStatus.isPending || archive.isPending}>
-                  {setStatus.isPending || archive.isPending ? <Spinner /> : <MoreHorizontal className="size-4" />}
+                  {setStatus.isPending || archive.isPending ? <Spinner /> : <MoreHorizontal className="size-3.5" />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-48">
@@ -216,11 +216,11 @@ export function GoalDetailPage() {
 
         <div className="min-w-0 space-y-4">
           <SectionCard
-            icon={<Bell className="size-4 text-primary" />}
+            icon={<Bell className="size-3.5 text-primary" />}
             title="Reminders"
             action={
               <Button variant="ghost" size="icon-sm" onClick={() => setDialog("reminder")} aria-label="Add reminder" title="Add reminder">
-                <Plus className="size-4" />
+                <Plus className="size-3.5" />
               </Button>
             }
             contentClassName="px-1 pt-1 pb-2"
@@ -235,7 +235,7 @@ export function GoalDetailPage() {
                   title="No reminders"
                   description="Add a weekly review or a nudge before the deadline."
                   className="py-5"
-                  action={<Button size="sm" variant="outline" onClick={() => setDialog("reminder")}><Plus className="size-4" /> Add reminder</Button>}
+                  action={<Button size="sm" variant="outline" onClick={() => setDialog("reminder")}><Plus className="size-3.5" /> <span className="text-xs">Add reminder</span></Button>}
                 />
               }
             />

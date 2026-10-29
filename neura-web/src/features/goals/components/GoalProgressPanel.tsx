@@ -157,7 +157,7 @@ export function GoalProgressPanel({ goal, onScrollTo }: { goal: GoalBase; onScro
             <UpdateProgressPopover goal={goal} trigger={<Button size="sm"><TrendingUp className="size-4" /> Update progress</Button>} />
           ) : (
             <Button size="sm" variant="outline" onClick={() => onScrollTo(goal.metric === "task" ? "tasks" : "subgoals")}>
-              {goal.metric === "task" ? "Go to tasks" : "Go to milestones"}
+             <span className="text-xs"> {goal.metric === "task" ? "Go to tasks" : "Go to milestones"}</span>
             </Button>
           )}
         </div>

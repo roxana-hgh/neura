@@ -107,9 +107,10 @@ function SingleList() {
               <AddNewTask
                 defaultListId={list.id}
                 trigger={
-                  <Button type="button" size="sm">
-                    <Plus className="size-4" /> New task
-                  </Button>
+                 
+                  <Button type="button" className="flex items-center gap-0.5" size="sm">
+                  <Plus className="size-3.5" /> <span className="text-xs">New task</span>
+                </Button>
                 }
               />
             </>

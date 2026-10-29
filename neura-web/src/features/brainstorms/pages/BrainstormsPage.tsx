@@ -130,8 +130,8 @@ export function BrainstormsPage() {
           !review && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm">
-                  <Sparkles className="size-4" /> Start reset <ChevronDown className="size-3.5 opacity-70" />
+                <Button size="sm" className="gap-1 flex items-center">
+                  <Sparkles className="size-3" /> <span className="text-xs">Start reset</span> <ChevronDown className="size-3 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
@@ -157,7 +157,7 @@ export function BrainstormsPage() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
         <StatTile
           isLoading={inbox.isLoading}
           icon={<Inbox className="size-3.5 text-primary" />}

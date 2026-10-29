@@ -51,8 +51,9 @@ export function HabitsHeader({
           <Button variant="outline" size="icon-sm" onClick={onManage} aria-label="Manage habits">
             <ListChecks className="size-4" />
           </Button>
-          <Button size="sm" onClick={onCreate}>
-            <Plus className="size-4" /> New
+
+          <Button type="button" onClick={onCreate} className="flex items-center gap-0.5" size="sm">
+            <Plus className="size-3.5" /> <span className="text-xs">New </span>
           </Button>
         </div>
       </div>
@@ -83,7 +84,7 @@ export function HabitsHeader({
           <div className="ml-auto flex items-center gap-1 lg:ml-0">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={onToday} disabled={isCurrentPeriod} className="h-8 text-xs">
+                <Button variant="outline" size="sm" onClick={onToday} disabled={isCurrentPeriod} className="h-7 text-xs">
                   Today
                 </Button>
               </TooltipTrigger>
@@ -93,7 +94,7 @@ export function HabitsHeader({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={onPrev} className="size-8" aria-label={`Previous ${view}`}>
+                <Button variant="outline" size="icon" onClick={onPrev} className="size-7" aria-label={`Previous ${view}`}>
                   <ChevronLeft className="size-4" />
                 </Button>
               </TooltipTrigger>
@@ -103,7 +104,7 @@ export function HabitsHeader({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={onNext} className="size-8" aria-label={`Next ${view}`}>
+                <Button variant="outline" size="icon" onClick={onNext} className="size-7" aria-label={`Next ${view}`}>
                   <ChevronRight className="size-4" />
                 </Button>
               </TooltipTrigger>
@@ -116,11 +117,12 @@ export function HabitsHeader({
 
         {/* desktop actions */}
         <div className="hidden items-center gap-1.5 lg:ml-2 lg:flex">
-          <Button variant="outline" size="sm" onClick={onManage}>
-            <ListChecks className="size-4" /> Manage
+          <Button className="flex items-center gap-1" variant="outline" size="sm" onClick={onManage}>
+            <ListChecks className="size-3.5" />  <span className="text-xs">Manage</span>
           </Button>
-          <Button size="sm" onClick={onCreate}>
-            <Plus className="size-4" /> New habit
+
+          <Button type="button" onClick={onCreate} className="flex items-center gap-1" size="sm">
+            <Plus className="size-3.5" /> <span className="text-xs">New habit</span>
           </Button>
         </div>
       </div>

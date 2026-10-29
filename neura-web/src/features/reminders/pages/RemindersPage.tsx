@@ -36,13 +36,14 @@ export function RemindersPage() {
         title="Reminders"
         description="Anything you want to remember at a certain time, on its own or tied to a goal, task or note."
         actions={
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" /> New reminder
+
+          <Button type="button" className="flex items-center gap-0.5" size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="size-3.5" /> <span className="text-xs">New reminder</span>
           </Button>
         }
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
         <StatTile
           isLoading={isLoading}
           icon={<AlarmClock className="size-3.5 text-rose-500" />}

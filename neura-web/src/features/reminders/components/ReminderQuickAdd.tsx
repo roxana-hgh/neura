@@ -45,7 +45,9 @@ export function ReminderQuickAdd() {
             maxLength={200}
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
-          <Button type="submit" size="sm" disabled={!title.trim() || createReminder.isPending}>Add</Button>
+          <Button type="submit" size="sm" disabled={!title.trim() || createReminder.isPending}>
+            <span className="text-xs">Add</span>
+          </Button>
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pl-6">
           {presets.map((p) => (

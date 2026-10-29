@@ -22,7 +22,7 @@ function PageHeader({ eyebrow, title, description, actions, className }: PageHea
         <h1 className="truncate text-lg font-semibold tracking-tight md:text-2xl">{title}</h1>
         {description && <div className="mt-0.5 text-sm text-muted-foreground">{description}</div>}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-1.5">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap items-center  gap-y-3 gap-x-1.5">{actions}</div>}
     </div>
   );
 }

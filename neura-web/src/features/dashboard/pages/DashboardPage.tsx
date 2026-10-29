@@ -147,12 +147,13 @@ function DailyPlanCard({ className }: { className?: string }) {
       <div className="relative mt-auto flex flex-wrap gap-2">
         {!dailyPlan.data && (
           <Button size="sm" disabled={dailyPlan.isPending} onClick={() => dailyPlan.mutate()}>
-            <Sparkles className="size-4" />
-            {dailyPlan.isPending ? "Thinking…" : dailyPlan.isError ? "Try again" : "Plan my day"}
+            <Sparkles className="size-3.5" />
+            <span className="text-xs">{dailyPlan.isPending ? "Thinking…" : dailyPlan.isError ? "Try again" : "Plan my day"}</span>
+            
           </Button>
         )}
         <Button asChild size="sm" variant="outline">
-          <Link to="/assistant">Open assistant</Link>
+          <Link className="text-xs" to="/assistant">Open assistant</Link>
         </Button>
       </div>
     </SectionCard>
@@ -234,8 +235,9 @@ function Dashboard() {
           <>
             <AddNewTask
               trigger={
-                <Button type="button" size="sm">
-                  <Plus className="size-4" /> New task
+             
+                <Button type="button" className="flex items-center gap-0.5" size="sm">
+                  <Plus className="size-3.5" /> <span className="text-xs">New task</span>
                 </Button>
               }
             />

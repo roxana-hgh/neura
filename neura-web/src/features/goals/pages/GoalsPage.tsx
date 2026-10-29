@@ -66,13 +66,14 @@ export function GoalsPage() {
         title="Goals"
         description="What you're working toward this week, month and year."
         actions={
-          <Button size="sm" onClick={() => create()}>
-            <Plus className="size-4" /> New goal
+
+          <Button type="button" className="flex items-center gap-0.5" size="sm" onClick={() => create()}>
+            <Plus className="size-3.5" /> <span className="text-xs">New goal</span>
           </Button>
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-3 lg:grid-cols-4">
         <StatTile isLoading={isLoading} icon={<Target className="size-3.5 text-primary" />} label="Active" value={open.filter((g) => g.status === "active").length} />
         <StatTile isLoading={isLoading} icon={<TrendingUp className="size-3.5 text-sky-500" />} label="On track" value={onTrack} hint="keeping up with the calendar" />
         <StatTile
@@ -105,7 +106,7 @@ export function GoalsPage() {
             description="Pick a time frame and a name — you can add steps, tasks and reminders later."
             action={
               <div className="flex flex-col items-center gap-3">
-                <Button size="sm" onClick={() => create()}><Plus className="size-4" /> New goal</Button>
+                <Button size="sm" onClick={() => create()}> <Plus className="size-3.5" /> <span className="text-xs">New goal</span></Button>
                 <div className="flex flex-wrap justify-center gap-1.5">
                   {EXAMPLES.map((e) => (
                     <button

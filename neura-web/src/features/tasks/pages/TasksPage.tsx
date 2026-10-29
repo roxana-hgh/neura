@@ -31,7 +31,8 @@ function TasksPage() {
         description="Everything on your plate, across all your lists."
         actions={
           <>
-            <TasksSearch className="order-last w-full sm:order-first sm:w-56" />
+            <TasksSearch className="order-last w-full sm:order-first sm:w-60" />
+             <TaskViewToggle />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Toggle
@@ -40,20 +41,20 @@ function TasksPage() {
                   pressed={!hideGoalTasks}
                   onPressedChange={toggleHideGoalTasks}
                   aria-label={goalFilterLabel}
-                  className={cn("cursor-pointer gap-1.5 px-2.5", hideGoalTasks && "text-muted-foreground")}
+                  className={cn("cursor-pointer gap-1 px-2.5", hideGoalTasks && "text-muted-foreground")}
                 >
-                  <Target />
-                  <span className={cn(hideGoalTasks && "line-through")}>Goals</span>
+                  <Target className="size-3.5" />
+                  <span className={cn(hideGoalTasks && "line-through text-xs")}>Goals</span>
                   {goalTaskCount > 0 && <span className="text-xs tabular-nums text-muted-foreground">{goalTaskCount}</span>}
                 </Toggle>
               </TooltipTrigger>
               <TooltipContent>{goalFilterLabel}</TooltipContent>
             </Tooltip>
-            <TaskViewToggle />
+           
             <AddNewTask
               trigger={
-                <Button type="button" size="sm">
-                  <Plus className="size-4" /> New task
+                <Button type="button" className="flex items-center gap-0.5" size="sm">
+                  <Plus className="size-3.5" /> <span className="text-xs">New task</span>
                 </Button>
               }
             />

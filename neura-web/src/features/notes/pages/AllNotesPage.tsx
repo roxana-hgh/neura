@@ -21,9 +21,9 @@ function AllNotesPage() {
             {isLoading ? " " : `${total} ${total === 1 ? "note" : "notes"}`}
           </p>
         </div>
-        <Button asChild className="hidden rounded-full sm:inline-flex">
+        <Button size="sm" asChild className="hidden  sm:inline-flex">
           <Link to="/note/new">
-            <Plus /> New note
+            <Plus className="size-3.5" /> <span className="text-xs">New note</span>
           </Link>
         </Button>
       </div>

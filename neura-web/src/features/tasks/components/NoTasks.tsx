@@ -27,8 +27,9 @@ function NoTasks({
           defaultListId={defaultListId}
           initialDueDate={initialDueDate}
           trigger={
-            <Button type="button" size="sm" variant="outline">
-              <Plus className="size-4" /> Add task
+
+            <Button variant="outline" type="button" className="flex items-center gap-0.5" size="sm">
+              <Plus className="size-3.5" /> <span className="text-xs">Add task</span>
             </Button>
           }
         />

@@ -23,21 +23,21 @@ interface Iprops {
 function AddNewList({ iconOnlyTrigger, isSmall = false }: Iprops) {
   const [open, setOpen] = useState(false);
 
-const addList = useTasksStore((s) => s.addList);
-const { mutate: createList } = useCreateList();
+  const addList = useTasksStore((s) => s.addList);
+  const { mutate: createList } = useCreateList();
 
-const handleSubmit = (values: any) => {
-  createList(values, {
-    onSuccess: (list) => {
-      addList(list);
-    setOpen(false);
-    toast.success("List created successfully!");
-    },
-    onError: (error) => {
-      toast.error(`Error creating list: ${error.message}`);
-    }
-  });
-};
+  const handleSubmit = (values: any) => {
+    createList(values, {
+      onSuccess: (list) => {
+        addList(list);
+        setOpen(false);
+        toast.success("List created successfully!");
+      },
+      onError: (error) => {
+        toast.error(`Error creating list: ${error.message}`);
+      }
+    });
+  };
 
 
 
@@ -49,8 +49,8 @@ const handleSubmit = (values: any) => {
             <Plus size={12} />
           </Button>
         ) : (
-          <Button type="button" size={isSmall ? "xs" : "sm"}>
-            <Plus className="size-4" /> New list
+          <Button type="button" size={isSmall ? "xs" : "sm"} className="flex items-center gap-0.5">
+            <Plus className="size-3.5" /> <span className="text-xs">New list</span>
           </Button>
         )}
       </DialogTrigger>

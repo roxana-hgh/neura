@@ -54,7 +54,7 @@ const handleSubmit = (values: TaskFormValues) => {
       <DialogTrigger asChild>
         {trigger ?? (
           <Button type="button" size={isSmall ? "xs" : "sm"} variant="outline">
-            <span className={`hidden sm:block  ${isSmall ? "text-xs" : "text-sm"}`}>Add Task</span> <Plus  />
+            <span className={`hidden sm:block  ${isSmall ? "text-xs" : "text-sm"}`}>Add Task</span> <Plus className="size-3.5"  />
           </Button>
         )}
       </DialogTrigger>
