@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Bell, Check, ChevronDown } from "lucide-react";
+import { format, isValid, parse } from "date-fns";
+import { Bell, CalendarIcon, Check, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useWeekStartsOn } from "@/hooks/useWeekStartsOn";
@@ -41,6 +44,11 @@ function chip(active: boolean) {
       ? "border-primary bg-primary text-primary-foreground"
       : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
   );
+}
+
+function parseDayKey(value: string): Date | undefined {
+  const date = parse(value, "yyyy-MM-dd", new Date());
+  return isValid(date) ? date : undefined;
 }
 
 function defaultValues(
@@ -93,6 +101,7 @@ export function GoalFormDialog({ open, onOpenChange, goal, parent, initialTitle 
   const [showMore, setShowMore] = useState(false);
   const [offset, setOffset] = useState(0); // 0 = this period, 1 = the next one
   const [editDates, setEditDates] = useState(false);
+  const [openDatePicker, setOpenDatePicker] = useState<"start" | "end" | null>(null);
 
   const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
@@ -104,6 +113,7 @@ export function GoalFormDialog({ open, onOpenChange, goal, parent, initialTitle 
     reset(defaultValues(goal, parent, weekStartsOn, initialTitle));
     setOffset(0);
     setEditDates(isSub);
+    setOpenDatePicker(null);
     let remembered = false;
     try { remembered = localStorage.getItem(MORE_KEY) === "1"; } catch { /* storage unavailable */ }
     setShowMore(isEdit || remembered);
@@ -113,6 +123,8 @@ export function GoalFormDialog({ open, onOpenChange, goal, parent, initialTitle 
   const [period, startDate, endDate, metric, color, presets] = useWatch({
     control, name: ["period", "startDate", "endDate", "metric", "color", "presets"],
   });
+  const startDateValue = parseDayKey(startDate);
+  const endDateValue = parseDayKey(endDate);
 
   const toggleMore = () => {
     const next = !showMore;
@@ -247,11 +259,54 @@ export function GoalFormDialog({ open, onOpenChange, goal, parent, initialTitle 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="goal-start" className="text-xs text-muted-foreground">Start</Label>
-                <Input id="goal-start" type="date" {...register("startDate", { onChange: () => !isSub && setValue("period", "custom") })} />
+                <Popover open={openDatePicker === "start"} onOpenChange={(open) => setOpenDatePicker(open ? "start" : null)}>
+                  <PopoverTrigger asChild>
+                    <Button id="goal-start" type="button" variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon />
+                      {startDate || <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDateValue}
+                      defaultMonth={startDateValue}
+                      captionLayout="dropdown"
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setValue("startDate", format(date, "yyyy-MM-dd"), { shouldValidate: true });
+                        if (!isSub) setValue("period", "custom");
+                        setOpenDatePicker(null);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="goal-end" className="text-xs text-muted-foreground">{isSub ? "Due" : "End"}</Label>
-                <Input id="goal-end" type="date" min={startDate} {...register("endDate", { onChange: () => !isSub && setValue("period", "custom") })} />
+                <Popover open={openDatePicker === "end"} onOpenChange={(open) => setOpenDatePicker(open ? "end" : null)}>
+                  <PopoverTrigger asChild>
+                    <Button id="goal-end" type="button" variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon />
+                      {endDate || <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDateValue}
+                      defaultMonth={endDateValue}
+                      captionLayout="dropdown"
+                      disabled={startDateValue ? { before: startDateValue } : undefined}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setValue("endDate", format(date, "yyyy-MM-dd"), { shouldValidate: true });
+                        if (!isSub) setValue("period", "custom");
+                        setOpenDatePicker(null);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               {(errors.startDate || errors.endDate) && (
                 <p className="col-span-2 text-xs text-destructive">{errors.startDate?.message ?? errors.endDate?.message}</p>
