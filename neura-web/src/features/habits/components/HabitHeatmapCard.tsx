@@ -59,7 +59,7 @@ function HabitHeatmapCard() {
           description="Small daily wins add up."
           action={
             <Button asChild size="sm" variant="outline">
-              <Link to="/habits">Create a habit</Link>
+              <Link className="text-xs" to="/habits">Create a habit</Link>
             </Button>
           }
         />

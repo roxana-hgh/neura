@@ -29,7 +29,7 @@ function ProfileMenu() {
           variant="default"
           size="icon-sm"
           aria-label="Account menu"
-          className="size-8 rounded-full md:w-auto md:max-w-48 md:rounded-md md:px-3"
+          className="size-8 rounded-full md:w-auto md:max-w-48 md:rounded-md md:px-3 flex gap-1 items-centerS"
         >
           <User className="size-4" />
           <span className="hidden truncate text-xs md:block">{session?.user?.name ?? "Profile"}</span>

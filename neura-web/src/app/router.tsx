@@ -19,6 +19,7 @@ import { GoalsPage } from "@/features/goals/pages/GoalsPage";
 import { GoalDetailPage } from "@/features/goals/pages/GoalDetailPage";
 import { RemindersPage } from "@/features/reminders/pages/RemindersPage";
 import { BrainstormsPage } from "@/features/brainstorms/pages/BrainstormsPage";
+import NotFoundPage from "@/layouts/NotFoundPage";
 
 
 export const router = createBrowserRouter([
@@ -37,9 +38,6 @@ export const router = createBrowserRouter([
       { path: "list/:id", element: <SingleList /> },
       { path: "notes", element: <AllNotesPage /> },
       { path: "note/:id", element: <NoteEditorPage /> },
-      // Old URLs: notes are now written and edited on the same page
-      { path: "notes/add", element: <Navigate to="/note/new" replace /> },
-      { path: "note/:id/edit", element: <NoteEditorPage /> },
       { path: "settings", element: <SettingPage /> },
       { path: "focus", element: <FocusTimerPage /> },
       { path: "habits", element: <HabitsPage /> },
@@ -48,6 +46,11 @@ export const router = createBrowserRouter([
       { path: "reminders", element: <RemindersPage /> },
       { path: "brainstorms", element: <BrainstormsPage /> },
       { path: "assistant", element: <AssistantPage /> },
+      // Old URLs: notes are now written and edited on the same page
+      { path: "notes/add", element: <Navigate to="/note/new" replace /> },
+      { path: "note/:id/edit", element: <NoteEditorPage /> },
+      // Catch-all: keep this last
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
   {

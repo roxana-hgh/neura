@@ -34,7 +34,7 @@ function GoalsCard() {
           icon={Target}
           title="No active goals"
           description="Set one for this week, month or year."
-          action={<Button size="sm" variant="outline" asChild><Link to="/goals"><Plus className="size-4" /> New goal</Link></Button>}
+          action={<Button size="sm" variant="outline" asChild><Link to="/goals"><Plus className="size-3" /><span className="text-xs">New goal</span></Link></Button>}
         />
       ) : (
         <div className="space-y-1">
