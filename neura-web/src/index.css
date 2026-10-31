@@ -158,6 +158,27 @@ body {
   @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
 }
 
+/* Status text with a highlight sweeping across it */
+.text-shimmer {
+  background: linear-gradient(90deg, var(--muted-foreground) 35%, var(--foreground) 50%, var(--muted-foreground) 65%) 100% 0 / 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 2s linear infinite;
+}
+
+@keyframes text-shimmer {
+  to { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer {
+    background: none;
+    color: var(--muted-foreground);
+    animation: none;
+  }
+}
+
 /* ── Note editor (TipTap) ─────────────────────────────────── */
 .tiptap { outline: none; }
 

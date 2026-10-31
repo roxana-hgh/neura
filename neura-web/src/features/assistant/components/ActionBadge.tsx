@@ -2,6 +2,7 @@ import type { ElementType } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
+  ArrowUpRight,
   CalendarCheck,
   CircleSlash,
   Flame,
@@ -21,10 +22,10 @@ interface ActionBadgeProps {
 type Tone = "create" | "update" | "delete" | "error";
 
 const TONE_STYLES: Record<Tone, string> = {
-  create: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  update: "border-primary/20 bg-primary/10 text-primary",
-  delete: "border-destructive/20 bg-destructive/10 text-destructive",
-  error: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  create: "text-emerald-600 dark:text-emerald-400",
+  update: "text-muted-foreground",
+  delete: "text-destructive",
+  error: "text-amber-600 dark:text-amber-400",
 };
 
 interface BadgeView {
@@ -81,21 +82,23 @@ export function ActionBadge({ action }: ActionBadgeProps) {
   const { tone, icon: Icon, verb, title, meta, to } = view;
 
   const className = cn(
-    "inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs",
+    "group/badge inline-flex max-w-full items-center gap-1.5 rounded-full bg-muted/70 px-3 py-1.5 text-xs",
     "animate-in fade-in slide-in-from-bottom-1 duration-300",
-    to && "transition-opacity hover:opacity-75",
-    TONE_STYLES[tone]
+    to && "transition-colors hover:bg-accent"
   );
   const content = (
     <>
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span className="shrink-0 opacity-80">{verb}</span>
+      <Icon className={cn("h-3.5 w-3.5 shrink-0", TONE_STYLES[tone])} />
+      <span className="shrink-0 text-muted-foreground">{verb}</span>
       {title && (
         <span dir="auto" className={cn("truncate font-medium", tone === "delete" && "line-through")}>
           {title}
         </span>
       )}
-      {meta && <span className={cn("truncate opacity-70", title && "shrink-0")}>· {meta}</span>}
+      {meta && <span className={cn("truncate text-muted-foreground", title && "shrink-0")}>· {meta}</span>}
+      {to && (
+        <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground transition-transform group-hover/badge:-translate-y-px group-hover/badge:translate-x-px" />
+      )}
     </>
   );
 

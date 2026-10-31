@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ArrowDown, ArrowUp, SquarePen, X } from "lucide-react";
 import { useAssistant, type MentionRef } from "@/features/assistant/hooks/useAssistant";
 import { QuickActions } from "@/features/assistant/components/QuickActions";
-import { AssistantAvatar, ChatMessage } from "@/features/assistant/components/ChatMessage";
+import { ChatMessage } from "@/features/assistant/components/ChatMessage";
 import { TypingIndicator } from "@/features/assistant/components/TypingIndicator";
 import { MentionPicker } from "@/features/assistant/components/MentionPicker";
 import {
@@ -144,6 +144,15 @@ export default function AssistantPage() {
     el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
   }, [input]);
 
+  const focusAt = (pos: number) => {
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
   const resetComposer = () => {
     setInput("");
     setCaret(0);
@@ -178,12 +187,20 @@ export default function AssistantPage() {
     setInput(next);
     setCaret(pos);
     setMentions((prev) => (prev.some((m) => m.id === item.id) ? prev : [...prev, item]));
-    requestAnimationFrame(() => {
-      const el = textareaRef.current;
-      if (!el) return;
-      el.focus();
-      el.setSelectionRange(pos, pos);
-    });
+    focusAt(pos);
+  };
+
+  // The "/" button does what typing it does, for phones where it's buried in the keyboard
+  const openPicker = () => {
+    if (trigger) return focusAt(caret);
+    const before = input.slice(0, caret);
+    const slash = !before || /\s$/.test(before) ? "/" : " /";
+    const pos = caret + slash.length;
+    setInput(before + slash + input.slice(caret));
+    setCaret(pos);
+    setMenuDismissed(false);
+    setActiveIndex(0);
+    focusAt(pos);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -222,12 +239,7 @@ export default function AssistantPage() {
     setCaret(draft.length);
     setMenuDismissed(false);
     setActiveIndex(0);
-    requestAnimationFrame(() => {
-      const el = textareaRef.current;
-      if (!el) return;
-      el.focus();
-      el.setSelectionRange(draft.length, draft.length);
-    });
+    focusAt(draft.length);
   };
 
   // Contextual chips for the single referenced item
@@ -244,28 +256,22 @@ export default function AssistantPage() {
 
   const hasMessages = messages.length > 0;
   const canSend = !!input.trim() && !isPending;
+  // Suggestions step aside while typing, unless they're about the mentioned item
+  const showChips = !!contextChips || !input.trim();
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-5rem)] w-full max-w-3xl flex-col overflow-hidden">
+    <div className="mx-auto flex h-[calc(100dvh-5.5rem)] w-full max-w-3xl flex-col">
       {/* Top bar */}
       {hasMessages && (
-        <div className="flex items-center justify-between gap-2 border-b px-1 pb-2 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <AssistantAvatar />
-            <div className="min-w-0 leading-tight">
-              <p className="text-sm font-semibold">Neura Assistant</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {isPending ? "Working on it…" : "Sees and manages everything in Neura"}
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center justify-between gap-2 px-1 sm:px-4">
+          <p className="truncate text-sm font-medium text-muted-foreground">Neura Assistant</p>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setConfirmClear(true)}
             disabled={isPending}
-            className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+            className="shrink-0 gap-1.5 rounded-full text-muted-foreground hover:text-foreground"
           >
             <SquarePen className="h-4 w-4" />
             <span className="hidden sm:inline">New chat</span>
@@ -278,28 +284,27 @@ export default function AssistantPage() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="no-scrollbar h-full overflow-y-auto px-1 py-6 sm:px-4"
+          className={cn(
+            "no-scrollbar h-full overflow-y-auto px-1 pb-8 pt-6 sm:px-4",
+            // Messages dissolve into the edges instead of being cut off
+            hasMessages && "[mask-image:linear-gradient(to_bottom,transparent,black_1.5rem,black_calc(100%-2rem),transparent)]"
+          )}
         >
           {!hasMessages ? (
-            <div className="flex min-h-full flex-col items-center justify-center gap-7 text-center animate-in fade-in duration-500">
-              <div className="relative">
-                <div className="absolute inset-0 -z-10 scale-150 rounded-full bg-primary/20 blur-2xl" />
-                <AssistantAvatar className="h-14 w-14 rounded-2xl [&_svg]:h-7 [&_svg]:w-7" />
-              </div>
-              <div className="space-y-1.5">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <div className="flex min-h-full flex-col items-center justify-center gap-8 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
                   {greeting}
                   {firstName ? `, ${firstName}` : ""}
                 </h1>
-                <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                  I can see your tasks, habits, goals, reminders, notes and ideas, change them
-                  and tell you what I think. Pick a starting point or just type. English and فارسی both work.
+                <p className="mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  Ask about anything in Neura, or tell me what to change. English and فارسی both work.
                 </p>
               </div>
               <QuickActions onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
@@ -316,11 +321,11 @@ export default function AssistantPage() {
         {!atBottom && hasMessages && (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="icon"
             aria-label="Scroll to latest message"
             onClick={() => scrollToBottom()}
-            className="absolute bottom-3 left-1/2 h-8 w-8 -translate-x-1/2 rounded-full bg-background shadow-md animate-in fade-in zoom-in-95"
+            className="absolute bottom-2 left-1/2 h-8 w-8 -translate-x-1/2 rounded-full border shadow-md animate-in fade-in zoom-in-95"
           >
             <ArrowDown className="h-4 w-4" />
           </Button>
@@ -328,31 +333,41 @@ export default function AssistantPage() {
       </div>
 
       {/* Composer */}
-      <div className="px-1 pb-3 pt-2 sm:px-4">
+      <div className="px-1 pb-1 sm:px-4">
         {hasMessages && (
-          <div className="mb-2">
-            {contextChips ? (
-              <div className="flex flex-wrap gap-2 animate-in fade-in duration-200">
-                {contextChips.options.map((text) => (
-                  <Button
-                    key={text}
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    disabled={isPending}
-                    onClick={() => {
-                      sendMessage(text, "custom", [contextChips.ref]);
-                      resetComposer();
-                    }}
-                    className="rounded-full bg-muted/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  >
-                    {text.replace(`"${contextChips.ref.title}"`, "it")}
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <QuickActions variant="chips" onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
+          <div
+            inert={!showChips}
+            className={cn(
+              "grid transition-[grid-template-rows,opacity] duration-200",
+              showChips ? "grid-rows-[1fr]" : "grid-rows-[0fr] opacity-0"
             )}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="pb-2 pt-1">
+                {contextChips ? (
+                  <div className="flex flex-wrap gap-1.5 animate-in fade-in duration-200">
+                    {contextChips.options.map((text) => (
+                      <Button
+                        key={text}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() => {
+                          sendMessage(text, "custom", [contextChips.ref]);
+                          resetComposer();
+                        }}
+                        className="h-8 rounded-full bg-muted/60 px-3 text-xs font-normal text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      >
+                        {text.replace(`"${contextChips.ref.title}"`, "it")}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <QuickActions variant="chips" onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -366,12 +381,7 @@ export default function AssistantPage() {
             />
           )}
 
-          <div
-            className={cn(
-              "rounded-3xl border bg-muted/40 p-1.5 shadow-sm transition-all",
-              "focus-within:border-primary/40 focus-within:bg-background focus-within:ring-4 focus-within:ring-primary/10"
-            )}
-          >
+          <div className="rounded-[1.625rem] border bg-card p-1.5 shadow-lg shadow-black/5 transition-[border-color,box-shadow] focus-within:border-foreground/20 focus-within:shadow-xl focus-within:shadow-black/10">
             {activeMentions.length > 0 && (
               <div className="flex flex-wrap gap-1.5 px-2.5 pt-1.5">
                 {activeMentions.map((m) => {
@@ -379,7 +389,7 @@ export default function AssistantPage() {
                   return (
                     <span
                       key={`${m.type}-${m.id}`}
-                      className="inline-flex max-w-56 items-center gap-1 rounded-full border bg-background py-0.5 pl-2 pr-1 text-xs"
+                      className="inline-flex max-w-56 items-center gap-1 rounded-full bg-muted py-0.5 pl-2 pr-1 text-xs"
                     >
                       <Icon className={cn("h-3 w-3 shrink-0", className)} />
                       <span dir="auto" className="truncate">{m.title}</span>
@@ -387,7 +397,7 @@ export default function AssistantPage() {
                         type="button"
                         aria-label={`Remove ${m.title}`}
                         onClick={() => removeMention(m)}
-                        className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -397,14 +407,27 @@ export default function AssistantPage() {
               </div>
             )}
 
-            <div className="flex items-end gap-2 pl-3">
+            <div className="flex items-end gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Mention an item"
+                title="Mention an item"
+                // mousedown + preventDefault keeps focus in the textarea, so the keyboard stays up
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={openPicker}
+                className="h-9 w-9 shrink-0 rounded-full font-mono text-base font-normal text-muted-foreground"
+              >
+                /
+              </Button>
               <textarea
                 ref={textareaRef}
                 dir="auto"
                 value={input}
                 rows={1}
                 aria-label="Message the assistant"
-                placeholder={hasMessages ? "Reply, or type / to pick an item…" : "Ask anything, or type / to pick an item…"}
+                placeholder={hasMessages ? "Reply…" : "Ask anything…"}
                 onChange={(e) => {
                   setInput(e.target.value);
                   setCaret(e.target.selectionStart);
@@ -413,16 +436,13 @@ export default function AssistantPage() {
                 }}
                 onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
                 onKeyDown={handleKeyDown}
-                className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+                className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-base leading-6 outline-none placeholder:text-muted-foreground sm:text-[15px]"
               />
               <Button
                 type="button"
                 size="icon"
                 aria-label="Send message"
-                className={cn(
-                  "h-9 w-9 shrink-0 rounded-full transition-all",
-                  !canSend && "scale-95"
-                )}
+                className="h-9 w-9 shrink-0 rounded-full disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
                 onClick={handleSend}
                 disabled={!canSend}
               >
@@ -432,11 +452,6 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        <p className="mt-1.5 hidden text-center text-[11px] text-muted-foreground md:block">
-          <kbd className="rounded border bg-muted px-1">Enter</kbd> to send ·{" "}
-          <kbd className="rounded border bg-muted px-1">Shift + Enter</kbd> for a new line ·{" "}
-          <kbd className="rounded border bg-muted px-1">/</kbd> to mention anything in Neura
-        </p>
       </div>
 
       <AlertDialog

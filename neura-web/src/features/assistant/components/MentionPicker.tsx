@@ -20,9 +20,10 @@ export function MentionPicker({ items, activeIndex, onSelect, onHover }: Mention
   }, [activeIndex]);
 
   return (
-    <div className="absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-lg animate-in fade-in slide-in-from-bottom-1 duration-150">
-      <div className="border-b px-3 py-1.5 text-[11px] text-muted-foreground">
-        Tasks, habits, goals, notes, reminders & ideas · ↑↓ · Enter · Esc
+    <div className="absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-xl shadow-black/10 animate-in fade-in slide-in-from-bottom-1 duration-150">
+      <div className="flex items-center justify-between gap-3 px-3.5 pb-1 pt-2.5 text-xs text-muted-foreground">
+        <span>Mention an item</span>
+        <span className="hidden md:inline">↑↓ · Enter · Esc</span>
       </div>
       <div ref={listRef} className="max-h-56 overflow-y-auto p-1 no-scrollbar">
         {items.map((item, i) => {
@@ -38,7 +39,7 @@ export function MentionPicker({ items, activeIndex, onSelect, onHover }: Mention
               }}
               onMouseEnter={() => onHover(i)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors",
+                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
                 i === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
               )}
             >

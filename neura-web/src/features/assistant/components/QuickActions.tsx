@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import type { ElementType } from "react";
 import type { AssistantMode } from "@/features/assistant/hooks/useAssistant";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import {
   CalendarCheck,
@@ -17,7 +18,6 @@ import {
   ListPlus,
   ListTree,
   Pencil,
-  ChevronRight,
   Trophy,
   Waypoints,
 } from "lucide-react";
@@ -70,6 +70,7 @@ function orderByTimeOfDay(actions: AskAction[]) {
 }
 
 const DRAG_THRESHOLD = 6;
+const CHIP_CLASS = "h-8 shrink-0 rounded-full bg-muted/60 px-3 text-xs font-normal text-muted-foreground hover:bg-accent hover:text-accent-foreground";
 
 export function QuickActions({ onAsk, onCompose, disabled, variant = "grid" }: QuickActionsProps) {
   const asks = useMemo(() => orderByTimeOfDay(ASK_ACTIONS), []);
@@ -77,7 +78,7 @@ export function QuickActions({ onAsk, onCompose, disabled, variant = "grid" }: Q
 
   // ---- drag-to-scroll (chips variant only) ----
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [showChevron, setShowChevron] = useState(false);
+  const [moreOnRight, setMoreOnRight] = useState(false);
   const pointerId = useRef<number | null>(null);
   const isDragging = useRef(false);
   const didDrag = useRef(false);
@@ -89,7 +90,7 @@ export function QuickActions({ onAsk, onCompose, disabled, variant = "grid" }: Q
     if (!el) return;
     const hasOverflow = el.scrollWidth > el.clientWidth + 1;
     const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
-    setShowChevron(hasOverflow && !atEnd);
+    setMoreOnRight(hasOverflow && !atEnd);
   }, []);
 
 useEffect(() => {
@@ -146,22 +147,20 @@ useEffect(() => {
   // ---------------- grid variant ----------------
   if (!isChips) {
     return (
-      <div className="w-full space-y-3">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="w-full max-w-2xl space-y-5">
+        <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
           {asks.map(({ id, mode, message, label, hint, icon: Icon }) => (
             <button
               key={id}
               type="button"
               disabled={disabled}
               onClick={() => onAsk(mode, message)}
-              className="group flex items-center gap-3 rounded-2xl border bg-card p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm disabled:pointer-events-none disabled:opacity-50"
+              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/60 disabled:pointer-events-none disabled:opacity-50"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                <Icon className="h-4 w-4" />
-              </span>
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-foreground">{label}</span>
-                <span className="block truncate text-xs text-muted-foreground">{hint}</span>
+                <span className="block text-sm text-foreground">{label}</span>
+                <span className="hidden truncate text-xs text-muted-foreground sm:block">{hint}</span>
               </span>
             </button>
           ))}
@@ -172,13 +171,13 @@ useEffect(() => {
             <Button
               key={label}
               type="button"
-              variant="outline"
-              size="xs"
+              variant="ghost"
+              size="sm"
               disabled={disabled}
               onClick={() => onCompose(draft)}
-              className="rounded-full border-dashed bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className={CHIP_CLASS}
             >
-              <Icon className="mr-1 h-3.5 w-3.5" />
+              <Icon className="h-3.5 w-3.5" />
               {label}
             </Button>
           ))}
@@ -189,28 +188,30 @@ useEffect(() => {
 
   // ---------------- chips variant ----------------
   return (
-    <div className="relative">
-      <div
-        ref={scrollRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerLeave={endDrag}
-        onClickCapture={handleClickCapture}
-        className="no-scrollbar flex cursor-grab select-none flex-nowrap justify-start gap-2 overflow-x-auto active:cursor-grabbing"
-        style={{ touchAction: "pan-x" }}
-      >
+    <div
+      ref={scrollRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endDrag}
+      onPointerLeave={endDrag}
+      onClickCapture={handleClickCapture}
+      className={cn(
+        "no-scrollbar flex cursor-grab select-none flex-nowrap justify-start gap-1.5 overflow-x-auto active:cursor-grabbing",
+        moreOnRight && "[mask-image:linear-gradient(to_right,black_calc(100%-3rem),transparent)]"
+      )}
+      style={{ touchAction: "pan-x" }}
+    >
         {asks.map(({ id, mode, message, label, icon: Icon }) => (
           <Button
             key={id}
             type="button"
-            variant="outline"
-            size="xs"
+            variant="ghost"
+            size="sm"
             disabled={disabled}
             onClick={() => onAsk(mode, message)}
-            className="shrink-0 rounded-full bg-muted/50 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={CHIP_CLASS}
           >
-            <Icon className="mr-1 h-3.5 w-3.5" />
+            <Icon className="h-3.5 w-3.5" />
             {label}
           </Button>
         ))}
@@ -218,23 +219,16 @@ useEffect(() => {
           <Button
             key={label}
             type="button"
-            variant="outline"
-            size="xs"
+            variant="ghost"
+            size="sm"
             disabled={disabled}
             onClick={() => onCompose(draft)}
-            className="shrink-0 rounded-full border-dashed bg-transparent text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={CHIP_CLASS}
           >
-            <Icon className="mr-1 h-3.5 w-3.5" />
+            <Icon className="h-3.5 w-3.5" />
             {label}
           </Button>
         ))}
-      </div>
-
-      {showChevron && (
-        <div className="pointer-events-none absolute right-0 top-0 flex h-full items-center bg-gradient-to-l from-background via-background/80 to-transparent pl-4 pr-1">
-          <ChevronRight className="h-4 w-4 animate-pulse text-muted-foreground" />
-        </div>
-      )}
     </div>
   );
 }
