@@ -13,9 +13,9 @@ export async function getMe(req: Request, res: Response) {
   }
 }
 
-// PATCH /api/users/me  { name?, age?, job?, gender?, weekStartsOn? (6 | 0 | 1) }
+// PATCH /api/users/me  { name?, age?, job?, gender?, weekStartsOn? (6 | 0 | 1), assistantInstructions? }
 export async function updateMe(req: Request, res: Response) {
-  const { name, age, job, gender, weekStartsOn } = req.body;
+  const { name, age, job, gender, weekStartsOn, assistantInstructions } = req.body;
 
   if (name !== undefined && (typeof name !== "string" || !name.trim())) {
     return res.status(400).json({ error: "Name cannot be empty" });
@@ -26,9 +26,23 @@ export async function updateMe(req: Request, res: Response) {
   if (weekStartsOn !== undefined && !isWeekStartsOn(weekStartsOn)) {
     return res.status(400).json({ error: "Week must start on Saturday, Sunday or Monday" });
   }
+  if (
+    assistantInstructions !== undefined &&
+    assistantInstructions !== null &&
+    (typeof assistantInstructions !== "string" ||
+      assistantInstructions.trim().length > usersService.MAX_ASSISTANT_INSTRUCTIONS)
+  ) {
+    return res.status(400).json({
+      error: `Custom instructions must be ${usersService.MAX_ASSISTANT_INSTRUCTIONS} characters or less`,
+    });
+  }
 
   try {
-    res.json(await usersService.updateProfile(req.userId!, { name, age, job, gender, weekStartsOn }));
+    res.json(
+      await usersService.updateProfile(req.userId!, {
+        name, age, job, gender, weekStartsOn, assistantInstructions,
+      }),
+    );
   } catch {
     res.status(500).json({ error: "Failed to update profile" });
   }

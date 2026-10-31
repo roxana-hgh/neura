@@ -58,6 +58,7 @@ function AccountSection() {
                     age: values.age ? Number(values.age) : null,
                     job: values.job || null,
                     gender: values.gender || null,
+                    assistantInstructions: values.assistantInstructions || null,
                   },
                   {
                     onSuccess: () => toast.success("Profile updated"),

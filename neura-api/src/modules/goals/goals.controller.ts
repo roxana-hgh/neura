@@ -27,7 +27,7 @@ const optionalText = (v: unknown, field: string, max = 1000): string | null => {
  * Snake_case body → GoalInput. Only present keys are set, so PATCH can be partial.
  * Throws 400 on invalid values.
  */
-function parseBody(body: Record<string, unknown>, isCreate: boolean): GoalInput {
+export function parseBody(body: Record<string, unknown>, isCreate: boolean): GoalInput {
   const input: GoalInput = {};
   const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
 

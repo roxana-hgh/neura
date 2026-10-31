@@ -7,13 +7,19 @@ import {
   CalendarCheck,
   CalendarRange,
   AlarmClock,
+  BellPlus,
+  ClipboardCheck,
   Target,
   Flame,
+  Lightbulb,
   Sunset,
   Plus,
   ListPlus,
+  ListTree,
   Pencil,
   ChevronRight,
+  Trophy,
+  Waypoints,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -40,12 +46,19 @@ const ASK_ACTIONS: AskAction[] = [
   { id: "plan_week", mode: "plan_week", message: "How does my week look?", label: "Plan my week", hint: "See what's heavy or light", icon: CalendarRange },
   { id: "habit_checkin", mode: "habit_checkin", message: "How are my habits going?", label: "Habit check-in", hint: "Streaks at risk today", icon: Flame },
   { id: "wrap_up", mode: "wrap_up", message: "Let's wrap up my day", label: "Wrap up my day", hint: "Review and move leftovers", icon: Sunset },
+  { id: "weekly_review", mode: "weekly_review", message: "Let's do my weekly review", label: "Weekly review", hint: "An honest look at your week", icon: ClipboardCheck },
+  { id: "goal_coach", mode: "goal_coach", message: "Coach me on my goals", label: "Goal coach", hint: "What needs attention, next steps", icon: Trophy },
+  { id: "sort_brainstorms", mode: "sort_brainstorms", message: "Help me sort my brainstorm inbox", label: "Sort my ideas", hint: "A verdict for every idea", icon: Lightbulb },
+  { id: "connect_dots", mode: "connect_dots", message: "Connect the dots for me", label: "Connect the dots", hint: "Links and blind spots across Neura", icon: Waypoints },
 ];
 
 const COMPOSE_ACTIONS: { draft: string; label: string; icon: ElementType }[] = [
   { draft: "Add a task: ", label: "Quick add", icon: Plus },
   { draft: "Add these tasks:\n- ", label: "Brain dump", icon: ListPlus },
-  { draft: "Edit /", label: "Edit a task", icon: Pencil }, // "/" immediately opens the picker
+  { draft: "Break this down into subtasks: /", label: "Break down", icon: ListTree },
+  { draft: "Remind me to ", label: "Remind me", icon: BellPlus },
+  { draft: "Help me turn this into a goal with sub-goals: ", label: "Shape a goal", icon: Target },
+  { draft: "Edit /", label: "Edit something", icon: Pencil }, // "/" immediately opens the picker
 ];
 
 // Put the most relevant action first for the time of day

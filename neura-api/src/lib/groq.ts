@@ -17,6 +17,7 @@ const SHORT_WAIT_MAX_MS = 3000; // wait + retry same model only if the limit res
 const DEFAULT_COOLDOWN_MS = 15_000;
 const MAX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const APPROX_TOKEN_WARN = 6000; // warn when a single request nears the 8K TPM cap
+const BUSY_AFTER_ACTIONS_REPLY = "I made the changes shown below, but couldn't finish my reply just now.";
 
 // ---------- Errors ----------
 
@@ -110,7 +111,9 @@ function cleanReply(text: string): string {
 
 // ---------- Single model call ----------
 
-async function callGroqModel(model: string, messages: GroqMessage[], tools?: any[]) {
+type ToolChoice = "auto" | "none";
+
+async function callGroqModel(model: string, messages: GroqMessage[], tools?: any[], toolChoice: ToolChoice = "auto") {
   let res: Awaited<ReturnType<typeof fetch>>;
   try {
     res = await fetch(GROQ_URL, {
@@ -126,7 +129,7 @@ async function callGroqModel(model: string, messages: GroqMessage[], tools?: any
         max_completion_tokens: MAX_COMPLETION_TOKENS,
         // gpt-oss models reason by default; "low" saves tokens/latency (don't send to Qwen)
         ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
-        ...(tools?.length ? { tools, tool_choice: "auto" } : {}),
+        ...(tools?.length ? { tools, tool_choice: toolChoice } : {}),
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
@@ -168,13 +171,13 @@ async function callGroqModel(model: string, messages: GroqMessage[], tools?: any
 
 // ---------- Fallback across models ----------
 
-async function callGroqWithFallback(order: string[], messages: GroqMessage[], tools?: any[]) {
+async function callGroqWithFallback(order: string[], messages: GroqMessage[], tools?: any[], toolChoice?: ToolChoice) {
   for (const model of order) {
     if (isCoolingDown(model)) continue;
 
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const data = await callGroqModel(model, messages, tools);
+        const data = await callGroqModel(model, messages, tools, toolChoice);
         return { data, modelUsed: model };
       } catch (err) {
         if (!(err instanceof RetryableModelError)) throw err; // config/bad-request errors: fail fast
@@ -200,13 +203,14 @@ async function callGroqWithFallback(order: string[], messages: GroqMessage[], to
 export async function runAssistantTurn({
   systemPrompt,
   userPrompt,
-  tools,
+  getTools,
   executeTool,
-  maxToolRounds = 4,
+  maxToolRounds = 6,
 }: {
   systemPrompt: string;
   userPrompt: string;
-  tools?: any[];
+  /** Read before every round: a tool call can make more tools available for the next one. */
+  getTools: () => any[];
   executeTool: (name: string, args: any) => Promise<any>;
   maxToolRounds?: number;
 }): Promise<{ reply: string; actions: ToolExecutedAction[]; modelUsed: string }> {
@@ -215,23 +219,33 @@ export async function runAssistantTurn({
     { role: "user", content: userPrompt },
   ];
   const actions: ToolExecutedAction[] = [];
-  const groqTools = toGroqTools(tools);
-  const toolsSize = JSON.stringify(groqTools ?? []).length;
 
   let currentOrder = getModelOrder();
   let modelUsed = currentOrder[0];
 
   for (let round = 0; round < maxToolRounds; round++) {
-    const approxTokens = Math.ceil((JSON.stringify(messages).length + toolsSize) / 3.5);
+    const groqTools = toGroqTools(getTools());
+    const approxTokens = Math.ceil(
+      (JSON.stringify(messages).length + JSON.stringify(groqTools ?? []).length) / 3.5
+    );
     if (approxTokens > APPROX_TOKEN_WARN) {
       console.warn(`[assistant] request ≈${approxTokens} tokens — close to the 8K TPM limit`);
     }
 
-    const { data, modelUsed: usedThisRound } = await callGroqWithFallback(
-      currentOrder,
-      messages,
-      groqTools
-    );
+    // The last round has to end in words, so the user never gets a canned reply
+    const toolChoice: ToolChoice = round === maxToolRounds - 1 ? "none" : "auto";
+
+    let response: Awaited<ReturnType<typeof callGroqWithFallback>>;
+    try {
+      response = await callGroqWithFallback(currentOrder, messages, groqTools, toolChoice);
+    } catch (err) {
+      // Changes already made must still reach the client, or its data goes stale silently
+      if (err instanceof AssistantBusyError && actions.length > 0) {
+        return { reply: BUSY_AFTER_ACTIONS_REPLY, actions, modelUsed };
+      }
+      throw err;
+    }
+    const { data, modelUsed: usedThisRound } = response;
     modelUsed = usedThisRound;
     // Stick with the winning model for the remaining rounds, others stay as fallbacks
     currentOrder = [usedThisRound, ...MODEL_POOL.filter((m) => m !== usedThisRound)];
@@ -274,9 +288,5 @@ export async function runAssistantTurn({
     }
   }
 
-  return {
-    reply: "I took a few actions but I'm not able to summarize the result right now — check your task list.",
-    actions,
-    modelUsed,
-  };
+  return { reply: BUSY_AFTER_ACTIONS_REPLY, actions, modelUsed };
 }

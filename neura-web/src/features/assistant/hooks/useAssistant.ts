@@ -5,26 +5,34 @@ import { api } from "@/lib/api";
 import { format } from "date-fns";
 import { useSession } from "@/lib/auth-client";
 import { useAssistantStore } from "@/features/assistant/stores/assistantStore";
+import { TOOL_ACTIONS } from "@/features/assistant/lib/toolActions";
+import type { MentionType } from "@/features/assistant/lib/mentionItems";
 
 export type AssistantMode =
   | "today" | "week" | "upcoming" | "overdue" | "suggestion" | "custom" | "daily_plan"
-  | "plan_day" | "next_up" | "reschedule_overdue" | "plan_week" | "habit_checkin" | "wrap_up";
-
-type TaskActionName = "create_task" | "update_task" | "delete_task";
-type HabitActionName = "create_habit" | "update_habit" | "delete_habit" | "log_habit_completion";
+  | "plan_day" | "next_up" | "reschedule_overdue" | "plan_week" | "habit_checkin" | "wrap_up"
+  | "weekly_review" | "goal_coach" | "sort_brainstorms" | "connect_dots";
 
 export interface MentionRef {
   id: string;
   title: string;
-  type: "task" | "habit";
+  type: MentionType;
+}
+
+interface ToolActionItem {
+  id?: string;
+  title: string;
+  meta?: string;
+  priority?: string;
+  durationDays?: number | null;
 }
 
 export interface ToolAction {
-  name: TaskActionName | HabitActionName;
+  name: string; // see TOOL_ACTIONS
   args: Record<string, any>;
   result: {
-    created?: { id: string; title: string; priority?: string; durationDays?: number | null };
-    updated?: { id: string; title: string; priority?: string; durationDays?: number | null };
+    created?: ToolActionItem;
+    updated?: ToolActionItem;
     deleted?: { id: string; title: string };
     habit?: string;
     date?: string;
@@ -57,13 +65,6 @@ interface AskAssistantPayload {
   clientDate: string;
   timeZone: string;
 }
-
-const HABIT_ACTION_NAMES = new Set<HabitActionName>([
-  "create_habit",
-  "update_habit",
-  "delete_habit",
-  "log_habit_completion",
-]);
 
 const ASSISTANT_MUTATION_KEY = ["assistant"];
 
@@ -99,13 +100,8 @@ export function useAssistant() {
           { id: crypto.randomUUID(), role: "assistant", content: reply, actions, createdAt: Date.now() },
         ]);
 
-        if (actions.length > 0) {
-          const touchedTasks = actions.some((a) => !HABIT_ACTION_NAMES.has(a.name as HabitActionName));
-          const touchedHabits = actions.some((a) => HABIT_ACTION_NAMES.has(a.name as HabitActionName));
-
-          if (touchedTasks) queryClient.invalidateQueries({ queryKey: ["tasks"] });
-          if (touchedHabits) queryClient.invalidateQueries({ queryKey: ["habits"] });
-        }
+        const touched = new Set(actions.flatMap((a) => TOOL_ACTIONS[a.name]?.queries ?? []));
+        touched.forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
       } catch (error: any) {
         const serverMessage = error?.response?.data?.message;
         const { mode, question, references } = payload;

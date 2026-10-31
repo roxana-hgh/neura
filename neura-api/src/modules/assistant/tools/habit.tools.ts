@@ -100,14 +100,6 @@ export const HABIT_TOOLS = [
   },
 ];
 
-export const HABIT_TOOL_NAMES = new Set([
-  "list_habits",
-  "create_habit",
-  "update_habit",
-  "delete_habit",
-  "log_habit_completion",
-]);
-
 // ---- Execution, always scoped to the authenticated user ----
 export async function executeHabitTool(name: string, args: any, userId: string) {
   switch (name) {

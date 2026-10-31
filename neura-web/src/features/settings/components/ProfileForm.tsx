@@ -1,11 +1,17 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { User } from "@/features/settings/types/user";
-import { profileFormSchema, type ProfileFormValues } from "@/features/settings/schemas/profile.schema";
+import {
+  MAX_ASSISTANT_INSTRUCTIONS,
+  profileFormSchema,
+  type ProfileFormValues,
+} from "@/features/settings/schemas/profile.schema";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 
 interface ProfileFormProps {
@@ -28,10 +34,12 @@ function ProfileForm({ profile, onSubmit, isSubmitting }: ProfileFormProps) {
       age: profile.age ? String(profile.age) : "",
       job: profile.job ?? "",
       gender: (profile.gender as ProfileFormValues["gender"]) ?? undefined,
+      assistantInstructions: profile.assistantInstructions ?? "",
     },
   });
 
   const gender = watch("gender");
+  const instructionsLength = watch("assistantInstructions")?.length ?? 0;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -75,6 +83,33 @@ function ProfileForm({ profile, onSubmit, isSubmitting }: ProfileFormProps) {
         <Input id="job" placeholder="e.g. Software Developer" {...register("job")} />
         {errors.job && <p className="text-xs text-destructive">{errors.job.message}</p>}
       </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <Label htmlFor="assistantInstructions">Custom instructions for the assistant</Label>
+          <span
+            className={cn(
+              "shrink-0 text-xs tabular-nums text-muted-foreground",
+              instructionsLength > MAX_ASSISTANT_INSTRUCTIONS && "text-destructive"
+            )}
+          >
+            {instructionsLength}/{MAX_ASSISTANT_INSTRUCTIONS}
+          </span>
+        </div>
+        <Textarea
+          id="assistantInstructions"
+          dir="auto"
+          rows={4}
+          placeholder="e.g. Always reply in Persian. Be blunt about my priorities. I work best in the morning, so suggest deep work before noon."
+          {...register("assistantInstructions")}
+        />
+        <p className="text-xs text-muted-foreground">
+          Optional. The assistant follows these in every chat: how it talks to you, what to focus on, how you like to work.
+        </p>
+        {errors.assistantInstructions && (
+          <p className="text-xs text-destructive">{errors.assistantInstructions.message}</p>
+        )}
       </div>
 
       <div className="flex justify-end">

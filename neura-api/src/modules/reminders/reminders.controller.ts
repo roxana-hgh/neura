@@ -18,7 +18,7 @@ const optionalId = (v: unknown) => (typeof v === "string" && v ? v : null);
  * Turns the snake_case request body into a ReminderInput. Only keys that are present
  * are set, so PATCH can send a partial body. Throws 400 on invalid values.
  */
-function parseBody(body: Record<string, unknown>, isCreate: boolean): ReminderInput {
+export function parseBody(body: Record<string, unknown>, isCreate: boolean): ReminderInput {
   const input: ReminderInput = {};
   const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
 

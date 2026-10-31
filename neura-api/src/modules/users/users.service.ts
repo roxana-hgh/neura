@@ -11,8 +11,12 @@ const profileSelect = {
   job: true,
   gender: true,
   weekStartsOn: true,
+  assistantInstructions: true,
   createdAt: true,
 };
+
+// Sent with every assistant request, so it's capped well below the model's token budget.
+export const MAX_ASSISTANT_INSTRUCTIONS = 1000;
 
 export interface ProfileUpdate {
   name?: string;
@@ -20,6 +24,7 @@ export interface ProfileUpdate {
   job?: string | null;
   gender?: string | null;
   weekStartsOn?: WeekStartsOn;
+  assistantInstructions?: string | null;
 }
 
 export function getProfile(userId: string) {
@@ -29,7 +34,10 @@ export function getProfile(userId: string) {
   });
 }
 
-export function updateProfile(userId: string, { name, age, job, gender, weekStartsOn }: ProfileUpdate) {
+export function updateProfile(
+  userId: string,
+  { name, age, job, gender, weekStartsOn, assistantInstructions }: ProfileUpdate,
+) {
   return prisma.user.update({
     where: { id: userId },
     data: {
@@ -38,6 +46,9 @@ export function updateProfile(userId: string, { name, age, job, gender, weekStar
       ...(job !== undefined && { job }),
       ...(gender !== undefined && { gender }),
       ...(weekStartsOn !== undefined && { weekStartsOn }),
+      ...(assistantInstructions !== undefined && {
+        assistantInstructions: assistantInstructions?.trim() || null,
+      }),
     },
     select: profileSelect,
   });

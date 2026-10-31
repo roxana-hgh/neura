@@ -25,6 +25,7 @@ model User {
   job           String?
   gender        String?
   weekStartsOn  Int            @default(1) // 0 = Sunday, 1 = Monday, 6 = Saturday
+  assistantInstructions String? // free-text preferences added to the assistant's system prompt
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   sessions      Session[]

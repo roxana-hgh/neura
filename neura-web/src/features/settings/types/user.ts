@@ -9,9 +9,10 @@ export interface User {
   job: string | null;
   gender: string | null;
   weekStartsOn: WeekStartsOn;
+  assistantInstructions: string | null;
   createdAt: string;
 }
 
 export type UpdateProfilePayload = Partial<
-  Pick<User, "name" | "age" | "job" | "gender">
+  Pick<User, "name" | "age" | "job" | "gender" | "assistantInstructions">
 >;

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
-import { CheckSquare, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { MentionItem } from "@/features/assistant/lib/mentionItems";
+import { MENTION_STYLES, type MentionItem } from "@/features/assistant/lib/mentionItems";
 
 
 interface MentionPickerProps {
@@ -23,11 +22,11 @@ export function MentionPicker({ items, activeIndex, onSelect, onHover }: Mention
   return (
     <div className="absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-lg animate-in fade-in slide-in-from-bottom-1 duration-150">
       <div className="border-b px-3 py-1.5 text-[11px] text-muted-foreground">
-        Tasks & habits · ↑↓ to move · Enter to select · Esc to close
+        Tasks, habits, goals, notes, reminders & ideas · ↑↓ · Enter · Esc
       </div>
       <div ref={listRef} className="max-h-56 overflow-y-auto p-1 no-scrollbar">
         {items.map((item, i) => {
-          const Icon = item.type === "habit" ? Flame : CheckSquare;
+          const { icon: Icon, className } = MENTION_STYLES[item.type];
           return (
             <button
               key={`${item.type}-${item.id}`}
@@ -43,13 +42,8 @@ export function MentionPicker({ items, activeIndex, onSelect, onHover }: Mention
                 i === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
               )}
             >
-              <Icon
-                className={cn(
-                  "h-4 w-4 shrink-0",
-                  item.type === "habit" ? "text-orange-500" : "text-primary"
-                )}
-              />
-              <span className="min-w-0 flex-1 truncate">{item.title}</span>
+              <Icon className={cn("h-4 w-4 shrink-0", className)} />
+              <span dir="auto" className="min-w-0 flex-1 truncate">{item.title}</span>
               {item.meta && (
                 <span className="shrink-0 text-xs text-muted-foreground">{item.meta}</span>
               )}

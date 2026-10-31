@@ -144,7 +144,8 @@ src/
 │   │   ├── components/            # ChatMessage, MarkdownMessage, ActionBadge, MentionPicker,
 │   │   │                          # QuickActions, TypingIndicator
 │   │   ├── hooks/                 # useAssistant (chat, modes, @mentions), useDailyPlan (dashboard card)
-│   │   ├── lib/                   # mentionItems (MentionItem, filterMentionItems)
+│   │   ├── lib/                   # mentionItems (MentionItem, MENTION_STYLES, filterMentionItems),
+│   │   │                          # toolActions (TOOL_ACTIONS: badge verb, queries to refresh, link per tool)
 │   │   └── pages/                 # AssistantPage (uses tasks + habits hooks for @mentions)
 │   ├── goals/
 │   │   ├── components/            # GoalCard (+ GoalStatusBadge), GoalProgressBar, GoalFormDialog (create/edit goal or
@@ -248,7 +249,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 - Features should not import from each other. Allowed exceptions:
   - `dashboard` imports from all features
   - `layouts/SidebarNav` imports from `tasks`
-  - `assistant/pages/AssistantPage` uses `tasks` and `habits` hooks for @mentions
+  - `assistant/pages/AssistantPage` uses the `tasks`, `habits`, `goals`, `notes`, `reminders` and `brainstorms` list hooks for @mentions
   - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
   - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
   - `brainstorms` uses `tasks` (`TaskForm`, `useCreateTask`) and `reminders/ReminderFormDialog` (`onSaved`) to convert items
@@ -462,10 +463,19 @@ neura-api/
             ├── assistant.routes.ts / assistant.controller.ts  # 503 + Retry-After when every model is busy
             ├── assistant.service.ts   # Builds the user prompt, runs the tool loop, filters mutating actions
             ├── assistant.prompts.ts   # SYSTEM_PROMPT, QUICK_INSTRUCTIONS (per quick-action mode), MUTATING_TOOLS
-            ├── assistant.context.ts   # Task / habit / profile snapshots embedded in the prompt
+            ├── assistant.context.ts   # Task / habit / profile / workspace snapshots embedded in the prompt
+            ├── assistant.toolbox.ts   # Tool areas, which ones a request gets (selectAreas), load_tools, dispatch
             └── tools/
-                ├── task.tools.ts      # list_tasks, create_task, update_task, delete_task
-                └── habit.tools.ts     # list_habits, create_habit, update_habit, delete_habit, log_habit_completion
+                ├── tool.utils.ts      # ToolContext (userId, todayKey, timeZone), argument validation, clip
+                ├── task.tools.ts      # Core: list/create/update/delete_task. task_details: get_task, add_subtasks,
+                │                      # update_subtask, bulk_update_tasks, list_task_lists, create_task_list
+                ├── habit.tools.ts     # Core: list_habits, create/update/delete_habit, log_habit_completion
+                ├── search.tools.ts    # Core: search_everything
+                ├── goal.tools.ts      # goals: list/get/create/update/delete, progress, journal, status, tasks, links
+                ├── reminder.tools.ts  # reminders: list/create/update/delete, reminder_action (local time ↔ UTC)
+                ├── brainstorm.tools.ts # brainstorms: list/add/update/delete, sort_brainstorm (to task / reminder, keep, dismiss)
+                ├── note.tools.ts      # notes: list/get/create/update/delete (plain text ↔ TipTap HTML)
+                └── insight.tools.ts   # insights: get_insights, log_focus_session
 ```
 
 ### Backend conventions (follow these when adding or changing code)
@@ -518,7 +528,11 @@ neura-api/
 - To add a tool:
   1. Add the schema and a `case` in `execute*Tool`.
   2. If the tool changes data, add its name to `MUTATING_TOOLS` in `assistant.prompts.ts`.
-  3. For habit tools, also add the name to `HABIT_TOOL_NAMES`.
+  3. If it changes data, add it to `TOOL_ACTIONS` in `neura-web/.../assistant/lib/toolActions.ts`, and return `{ created | updated | deleted: { id, title, meta? } }` so `ActionBadge` can show it.
+  4. A new file needs its group registered in `assistant.toolbox.ts`.
+- Each model has an 8K tokens-per-minute limit, and every schema counts on every round. Only the core group is always sent; the rest are areas, added by keyword / mode / @mention (`selectAreas`) or by the model through `load_tools`. Keep descriptions short and add new tools to an area, not to core.
+- Tools call the module's service rather than duplicating its logic. Throw `HttpError` for expected failures: the toolbox returns the message to the model so it can correct itself. Goal and reminder tools reuse the controllers' `parseBody`, so their fields are snake_case.
+- Notes hold inline images as data URLs, so tools only exchange plain text (`htmlToText` / `textToHtml`), and a full rewrite is refused for a note with images.
 
 **Dependencies and deploy (Render)**
 - Render installs with production settings, so **devDependencies are not installed** during the build.
@@ -556,7 +570,7 @@ neura-api/
 ### Data model (Prisma)
 
 - `User`
-  - Fields: name, email, image, age, job, gender, weekStartsOn (`Int`, default `1`; `6` Sat / `0` Sun / `1` Mon)
+  - Fields: name, email, image, age, job, gender, weekStartsOn (`Int`, default `1`; `6` Sat / `0` Sun / `1` Mon), assistantInstructions (custom instructions, max 1000 chars, added to the assistant's system prompt)
   - Relations: sessions, accounts, tasks, taskLists, notes, focusSessions, habits
 - Better Auth tables: `Session`, `Account`, `Verification`
 - `TaskList`: name, color, description, userId. Has many tasks.
@@ -593,9 +607,9 @@ All IDs are `cuid()` strings. Child rows are cascade-deleted with their user.
    - The user prompt includes:
      - today's date
      - profile info
-     - task and habit snapshots from `assistant.context.ts`
+     - task, habit and workspace (goals, reminders, inbox, notes, focus) snapshots from `assistant.context.ts`
      - sanitized references
      - the last 6 chat turns
 3. `lib/groq.ts` runs the tool-calling loop with `SYSTEM_PROMPT`. It rotates through a model pool when a model is rate-limited. When every model is busy it throws `AssistantBusyError`, and the controller answers `503` with a `Retry-After` header.
-4. Tool calls run against Prisma through `tools/task.tools.ts` and `tools/habit.tools.ts`, always scoped to the user. Only data-changing actions (`MUTATING_TOOLS`) are returned to the client, which shows them as `ActionBadge`s.
+4. Tool calls run through `assistant.toolbox.ts` into `tools/*.tools.ts`, always scoped to the user. The tool list is re-read every round (up to 6; the last one must answer in text), so `load_tools` takes effect on the next round. Only data-changing actions (`MUTATING_TOOLS`) are returned to the client, which shows them as `ActionBadge`s that link to the item. The user's `assistantInstructions` are appended to the system prompt; they can't lift the confirmation rules. Mode `daily_plan` sends no tools.
 5. The assistant replies in the user's language. Both Persian and English are supported. Mode `daily_plan` powers the dashboard card.

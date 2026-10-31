@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
-import { ArrowDown, ArrowUp, CheckSquare, Flame, SquarePen, X } from "lucide-react";
+import { ArrowDown, ArrowUp, SquarePen, X } from "lucide-react";
 import { useAssistant, type MentionRef } from "@/features/assistant/hooks/useAssistant";
 import { QuickActions } from "@/features/assistant/components/QuickActions";
 import { AssistantAvatar, ChatMessage } from "@/features/assistant/components/ChatMessage";
@@ -8,6 +8,7 @@ import { TypingIndicator } from "@/features/assistant/components/TypingIndicator
 import { MentionPicker } from "@/features/assistant/components/MentionPicker";
 import {
   filterMentionItems,
+  MENTION_STYLES,
   type MentionItem,
 } from "@/features/assistant/lib/mentionItems";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,19 @@ import { useSession } from "@/lib/auth-client";
 import { useTasks } from "@/features/tasks/hooks/useTasks";
 import { useHabits } from "@/features/habits/hooks/useHabits";
 import type { Habit } from "@/features/habits/types/habit";
+import { useGoals } from "@/features/goals/hooks/useGoals";
+import { useNotes } from "@/features/notes/hooks/useNotes";
+import { useReminders } from "@/features/reminders/hooks/useReminders";
+import { useBrainstorms } from "@/features/brainstorms/hooks/useBrainstorms";
+
+const CONTEXT_OPTIONS: Partial<Record<MentionItem["type"], (title: string) => string[]>> = {
+  task: (t) => [`Mark "${t}" as done`, `Move "${t}" to tomorrow`, `Break "${t}" down into subtasks`],
+  habit: (t) => [`Mark "${t}" as done for today`, `How's my streak on "${t}"?`],
+  goal: (t) => [`How am I doing on "${t}"?`, `Suggest next steps for "${t}"`, `Break "${t}" into sub-goals`],
+  note: (t) => [`Summarize "${t}"`, `Pull action items out of "${t}"`, `What's your take on "${t}"?`],
+  reminder: (t) => [`Mark "${t}" as done`, `Snooze "${t}" for an hour`],
+  brainstorm: (t) => [`What do you think of "${t}"?`, `Sharpen "${t}"`, `Turn "${t}" into a task`],
+};
 
 export default function AssistantPage() {
   const { messages, sendMessage, sendQuickAction, retry, clearChat, isPending } = useAssistant();
@@ -36,6 +50,10 @@ export default function AssistantPage() {
   const { data: tasksData } = useTasks();
   const { data: habitsData } = useHabits("all",
     new Date());
+  const { data: goalsData } = useGoals();
+  const { notes } = useNotes();
+  const { data: remindersData } = useReminders("upcoming");
+  const { data: brainstormsData } = useBrainstorms("inbox");
 
   const mentionItems = useMemo<MentionItem[]>(() => {
     const tasks = tasksData ?? [];
@@ -58,8 +76,21 @@ export default function AssistantPage() {
       .filter((h) => !h.isArchived)
       .map((h) => ({ id: h.id, title: h.title, type: "habit" as const, meta: "habit" }));
 
-    return [...taskItems, ...habitItems];
-  }, [tasksData, habitsData]);
+    const goalItems: MentionItem[] = (goalsData ?? []).map((g) => ({
+      id: g.id, title: g.title, type: "goal" as const, meta: `${g.progress}%`,
+    }));
+    const noteItems: MentionItem[] = notes.map((n) => ({
+      id: String(n.id), title: n.title, type: "note" as const, meta: "note",
+    }));
+    const reminderItems: MentionItem[] = (remindersData ?? []).map((r) => ({
+      id: r.id, title: r.title, type: "reminder" as const, meta: format(new Date(r.nextAt), "MMM d, HH:mm"),
+    }));
+    const brainstormItems: MentionItem[] = (brainstormsData ?? []).map((b) => ({
+      id: b.id, title: b.content.split("\n")[0].slice(0, 80), type: "brainstorm" as const, meta: "idea",
+    }));
+
+    return [...taskItems, ...habitItems, ...goalItems, ...noteItems, ...reminderItems, ...brainstormItems];
+  }, [tasksData, habitsData, goalsData, notes, remindersData, brainstormsData]);
 
   // "/" trigger: a slash at the start or after whitespace, up to the caret
   const trigger = useMemo(() => {
@@ -204,15 +235,7 @@ export default function AssistantPage() {
     if (activeMentions.length !== 1) return null;
     const m = activeMentions[0];
     const ref: MentionRef = { id: m.id, title: m.title, type: m.type };
-    const options =
-      m.type === "task"
-        ? [
-          `Mark "${m.title}" as done`,
-          `Move "${m.title}" to tomorrow`,
-          `Make "${m.title}" high priority`,
-        ]
-        : [`Mark "${m.title}" as done for today`, `How's my streak on "${m.title}"?`];
-    return { ref, options };
+    return { ref, options: CONTEXT_OPTIONS[m.type]?.(m.title) ?? [] };
   }, [activeMentions]);
 
   const hour = new Date().getHours();
@@ -232,7 +255,7 @@ export default function AssistantPage() {
             <div className="min-w-0 leading-tight">
               <p className="text-sm font-semibold">Neura Assistant</p>
               <p className="truncate text-xs text-muted-foreground">
-                {isPending ? "Working on it…" : "Manages your tasks & habits"}
+                {isPending ? "Working on it…" : "Sees and manages everything in Neura"}
               </p>
             </div>
           </div>
@@ -269,8 +292,8 @@ export default function AssistantPage() {
                   {firstName ? `, ${firstName}` : ""}
                 </h1>
                 <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                  I can plan your day, add or reschedule tasks and check in on your habits.
-                  Pick a starting point or just type. English and فارسی both work.
+                  I can see your tasks, habits, goals, reminders, notes and ideas, change them
+                  and tell you what I think. Pick a starting point or just type. English and فارسی both work.
                 </p>
               </div>
               <QuickActions onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
@@ -352,18 +375,13 @@ export default function AssistantPage() {
             {activeMentions.length > 0 && (
               <div className="flex flex-wrap gap-1.5 px-2.5 pt-1.5">
                 {activeMentions.map((m) => {
-                  const Icon = m.type === "habit" ? Flame : CheckSquare;
+                  const { icon: Icon, className } = MENTION_STYLES[m.type];
                   return (
                     <span
                       key={`${m.type}-${m.id}`}
                       className="inline-flex max-w-56 items-center gap-1 rounded-full border bg-background py-0.5 pl-2 pr-1 text-xs"
                     >
-                      <Icon
-                        className={cn(
-                          "h-3 w-3 shrink-0",
-                          m.type === "habit" ? "text-orange-500" : "text-primary"
-                        )}
-                      />
+                      <Icon className={cn("h-3 w-3 shrink-0", className)} />
                       <span dir="auto" className="truncate">{m.title}</span>
                       <button
                         type="button"
@@ -386,7 +404,7 @@ export default function AssistantPage() {
                 value={input}
                 rows={1}
                 aria-label="Message the assistant"
-                placeholder={hasMessages ? "Reply, or type / to pick a task…" : "Ask anything, or type / to pick a task…"}
+                placeholder={hasMessages ? "Reply, or type / to pick an item…" : "Ask anything, or type / to pick an item…"}
                 onChange={(e) => {
                   setInput(e.target.value);
                   setCaret(e.target.selectionStart);
@@ -417,7 +435,7 @@ export default function AssistantPage() {
         <p className="mt-1.5 hidden text-center text-[11px] text-muted-foreground md:block">
           <kbd className="rounded border bg-muted px-1">Enter</kbd> to send ·{" "}
           <kbd className="rounded border bg-muted px-1">Shift + Enter</kbd> for a new line ·{" "}
-          <kbd className="rounded border bg-muted px-1">/</kbd> to mention a task or habit
+          <kbd className="rounded border bg-muted px-1">/</kbd> to mention anything in Neura
         </p>
       </div>
 
@@ -425,7 +443,7 @@ export default function AssistantPage() {
         open={confirmClear}
         setOpen={setConfirmClear}
         title="Start a new chat?"
-        description="This conversation will be cleared. Tasks and habits the assistant changed stay as they are."
+        description="This conversation will be cleared. Anything the assistant changed stays as it is."
         acceptButtonText="New chat"
         cancelButtonText="Cancel"
         onConfirm={handleNewChat}
