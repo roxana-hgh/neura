@@ -156,8 +156,10 @@ src/
 │   │   ├── lib/                   # goalPeriod (PERIOD_OPTIONS, periodRange, METRIC_OPTIONS, PRESET_OPTIONS, labels)
 │   │   ├── pages/                 # GoalsPage, GoalDetailPage
 │   │   ├── schemas/               # goal.schema
+│   │   ├── stores/                # goalTasksViewStore (task sort + group by sub-goal, persisted)
 │   │   ├── types/                 # goal.ts
-│   │   └── utils/                 # goalStyles (colors, status / pace / needs-review styles, progressValueLabel)
+│   │   └── utils/                 # goalStyles (colors, status / pace / needs-review styles, progressValueLabel),
+│   │                              # goalTasks (sortGoalTasks, groupGoalTasks)
 │   ├── reminders/
 │   │   ├── components/            # ReminderFormDialog, ReminderItem, ReminderList (self-contained, filterable),
 │   │   │                          # ReminderQuickAdd, ReminderLinkPicker

@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import {
-  Bell, CircleCheckBig, Link2, ListTodo, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Unlink,
+  ArrowUpDown, Bell, ChevronDown, CircleCheckBig, Layers, Link2, ListTodo, MoreHorizontal, Pencil, Plus, StickyNote,
+  Trash2, Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Toggle } from "@/components/ui/toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +23,10 @@ import {
   useCreateGoalTask, useDeleteGoalTask, useGoalLink, useGoalLinkOptions, useSetGoalTaskVisibility, useToggleGoalTask,
 } from "@/features/goals/hooks/useGoals";
 import { GoalTaskDialog } from "@/features/goals/components/GoalTaskDialog";
+import { useGoalTasksViewStore } from "@/features/goals/stores/goalTasksViewStore";
 import type { GoalDetail, GoalTask } from "@/features/goals/types/goal";
+import { TASK_PRIORITY_STYLES } from "@/features/goals/utils/goalStyles";
+import { GOAL_TASK_SORTS, groupGoalTasks, sortGoalTasks } from "@/features/goals/utils/goalTasks";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -79,8 +84,8 @@ function LinkExistingPopover({ goalId, type }: { goalId: string; type: "task" | 
   );
 }
 
-function TaskRow({ task, goal, onEdit, onRemind }: {
-  task: GoalTask; goal: GoalDetail; onEdit: () => void; onRemind: () => void;
+function TaskRow({ task, goal, hideMilestone, onEdit, onRemind }: {
+  task: GoalTask; goal: GoalDetail; hideMilestone: boolean; onEdit: () => void; onRemind: () => void;
 }) {
   const toggle = useToggleGoalTask();
   const link = useGoalLink();
@@ -88,9 +93,10 @@ function TaskRow({ task, goal, onEdit, onRemind }: {
   const remove = useDeleteGoalTask();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const busy = link.isPending || visibility.isPending || remove.isPending;
-  const sub = task.goalId !== goal.id ? goal.subGoals.find((s) => s.id === task.goalId) : null;
+  const sub = !hideMilestone && task.goalId !== goal.id ? goal.subGoals.find((s) => s.id === task.goalId) : null;
   const due = task.dueDate ? new Date(task.dueDate) : null;
   const overdue = !!due && !task.completed && isPast(due) && !isToday(due);
+  const priority = task.priority !== "medium" ? TASK_PRIORITY_STYLES[task.priority] : null;
 
   return (
     <div className={cn("group flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-muted/40 sm:px-3", (link.isPending || remove.isPending) && "opacity-60")}>
@@ -108,9 +114,10 @@ function TaskRow({ task, goal, onEdit, onRemind }: {
       <button type="button" onClick={onEdit} disabled={remove.isPending} className="block min-w-0 flex-1 cursor-pointer text-left">
         <p dir="auto" className={cn("truncate text-sm", task.completed && "text-muted-foreground line-through")}>{task.title}</p>
         {task.description && <p dir="auto" className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{task.description}</p>}
-        {(due || sub || task.showInTasks) && (
+        {(due || sub || priority || task.showInTasks) && (
           <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground">
             {due && <span className={cn(overdue && "text-rose-600 dark:text-rose-400")}>{isToday(due) ? "Today" : format(due, "MMM d")}</span>}
+            {priority && <span className={priority.text}>{priority.label}</span>}
             {sub && <span className="truncate">↳ {sub.title}</span>}
             {task.showInTasks && <span className="inline-flex items-center gap-1"><ListTodo className="size-3" /> Also in Tasks</span>}
           </div>
@@ -164,16 +171,60 @@ function TaskRow({ task, goal, onEdit, onRemind }: {
   );
 }
 
+function TaskGroupSection({ title, tasks, collapsed, onToggle, children }: {
+  title: string; tasks: GoalTask[]; collapsed: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  const done = tasks.filter((t) => t.completed).length;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium hover:bg-muted/40 sm:px-3"
+      >
+        <ChevronDown className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", collapsed && "-rotate-90")} />
+        <span dir="auto" className="min-w-0 truncate">{title}</span>
+        <span className="ml-auto shrink-0 font-normal text-muted-foreground tabular-nums">{done}/{tasks.length}</span>
+      </button>
+      {!collapsed && <div className="divide-y divide-border/60">{children}</div>}
+    </div>
+  );
+}
+
 export function GoalTasksSection({ goal }: { goal: GoalDetail }) {
   const createTask = useCreateGoalTask();
+  const { sort, grouped, setSort, setGrouped } = useGoalTasksViewStore();
   const [title, setTitle] = useState("");
   const [target, setTarget] = useState(goal.id);
   // off by default: tasks added here live on the goal page only
   const [showInTasks, setShowInTasks] = useState(false);
   const [remindTask, setRemindTask] = useState<GoalTask | null>(null);
   const [editing, setEditing] = useState<GoalTask | null>(null);
+  const [milestoneFilter, setMilestoneFilter] = useState("all");
+  const [collapsed, setCollapsed] = useState<string[]>([]);
   const done = goal.tasks.filter((t) => t.completed).length;
+  const hasSubs = goal.subGoals.length > 0;
   const openSubs = goal.subGoals.filter((s) => s.status !== "completed");
+  const noun = goal.metric === "milestone" ? "milestone" : "sub-goal";
+
+  // A sub-goal can be completed or deleted while it's selected: fall back instead of pointing at it.
+  const addTo = openSubs.some((s) => s.id === target) ? target : goal.id;
+  const filter = milestoneFilter === goal.id || goal.subGoals.some((s) => s.id === milestoneFilter) ? milestoneFilter : "all";
+
+  const sorted = sortGoalTasks(goal.tasks, sort);
+  const countOf = (id: string) => goal.tasks.filter((t) => t.goalId === id).length;
+  const visible = filter === "all" ? sorted : sorted.filter((t) => t.goalId === filter);
+  const groups = hasSubs && grouped && filter === "all" ? groupGoalTasks(goal, sorted) : null;
+
+  const changeFilter = (value: string) => {
+    setMilestoneFilter(value);
+    // A new task should land in the view being looked at, not vanish into another one.
+    if (value === goal.id || openSubs.some((s) => s.id === value)) setTarget(value);
+  };
+
+  const toggleGroup = (id: string) =>
+    setCollapsed((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
 
   const add = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,8 +232,19 @@ export function GoalTasksSection({ goal }: { goal: GoalDetail }) {
     if (!value || createTask.isPending) return;
     // Clear right away; the pending row below shows the task until the list catches up.
     setTitle("");
-    createTask.mutate({ goalId: target, title: value, showInTasks }, { onError: () => setTitle(value) });
+    createTask.mutate({ goalId: addTo, title: value, showInTasks }, { onError: () => setTitle(value) });
   };
+
+  const renderRow = (t: GoalTask) => (
+    <TaskRow
+      key={t.id}
+      task={t}
+      goal={goal}
+      hideMilestone={!!groups || filter !== "all"}
+      onEdit={() => setEditing(t)}
+      onRemind={() => setRemindTask(t)}
+    />
+  );
 
   return (
     <SectionCard
@@ -192,56 +254,126 @@ export function GoalTasksSection({ goal }: { goal: GoalDetail }) {
       action={<LinkExistingPopover goalId={goal.id} type="task" />}
       contentClassName="pt-1"
     >
-      <div className="divide-y divide-border/60">
-        {goal.tasks.map((t) => <TaskRow key={t.id} task={t} goal={goal} onEdit={() => setEditing(t)} onRemind={() => setRemindTask(t)} />)}
+      <form onSubmit={add} className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Add a task…"
+            maxLength={100}
+            aria-label="New task"
+          />
+          {/* preventDefault keeps focus in the input, so the mobile keyboard stays open between tasks */}
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!title.trim() || createTask.isPending}
+            onMouseDown={(e) => e.preventDefault()}
+            aria-label="Add task"
+            title="Add task"
+            className="shrink-0"
+          >
+            {createTask.isPending ? <Spinner /> : <Plus className="size-4" />}
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {openSubs.length > 0 && (
+            <Select value={addTo} onValueChange={setTarget}>
+              <SelectTrigger size="sm" className="min-w-0 flex-1 text-xs sm:max-w-64" aria-label="Add to">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="start" className="max-w-[calc(100vw-2rem)]">
+                <SelectItem value={goal.id}>This goal</SelectItem>
+                {openSubs.map((s) => <SelectItem key={s.id} value={s.id}>↳ {s.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Toggle
+            size="sm"
+            pressed={showInTasks}
+            onPressedChange={setShowInTasks}
+            aria-label="Also add to Tasks list"
+            title={showInTasks ? "New tasks also go to your Tasks list" : "New tasks stay on this goal only — click to also add them to your Tasks list"}
+            className={cn(
+              "h-8 shrink-0 cursor-pointer gap-1 px-2 text-xs text-muted-foreground",
+              showInTasks && "data-[state=on]:bg-primary/10 data-[state=on]:text-primary",
+            )}
+          >
+            <ListTodo className="size-3.5" />
+            {showInTasks ? "In Tasks" : "Goal only"}
+          </Toggle>
+        </div>
+      </form>
+
+      {(goal.tasks.length > 1 || filter !== "all") && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+          {hasSubs && (
+            <Select value={filter} onValueChange={changeFilter}>
+              <SelectTrigger size="sm" className="min-w-0 basis-full text-xs sm:max-w-64 sm:flex-1 sm:basis-auto" aria-label={`Filter by ${noun}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="start" className="max-w-[calc(100vw-2rem)]">
+                <SelectItem value="all">All tasks ({goal.tasks.length})</SelectItem>
+                <SelectItem value={goal.id}>This goal ({countOf(goal.id)})</SelectItem>
+                {goal.subGoals.map((s) => <SelectItem key={s.id} value={s.id}>↳ {s.title} ({countOf(s.id)})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {hasSubs && filter === "all" && (
+            <Toggle
+              size="sm"
+              pressed={grouped}
+              onPressedChange={setGrouped}
+              aria-label={`Group by ${noun}`}
+              title={grouped ? "Show one flat list" : `Group by ${noun}`}
+              className={cn(
+                "h-8 shrink-0 cursor-pointer gap-1 px-2 text-xs text-muted-foreground",
+                grouped && "data-[state=on]:bg-primary/10 data-[state=on]:text-primary",
+              )}
+            >
+              <Layers className="size-3.5" /> Group
+            </Toggle>
+          )}
+          <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
+            <SelectTrigger size="sm" className="ml-auto w-auto shrink-0 gap-1.5 text-xs" aria-label="Sort tasks">
+              <ArrowUpDown className="size-3.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" align="end">
+              {GOAL_TASK_SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="mt-2">
         {createTask.isPending && (
           <div className="flex items-center gap-3 px-2 py-2 sm:px-3" aria-live="polite">
             <Spinner className="shrink-0 text-muted-foreground" />
             <p className="truncate text-sm text-muted-foreground">{createTask.variables.title}</p>
           </div>
         )}
-      </div>
-
-      <form onSubmit={add} className="mt-1 flex items-center gap-3 px-2 py-1.5 sm:px-3">
-        {createTask.isPending ? (
-          <Spinner className="shrink-0 text-muted-foreground" />
+        {groups ? (
+          <div className="space-y-1">
+            {groups.map((g) => (
+              <TaskGroupSection
+                key={g.id}
+                title={g.title}
+                tasks={g.tasks}
+                collapsed={collapsed.includes(g.id)}
+                onToggle={() => toggleGroup(g.id)}
+              >
+                {g.tasks.map(renderRow)}
+              </TaskGroupSection>
+            ))}
+          </div>
         ) : (
-          <Plus className="size-4 shrink-0 text-muted-foreground" />
+          <div className="divide-y divide-border/60">{visible.map(renderRow)}</div>
         )}
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Add a task and press Enter"
-          maxLength={100}
-          aria-label="New task"
-          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-        />
-        <Toggle
-          size="sm"
-          pressed={showInTasks}
-          onPressedChange={setShowInTasks}
-          aria-label="Also add to Tasks list"
-          title={showInTasks ? "New tasks also go to your Tasks list" : "New tasks stay on this goal only — click to also add them to your Tasks list"}
-          className={cn(
-            "h-7 shrink-0 cursor-pointer gap-1 px-2 text-xs text-muted-foreground",
-            showInTasks && "data-[state=on]:bg-primary/10 data-[state=on]:text-primary",
-          )}
-        >
-          <ListTodo className="size-3.5" />
-          <span className="hidden sm:inline">{showInTasks ? "In Tasks" : "Goal only"}</span>
-        </Toggle>
-        {openSubs.length > 0 && (
-          <Select value={target} onValueChange={setTarget}>
-            <SelectTrigger size="sm" className="h-7 max-w-36 text-xs" aria-label="Add to">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value={goal.id}>This goal</SelectItem>
-              {openSubs.map((s) => <SelectItem key={s.id} value={s.id}>↳ {s.title}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        {filter !== "all" && visible.length === 0 && (
+          <p className="px-2 py-6 text-center text-xs text-muted-foreground">No tasks here yet</p>
         )}
-      </form>
+      </div>
 
       <GoalTaskDialog goalId={goal.id} task={editing} open={!!editing} onOpenChange={(o) => !o && setEditing(null)} />
       <ReminderFormDialog

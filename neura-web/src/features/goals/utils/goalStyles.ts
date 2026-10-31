@@ -33,6 +33,12 @@ export const PACE_STYLES: Record<GoalPace, { label: string; text: string }> = {
   behind: { label: "Behind", text: "text-amber-600 dark:text-amber-400" },
 };
 
+/** Medium is the default, so a task row only labels the other two. */
+export const TASK_PRIORITY_STYLES: Record<"high" | "low", { label: string; text: string }> = {
+  high: { label: "High", text: "text-rose-600 dark:text-rose-400" },
+  low: { label: "Low", text: "text-sky-600 dark:text-sky-400" },
+};
+
 /** "32 / 50 km", "64%", … the headline number of a goal. */
 export function progressValueLabel(g: {
   metric: string; currentValue: number; targetValue: number | null; unit: string | null; progress: number;

@@ -210,7 +210,7 @@ export function GoalDetailPage() {
         <div className="min-w-0 space-y-4 lg:col-span-2">
           <GoalProgressPanel goal={goal} onScrollTo={scrollTo} />
           {!isSub && <div ref={subgoalsRef} className="scroll-mt-4"><SubGoalsSection goal={goal} /></div>}
-          <div ref={tasksRef} className="scroll-mt-4"><GoalTasksSection goal={goal} /></div>
+          <div ref={tasksRef} className="scroll-mt-4"><GoalTasksSection key={goal.id} goal={goal} /></div>
           <GoalNotesSection goal={goal} />
         </div>
 

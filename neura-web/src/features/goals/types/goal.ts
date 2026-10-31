@@ -62,6 +62,7 @@ export interface GoalTask {
   priority: "low" | "medium" | "high";
   description: string | null;
   dueDate: string | null;
+  createdAt: string;
   goalId: string | null;
   /** false = only shown here, not on the Tasks page / calendar */
   showInTasks: boolean;
