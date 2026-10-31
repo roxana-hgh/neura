@@ -21,7 +21,7 @@ function NoteEditorPage() {
   const handleCreated = useCallback(
     (newId: string) => {
       setCreatedId(newId);
-      navigate(`/note/${newId}`, { replace: true });
+      navigate(`/note/${newId}`, { replace: true, preventScrollReset: true });
     },
     [navigate]
   );

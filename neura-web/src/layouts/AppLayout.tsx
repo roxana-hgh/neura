@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, ScrollRestoration } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import SidebarNav from "@/layouts/SidebarNav";
 import Header from "@/layouts/Header";
@@ -8,6 +8,7 @@ import NotificationWatcher from "@/features/notifications/components/Notificatio
 function AppLayout() {
   return (
     <SidebarProvider>
+      <ScrollRestoration />
       <SidebarNav />
       <div className="w-full">
        <Header />
