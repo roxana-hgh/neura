@@ -298,7 +298,7 @@ export default function AssistantPage() {
                   {firstName ? `, ${firstName}` : ""}
                 </h1>
                 <p className="mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  Ask about anything in Neura, or tell me what to change. English and فارسی both work.
+                  Ask about anything in Neura, or tell me what to change. i can help you as your assistant
                 </p>
               </div>
               <QuickActions onAsk={sendQuickAction} onCompose={handleCompose} disabled={isPending} />
