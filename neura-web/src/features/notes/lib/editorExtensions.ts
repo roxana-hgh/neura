@@ -7,11 +7,16 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import { Details, DetailsContent, DetailsSummary } from "@tiptap/extension-details";
+import { NoteCodeBlock } from "@/features/notes/lib/codeBlock";
+import { LinkEmbed } from "@/features/notes/lib/linkEmbed";
 
 // StarterKit v3 already ships Link, Underline, ListKeymap and TrailingNode
 export const noteExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
+    // replaced by NoteCodeBlock (syntax highlighting)
+    codeBlock: false,
     link: {
       openOnClick: false,
       autolink: true,
@@ -19,7 +24,18 @@ export const noteExtensions = [
     },
   }),
   Image.configure({ inline: false, allowBase64: true }),
-  Placeholder.configure({ placeholder: "Start writing…" }),
+  Placeholder.configure({
+    // the summary of a toggle block shows its own hint even when the caret is elsewhere (see .note-prose CSS)
+    includeChildren: true,
+    showOnlyCurrent: false,
+    placeholder: ({ node }) => (node.type.name === "detailsSummary" ? "Toggle title" : "Start writing…"),
+  }),
+  NoteCodeBlock,
+  // Collapsible "toggle" blocks; the open / closed state is saved with the note
+  Details.configure({ persist: true, HTMLAttributes: { class: "note-details" } }),
+  DetailsSummary,
+  DetailsContent,
+  LinkEmbed,
   TaskList,
   TaskItem.configure({ nested: true }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),

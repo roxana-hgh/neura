@@ -42,6 +42,7 @@ import { isBefore, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import EditTask from "@/features/tasks/components/EditTask";
 import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
+import TaskNotesSection from "@/features/notes/components/links/TaskNotesSection";
 import AlertDialog from "@/components/shared/AlertDialog";
 
 interface IProps {
@@ -313,6 +314,9 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
                   </div>
                 </div>
               )}
+
+              {/* Notes linked to this task */}
+              <TaskNotesSection taskId={String(task.id)} />
 
               {/* Subtasks  */}
               <div className="space-y-2.5">

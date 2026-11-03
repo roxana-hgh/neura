@@ -14,10 +14,12 @@ import {
   Link2,
   List,
   ListChecks,
+  ListCollapse,
   ListOrdered,
   Minus,
   Quote,
   Redo2,
+  SquarePlay,
   Strikethrough,
   Underline,
   Undo2,
@@ -27,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HIGHLIGHT_COLORS, TEXT_COLORS } from "@/features/notes/lib/editorExtensions";
 import { firstImageFile, insertImageFile } from "@/features/notes/lib/noteImage";
+import { detectLink, parseUrl } from "@/features/notes/lib/linkProviders";
 import { cn } from "@/lib/utils";
 
 interface NoteToolbarProps {
@@ -72,6 +75,7 @@ export default function NoteToolbar({ editor, placement }: NoteToolbarProps) {
       taskList: e.isActive("taskList"),
       blockquote: e.isActive("blockquote"),
       codeBlock: e.isActive("codeBlock"),
+      details: e.isActive("details"),
       link: e.isActive("link"),
       heading: ([1, 2, 3] as const).find((level) => e.isActive("heading", { level })) ?? 0,
       align:
@@ -246,6 +250,13 @@ export default function NoteToolbar({ editor, placement }: NoteToolbarProps) {
         <Quote />
       </ToolButton>
       <ToolButton
+        label="Toggle block (collapsible)"
+        active={s.details}
+        onClick={() => (s.details ? chain().unsetDetails().run() : chain().setDetails().run())}
+      >
+        <ListCollapse />
+      </ToolButton>
+      <ToolButton
         label="Code block"
         active={s.codeBlock}
         onClick={() => chain().toggleCodeBlock().run()}
@@ -257,6 +268,7 @@ export default function NoteToolbar({ editor, placement }: NoteToolbarProps) {
       </ToolButton>
 
       <LinkPopover editor={editor} side={side} active={s.link} />
+      <LinkCardPopover editor={editor} side={side} />
 
       <ToolButton label="Insert image" onClick={() => fileInputRef.current?.click()}>
         <ImagePlus />
@@ -467,6 +479,67 @@ function LinkPopover({
             )}
             <Button type="submit" size="sm">
               {active ? "Update" : "Add link"}
+            </Button>
+          </div>
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Inserts a link as a card that shows what it is (YouTube video, post on X, Instagram reel, …) */
+function LinkCardPopover({ editor, side }: { editor: Editor; side: "top" | "bottom" }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const info = detectLink(url);
+
+  const insert = () => {
+    const parsed = parseUrl(url);
+    if (!parsed) return;
+    editor.chain().focus().setLinkEmbed(parsed.href).run();
+    setUrl("");
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title="Link card (YouTube, X, Instagram, …)"
+          aria-label="Link card"
+          onMouseDown={keepFocus}
+          className={toolButtonClass()}
+        >
+          <SquarePlay />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side={side} align="end" sideOffset={8} className="w-80 rounded-xl p-3">
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            insert();
+          }}
+        >
+          <p className="text-xs text-muted-foreground">
+            Paste a link to a video, post or page. Tip: pasting a YouTube, X or Instagram link on an
+            empty line does this too.
+          </p>
+          <Input
+            autoFocus
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://youtube.com/watch?v=…"
+            inputMode="url"
+            dir="ltr"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-xs text-muted-foreground">
+              {info ? `${info.name} · ${info.kind}` : url.trim() ? "Not a valid link" : ""}
+            </span>
+            <Button type="submit" size="sm" disabled={!info}>
+              Insert card
             </Button>
           </div>
         </form>

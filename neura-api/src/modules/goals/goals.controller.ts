@@ -243,13 +243,13 @@ export async function getLinkOptions(req: Request<IdParams>, res: Response) {
   res.json(await goalsService.getLinkOptions(req.userId!, req.params.id));
 }
 
-const LINK_TYPES = ["task", "note"] as const;
+const LINK_TYPES = ["task", "note", "folder"] as const;
 
-// POST /api/goals/:id/links  { type: "task" | "note", target_id }
+// POST /api/goals/:id/links  { type: "task" | "note" | "folder", target_id }
 export async function addLink(req: Request<IdParams>, res: Response) {
   const { type, target_id } = req.body ?? {};
   if (!LINK_TYPES.includes(type) || typeof target_id !== "string") {
-    res.status(400).json({ error: "type (task | note) and target_id are required" });
+    res.status(400).json({ error: "type (task | note | folder) and target_id are required" });
     return;
   }
   await goalsService.link(req.userId!, req.params.id, type, target_id, true);

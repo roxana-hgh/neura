@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import {
-  ArrowUpDown, Bell, ChevronDown, CircleCheckBig, Layers, Link2, ListTodo, MoreHorizontal, Pencil, Plus, StickyNote,
-  Trash2, Unlink,
+  ArrowUpDown, ArrowUpRight, Bell, ChevronDown, CircleCheckBig, Folder, Layers, Link2, ListTodo, MoreHorizontal, Pencil,
+  Plus, StickyNote, Trash2, Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,19 +24,25 @@ import {
 } from "@/features/goals/hooks/useGoals";
 import { GoalTaskDialog } from "@/features/goals/components/GoalTaskDialog";
 import { useGoalTasksViewStore } from "@/features/goals/stores/goalTasksViewStore";
-import type { GoalDetail, GoalTask } from "@/features/goals/types/goal";
+import type { GoalDetail, GoalNote, GoalTask } from "@/features/goals/types/goal";
 import { TASK_PRIORITY_STYLES } from "@/features/goals/utils/goalStyles";
 import { GOAL_TASK_SORTS, groupGoalTasks, sortGoalTasks } from "@/features/goals/utils/goalTasks";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-/** Searchable list of unlinked tasks / notes. */
+/** Searchable list of unlinked tasks, or of note folders + notes. */
 function LinkExistingPopover({ goalId, type }: { goalId: string; type: "task" | "note" }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const { data, isLoading } = useGoalLinkOptions(goalId, open);
   const link = useGoalLink();
-  const items = (type === "task" ? data?.tasks : data?.notes) ?? [];
+  const items: { id: string; title: string; goalId: string | null; kind: "task" | "note" | "folder"; noteCount?: number }[] =
+    type === "task"
+      ? (data?.tasks ?? []).map((t) => ({ ...t, kind: "task" as const }))
+      : [
+        ...(data?.folders ?? []).map((f) => ({ ...f, kind: "folder" as const })),
+        ...(data?.notes ?? []).map((n) => ({ ...n, kind: "note" as const })),
+      ];
   const filtered = items.filter((i) => (i.title || "Untitled").toLowerCase().includes(q.toLowerCase().trim()));
 
   return (
@@ -52,7 +58,7 @@ function LinkExistingPopover({ goalId, type }: { goalId: string; type: "task" | 
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={type === "task" ? "Search open tasks…" : "Search notes…"}
+            placeholder={type === "task" ? "Search open tasks…" : "Search folders and notes…"}
             className="h-8 w-full rounded-md bg-transparent px-2 text-sm outline-none"
           />
         </div>
@@ -66,10 +72,15 @@ function LinkExistingPopover({ goalId, type }: { goalId: string; type: "task" | 
                 key={i.id}
                 type="button"
                 disabled={link.isPending}
-                onClick={() => link.mutate({ id: goalId, type, targetId: i.id, attach: true })}
+                onClick={() => link.mutate({ id: goalId, type: i.kind, targetId: i.id, attach: true })}
                 className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
               >
-                <span className="min-w-0 flex-1 truncate">{i.title || "Untitled"}</span>
+                {i.kind === "folder" && <Folder className="size-3.5 shrink-0 text-muted-foreground" />}
+                {i.kind === "note" && <StickyNote className="size-3.5 shrink-0 text-muted-foreground" />}
+                <span dir="auto" className="min-w-0 flex-1 truncate">{i.title || "Untitled"}</span>
+                {i.kind === "folder" && !linking && !i.goalId && (
+                  <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">{i.noteCount}</span>
+                )}
                 {linking ? (
                   <Spinner className="size-3.5 shrink-0 text-muted-foreground" />
                 ) : (
@@ -392,40 +403,119 @@ export function GoalTasksSection({ goal }: { goal: GoalDetail }) {
   );
 }
 
+function GoalNoteRow({ note, onDetach, detaching }: { note: GoalNote; onDetach?: () => void; detaching?: boolean }) {
+  return (
+    <div className={cn("group flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted/40 sm:px-3", detaching && "opacity-60")}>
+      <StickyNote className="size-4 shrink-0 text-muted-foreground" />
+      <Link to={`/note/${note.id}`} dir="auto" className="min-w-0 flex-1 truncate text-sm hover:underline">{note.title || "Untitled"}</Link>
+      <span className="shrink-0 text-[11px] text-muted-foreground">{format(new Date(note.updatedAt), "MMM d")}</span>
+      {onDetach && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={detaching}
+          onClick={onDetach}
+          aria-label="Detach note"
+          title="Detach (the note is kept)"
+          className={cn("text-muted-foreground", !detaching && "sm:opacity-0 sm:group-hover:opacity-100")}
+        >
+          {detaching ? <Spinner /> : <Unlink className="size-4" />}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function GoalNotesSection({ goal }: { goal: GoalDetail }) {
+  const navigate = useNavigate();
   const link = useGoalLink();
+  const [openFolders, setOpenFolders] = useState<string[]>([]);
+  const folderIds = new Set(goal.noteFolders.map((f) => f.id));
+  // notes inside a linked folder are listed under that folder
+  const looseNotes = goal.notes.filter((n) => !n.folderId || !folderIds.has(n.folderId));
+  const isEmpty = goal.noteFolders.length === 0 && looseNotes.length === 0;
+  const busy = (id: string) => link.isPending && link.variables?.targetId === id;
+
+  const toggleFolder = (id: string) =>
+    setOpenFolders((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+
   return (
     <SectionCard
       icon={<StickyNote className="size-4 text-primary" />}
       title="Notes"
-      action={<LinkExistingPopover goalId={goal.id} type="note" />}
+      action={
+        <div className="flex items-center">
+          <LinkExistingPopover goalId={goal.id} type="note" />
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => navigate(`/note/new?goal=${goal.id}`)}>
+            <Plus className="size-3.5" /> New
+          </Button>
+        </div>
+      }
       contentClassName="pt-1"
     >
-      {goal.notes.length === 0 ? (
-        <EmptyState compact icon={StickyNote} title="No notes attached" description="Attach plans, research or journal notes." className="py-5" />
+      {isEmpty ? (
+        <EmptyState compact icon={StickyNote} title="No notes attached" description="Attach plans, research or journal notes, or a whole folder." className="py-5" />
       ) : (
-        <div className="divide-y divide-border/60">
-          {goal.notes.map((n) => {
-            const detaching = link.isPending && link.variables?.targetId === n.id;
+        <div className="space-y-1">
+          {goal.noteFolders.map((f) => {
+            const open = openFolders.includes(f.id);
             return (
-              <div key={n.id} className={cn("group flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted/40 sm:px-3", detaching && "opacity-60")}>
-                <StickyNote className="size-4 shrink-0 text-muted-foreground" />
-                <Link to={`/note/${n.id}`} className="min-w-0 flex-1 truncate text-sm hover:underline">{n.title || "Untitled"}</Link>
-                <span className="shrink-0 text-[11px] text-muted-foreground">{format(new Date(n.updatedAt), "MMM d")}</span>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={detaching}
-                  onClick={() => link.mutate({ id: goal.id, type: "note", targetId: n.id, attach: false })}
-                  aria-label="Detach note"
-                  title="Detach (the note is kept)"
-                  className={cn("text-muted-foreground", !detaching && "sm:opacity-0 sm:group-hover:opacity-100")}
-                >
-                  {detaching ? <Spinner /> : <Unlink className="size-4" />}
-                </Button>
+              <div key={f.id} className={cn("rounded-lg", busy(f.id) && "opacity-60")}>
+                <div className="group flex items-center gap-1 rounded-lg hover:bg-muted/40">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolder(f.id)}
+                    aria-expanded={open}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 px-2 py-2 text-left sm:px-3"
+                  >
+                    <ChevronDown className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", !open && "-rotate-90")} />
+                    <Folder className="size-4 shrink-0 text-muted-foreground" />
+                    <span dir="auto" className="min-w-0 truncate text-sm font-medium">{f.name}</span>
+                    <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                      {f.notes.length} {f.notes.length === 1 ? "note" : "notes"}
+                    </span>
+                  </button>
+                  <Button variant="ghost" size="icon-sm" asChild className="text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100">
+                    <Link to={`/notes?folder=${f.id}`} aria-label="Open folder" title="Open folder">
+                      <ArrowUpRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={busy(f.id)}
+                    onClick={() => link.mutate({ id: goal.id, type: "folder", targetId: f.id, attach: false })}
+                    aria-label="Detach folder"
+                    title="Detach folder (its notes are kept)"
+                    className={cn("text-muted-foreground", !busy(f.id) && "sm:opacity-0 sm:group-hover:opacity-100")}
+                  >
+                    {busy(f.id) ? <Spinner /> : <Unlink className="size-4" />}
+                  </Button>
+                </div>
+                {open && (
+                  <div className="ms-5 border-s border-border/60 ps-1">
+                    {f.notes.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">Empty folder</p>
+                    ) : (
+                      f.notes.map((n) => <GoalNoteRow key={n.id} note={n} />)
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
+          {looseNotes.length > 0 && (
+            <div className="divide-y divide-border/60">
+              {looseNotes.map((n) => (
+                <GoalNoteRow
+                  key={n.id}
+                  note={n}
+                  detaching={busy(n.id)}
+                  onDetach={() => link.mutate({ id: goal.id, type: "note", targetId: n.id, attach: false })}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </SectionCard>

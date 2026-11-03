@@ -16,29 +16,30 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  name          String
-  email         String         @unique
-  emailVerified Boolean        @default(false)
-  image         String?
-  age           Int?
-  job           String?
-  gender        String?
-  weekStartsOn  Int            @default(1) // 0 = Sunday, 1 = Monday, 6 = Saturday
+  id                    String         @id @default(cuid())
+  name                  String
+  email                 String         @unique
+  emailVerified         Boolean        @default(false)
+  image                 String?
+  age                   Int?
+  job                   String?
+  gender                String?
+  weekStartsOn          Int            @default(1) // 0 = Sunday, 1 = Monday, 6 = Saturday
   assistantInstructions String? // free-text preferences added to the assistant's system prompt
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  tasks         Task[]
-  taskLists     TaskList[]
-  taskTags      TaskTag[]
-  notes         Note[]
-  focusSessions FocusSession[]
-  habits        Habit[]
-  goals         Goal[]
-  reminders     Reminder[]
-  brainstorms   Brainstorm[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  sessions              Session[]
+  accounts              Account[]
+  tasks                 Task[]
+  taskLists             TaskList[]
+  taskTags              TaskTag[]
+  notes                 Note[]
+  noteFolders           NoteFolder[]
+  focusSessions         FocusSession[]
+  habits                Habit[]
+  goals                 Goal[]
+  reminders             Reminder[]
+  brainstorms           Brainstorm[]
 
   pushSubscriptions    PushSubscription[]
   notificationSettings NotificationSettings?
@@ -116,6 +117,7 @@ model Task {
   tags        TaskTag[]
   reminders   Reminder[]
   brainstorms Brainstorm[]
+  notes       Note[]
 }
 
 /// User-defined label, many-to-many with tasks (implicit join table)
@@ -140,17 +142,40 @@ model SubTask {
 }
 
 model Note {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
   description String?
-  color       String     @default("default")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  color       String      @default("default")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   goalId      String?
-  goal        Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  goal        Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  folderId    String?
+  folder      NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  taskId      String?
+  task        Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
   reminders   Reminder[]
+
+  @@index([userId, folderId])
+  @@index([taskId])
+}
+
+/// A folder of notes (one level). Can be linked to a goal, which then lists the folder's notes.
+model NoteFolder {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("gray")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId    String?
+  goal      Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  notes     Note[]
+
+  @@unique([userId, name])
 }
 
 enum FocusSessionTag {
@@ -268,12 +293,13 @@ model Goal {
   completedAt DateTime?
   archivedAt  DateTime? // independent of status
 
-  tasks     Task[]
-  notes     Note[]
-  reminders Reminder[]
-  logs      GoalLog[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  tasks       Task[]
+  notes       Note[]
+  noteFolders NoteFolder[]
+  reminders   Reminder[]
+  logs        GoalLog[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([userId, status])
   @@index([parentId])

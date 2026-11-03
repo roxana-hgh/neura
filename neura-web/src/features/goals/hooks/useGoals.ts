@@ -154,6 +154,7 @@ export function useGoalLinkOptions(id: string, enabled: boolean) {
     queryFn: async () => (await api.get<{
       tasks: { id: string; title: string; dueDate: string | null; goalId: string | null }[];
       notes: { id: string; title: string; goalId: string | null }[];
+      folders: { id: string; title: string; goalId: string | null; noteCount: number }[];
     }>(`/goals/${id}/link-options`)).data,
     enabled,
   });
@@ -162,11 +163,15 @@ export function useGoalLinkOptions(id: string, enabled: boolean) {
 export function useGoalLink() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, type, targetId, attach }: { id: string; type: "task" | "note"; targetId: string; attach: boolean }) => {
+    mutationFn: async ({ id, type, targetId, attach }: { id: string; type: "task" | "note" | "folder"; targetId: string; attach: boolean }) => {
       if (attach) await api.post(`/goals/${id}/links`, { type, target_id: targetId });
       else await api.delete(`/goals/${id}/links/${type}/${targetId}`);
     },
-    onSuccess: () => invalidateWithTasks(qc),
+    onSuccess: (_, { type }) => {
+      // notes show their goal, and the Notes page shows folders' goals
+      if (type !== "task") void qc.invalidateQueries({ queryKey: ["notes"] });
+      return invalidateWithTasks(qc);
+    },
     onError: () => toast.error("Couldn't update the link"),
   });
 }

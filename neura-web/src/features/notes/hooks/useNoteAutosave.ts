@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { NOTES_LIST_KEY } from "@/features/notes/hooks/useNotes";
-import type { Note, NoteInput } from "@/features/notes/types/note";
+import type { Note, NoteInput, NoteLinksInput } from "@/features/notes/types/note";
 import type { colors } from "@/types/color";
 import { api } from "@/lib/api";
 
@@ -29,7 +29,9 @@ const toPayload = (d: NoteDraft): NoteInput => {
 
 interface Options {
   noteId?: string;
-  onCreated?: (id: string) => void;
+  onCreated?: (note: Note) => void;
+  /** Folder / goal / task a new note is created in (read at the moment of the first save) */
+  getCreateLinks?: () => NoteLinksInput;
   delay?: number;
 }
 
@@ -38,7 +40,7 @@ interface Options {
  * saves update it (PUT). Saves never overlap, and pending changes are flushed
  * when the editor unmounts or the tab is hidden.
  */
-export function useNoteAutosave({ noteId, onCreated, delay = 800 }: Options) {
+export function useNoteAutosave({ noteId, onCreated, getCreateLinks, delay = 800 }: Options) {
   const qc = useQueryClient();
   const [status, setStatus] = useState<SaveStatus>(noteId ? "saved" : "idle");
 
@@ -47,10 +49,12 @@ export function useNoteAutosave({ noteId, onCreated, delay = 800 }: Options) {
   const timerRef = useRef<number | undefined>(undefined);
   const inFlightRef = useRef<Promise<void> | null>(null);
   const onCreatedRef = useRef(onCreated);
+  const getCreateLinksRef = useRef(getCreateLinks);
 
   useEffect(() => {
     onCreatedRef.current = onCreated;
-  }, [onCreated]);
+    getCreateLinksRef.current = getCreateLinks;
+  }, [onCreated, getCreateLinks]);
 
   const flush = useCallback(async () => {
     window.clearTimeout(timerRef.current);
@@ -72,7 +76,7 @@ export function useNoteAutosave({ noteId, onCreated, delay = 800 }: Options) {
         const payload = toPayload(draft);
         const { data } = idRef.current
           ? await api.put<Note>(`/notes/${idRef.current}`, payload)
-          : await api.post<Note>("/notes", payload);
+          : await api.post<Note>("/notes", { ...payload, ...getCreateLinksRef.current?.() });
         const created = !idRef.current;
         idRef.current = String(data.id);
 
@@ -80,7 +84,7 @@ export function useNoteAutosave({ noteId, onCreated, delay = 800 }: Options) {
         qc.setQueryData<Note[]>(NOTES_LIST_KEY, (old) =>
           old && [data, ...old.filter((n) => String(n.id) !== String(data.id))]
         );
-        if (created) onCreatedRef.current?.(idRef.current);
+        if (created) onCreatedRef.current?.(data);
 
         setStatus(draftRef.current ? "pending" : "saved");
       } catch {

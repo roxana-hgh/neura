@@ -4,15 +4,17 @@ import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/r
 import { format } from "date-fns";
 import NoteToolbar from "@/features/notes/components/editor/NoteToolbar";
 import NoteEditorHeader from "@/features/notes/components/editor/NoteEditorHeader";
+import NoteLinksBar, { type NoteLinkIds } from "@/features/notes/components/links/NoteLinksBar";
 import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
 import AlertDialog from "@/components/shared/AlertDialog";
 import { useNoteAutosave, type NoteDraft } from "@/features/notes/hooks/useNoteAutosave";
-import { useDeleteNote } from "@/features/notes/hooks/useNotes";
+import { useDeleteNote, useSetNoteLinks } from "@/features/notes/hooks/useNotes";
 import { useKeyboardInset } from "@/features/notes/hooks/useKeyboardInset";
 import { noteExtensions } from "@/features/notes/lib/editorExtensions";
 import { firstImageFile, insertImageFile } from "@/features/notes/lib/noteImage";
+import { pasteLinkAsEmbed } from "@/features/notes/lib/linkEmbed";
 import { NOTE_COLORS, getNoteColor } from "@/features/notes/utils/colorMapper";
-import type { Note } from "@/features/notes/types/note";
+import type { Note, NoteLinksInput } from "@/features/notes/types/note";
 import type { colors } from "@/types/color";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/lib/toast";
@@ -22,10 +24,18 @@ interface NoteEditorProps {
   /** Undefined for a new note; it is created on the first autosave */
   note?: Note;
   onCreated: (id: string) => void;
+  /** Folder / goal / task for a new note (from `/note/new?folder=&goal=&task=`) */
+  initialLinks?: Partial<NoteLinkIds>;
 }
 
 // Keep the caret clear of the sticky header and the mobile bottom toolbar
 const SCROLL_MARGIN = { top: 140, bottom: 96, left: 0, right: 0 };
+
+const toLinksInput = (l: Partial<NoteLinkIds>): NoteLinksInput => ({
+  ...(l.folderId !== undefined && { folder_id: l.folderId }),
+  ...(l.goalId !== undefined && { goal_id: l.goalId }),
+  ...(l.taskId !== undefined && { task_id: l.taskId }),
+});
 
 const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
@@ -35,7 +45,7 @@ const resizeTitle = (el: HTMLTextAreaElement | null) => {
   el.style.height = `${el.scrollHeight}px`;
 };
 
-function NoteEditor({ note, onCreated }: NoteEditorProps) {
+function NoteEditor({ note, onCreated, initialLinks }: NoteEditorProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const keyboardInset = useKeyboardInset();
@@ -52,11 +62,48 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
   // Latest title/color for drafts built inside editor callbacks
   const latest = useRef({ title, color });
 
+  // Folder / goal / task links. A new note sends them with its first save.
+  const [links, setLinks] = useState<NoteLinkIds>(() => ({
+    folderId: note ? note.folderId : initialLinks?.folderId ?? null,
+    goalId: note ? note.goalId : initialLinks?.goalId ?? null,
+    taskId: note ? note.taskId : initialLinks?.taskId ?? null,
+  }));
+  const linksRef = useRef(links);
+  const setNoteLinks = useSetNoteLinks();
+
   const { status, schedule, flush, cancel, getNoteId } = useNoteAutosave({
     noteId: note ? String(note.id) : undefined,
-    onCreated,
+    getCreateLinks: () => toLinksInput(linksRef.current),
+    onCreated: (created) => {
+      // links changed while the first save was in flight
+      const cur = linksRef.current;
+      const diff: Partial<NoteLinkIds> = {};
+      if (created.folderId !== cur.folderId) diff.folderId = cur.folderId;
+      if (created.goalId !== cur.goalId) diff.goalId = cur.goalId;
+      if (created.taskId !== cur.taskId) diff.taskId = cur.taskId;
+      if (Object.keys(diff).length) setNoteLinks.mutate({ id: String(created.id), links: toLinksInput(diff) });
+      onCreated(String(created.id));
+    },
   });
   const deleteNote = useDeleteNote();
+
+  const changeLink = (key: keyof NoteLinkIds, value: string | null) => {
+    const prev = linksRef.current;
+    const next = { ...prev, [key]: value };
+    linksRef.current = next;
+    setLinks(next);
+    const id = getNoteId();
+    if (!id) return; // not saved yet: goes out with the first save
+    setNoteLinks.mutate(
+      { id, links: toLinksInput({ [key]: value }) },
+      {
+        onError: () => {
+          linksRef.current = { ...linksRef.current, [key]: prev[key] };
+          setLinks(linksRef.current);
+        },
+      }
+    );
+  };
 
   const buildDraft = (ed: Editor): NoteDraft => ({
     title: latest.current.title,
@@ -74,7 +121,7 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
       scrollThreshold: SCROLL_MARGIN,
       handlePaste: (view, event) => {
         const file = firstImageFile(event.clipboardData?.files);
-        if (!file) return false;
+        if (!file) return pasteLinkAsEmbed(view, event);
         void insertImageFile(view, file);
         return true;
       },
@@ -187,7 +234,7 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
           className="block w-full resize-none overflow-hidden bg-transparent text-[28px] leading-tight font-bold tracking-tight outline-none placeholder:text-muted-foreground/40 sm:text-4xl"
         />
 
-        <p className="mt-2 mb-5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+        <p className="mt-2 mb-3 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           {color !== "gray" && (
             <>
               <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 font-medium text-foreground/80">
@@ -203,6 +250,8 @@ function NoteEditor({ note, onCreated }: NoteEditorProps) {
             {wordCount} {wordCount === 1 ? "word" : "words"}
           </span>
         </p>
+
+        <NoteLinksBar links={links} note={note} onChange={changeLink} />
 
         {/* Clicking the empty paper below the text continues writing at the end */}
         <div

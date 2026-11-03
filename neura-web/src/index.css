@@ -270,6 +270,94 @@ body {
   border-bottom-color: var(--color-primary-foreground);
 }
 
+/* Toggle (collapsible) blocks: [chevron] [summary + content] */
+.note-prose [data-type="details"] { @apply my-2 flex items-start gap-1.5; }
+.note-prose [data-type="details"] > button {
+  @apply mt-[0.25em] flex size-[1.25em] shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground;
+}
+.note-prose [data-type="details"] > button::before {
+  content: "";
+  width: 0.4em;
+  height: 0.4em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateX(-0.08em) rotate(-45deg);
+  transition: transform 150ms;
+}
+.note-prose [data-type="details"].is-open > button::before { transform: translateY(-0.08em) rotate(45deg); }
+.note-prose [data-type="details"] > div { @apply min-w-0 flex-1; }
+.note-prose [data-type="details"] summary { @apply block font-semibold; list-style: none; unicode-bidi: plaintext; }
+.note-prose [data-type="details"] summary::-webkit-details-marker { display: none; }
+.note-prose [data-type="details"] [data-type="detailsContent"] { @apply mt-1; }
+.note-prose [data-type="details"] [data-type="detailsContent"] > * + * { @apply mt-2; }
+.note-prose summary.is-empty::before {
+  content: attr(data-placeholder);
+  @apply pointer-events-none float-left h-0 font-normal text-muted-foreground/50;
+}
+
+/* Code block: language / copy bar + highlighted code (lowlight → hljs classes) */
+.note-prose .note-code { @apply my-3 overflow-hidden rounded-xl border bg-muted/60; direction: ltr; }
+.note-prose .note-code-bar { @apply flex items-center justify-between gap-2 border-b bg-muted/60 px-3 py-1; }
+.note-prose .note-code pre { @apply m-0 rounded-none bg-transparent; }
+.note-prose .note-code select option { @apply bg-popover text-popover-foreground; }
+
+.note-prose pre .hljs-comment,
+.note-prose pre .hljs-quote,
+.note-prose pre .hljs-meta { color: #6a737d; font-style: italic; }
+.note-prose pre .hljs-keyword,
+.note-prose pre .hljs-selector-tag,
+.note-prose pre .hljs-doctag { color: #cf222e; }
+.note-prose pre .hljs-string,
+.note-prose pre .hljs-regexp,
+.note-prose pre .hljs-template-tag { color: #0a3069; }
+.note-prose pre .hljs-number,
+.note-prose pre .hljs-literal,
+.note-prose pre .hljs-built_in,
+.note-prose pre .hljs-symbol { color: #0550ae; }
+.note-prose pre .hljs-title,
+.note-prose pre .hljs-section { color: #8250df; }
+.note-prose pre .hljs-attr,
+.note-prose pre .hljs-attribute,
+.note-prose pre .hljs-variable,
+.note-prose pre .hljs-params,
+.note-prose pre .hljs-type { color: #953800; }
+.note-prose pre .hljs-name,
+.note-prose pre .hljs-selector-class,
+.note-prose pre .hljs-selector-id { color: #116329; }
+.note-prose pre .hljs-addition { color: #116329; background: #dafbe1; }
+.note-prose pre .hljs-deletion { color: #82071e; background: #ffebe9; }
+
+.dark .note-prose pre .hljs-comment,
+.dark .note-prose pre .hljs-quote,
+.dark .note-prose pre .hljs-meta { color: #8b949e; }
+.dark .note-prose pre .hljs-keyword,
+.dark .note-prose pre .hljs-selector-tag,
+.dark .note-prose pre .hljs-doctag { color: #ff7b72; }
+.dark .note-prose pre .hljs-string,
+.dark .note-prose pre .hljs-regexp,
+.dark .note-prose pre .hljs-template-tag { color: #a5d6ff; }
+.dark .note-prose pre .hljs-number,
+.dark .note-prose pre .hljs-literal,
+.dark .note-prose pre .hljs-built_in,
+.dark .note-prose pre .hljs-symbol { color: #79c0ff; }
+.dark .note-prose pre .hljs-title,
+.dark .note-prose pre .hljs-section { color: #d2a8ff; }
+.dark .note-prose pre .hljs-attr,
+.dark .note-prose pre .hljs-attribute,
+.dark .note-prose pre .hljs-variable,
+.dark .note-prose pre .hljs-params,
+.dark .note-prose pre .hljs-type { color: #ffa657; }
+.dark .note-prose pre .hljs-name,
+.dark .note-prose pre .hljs-selector-class,
+.dark .note-prose pre .hljs-selector-id { color: #7ee787; }
+.dark .note-prose pre .hljs-addition { color: #aff5b4; background: #033a16; }
+.dark .note-prose pre .hljs-deletion { color: #ffdcd7; background: #67060c; }
+
+/* Link cards: the card styles itself, so undo the prose link / image styles inside it */
+.note-prose .note-embed a { color: inherit; text-decoration: none; }
+.note-prose .note-embed a:hover { text-decoration: underline; }
+.note-prose .note-embed img { margin: 0; border-radius: 0; max-width: none; }
+
 /* Placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);

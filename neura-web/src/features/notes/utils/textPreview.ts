@@ -31,7 +31,9 @@ export function getNotePreview(html: string | null, title = ""): NotePreview {
   doc.querySelectorAll("li[data-checked]").forEach((li) => {
     li.prepend(li.getAttribute("data-checked") === "true" ? "☑ " : "☐ ");
   });
-  doc.querySelectorAll("p, h1, h2, h3, li, blockquote, pre").forEach((el) => {
+  doc.querySelectorAll('div[data-type="link-embed"]').forEach((el) => el.prepend("🔗 "));
+  doc.querySelectorAll("summary").forEach((el) => el.prepend("▸ "));
+  doc.querySelectorAll('p, h1, h2, h3, li, blockquote, pre, summary, div[data-type="link-embed"]').forEach((el) => {
     el.append("\n");
   });
 

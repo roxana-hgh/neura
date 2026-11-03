@@ -118,15 +118,22 @@ src/
 │   │                              # taskStats (getDueInfo labels, getTaskStats counts),
 │   │                              # taskTags (TAG_STYLES, nextTagColor, filterTasksByTags)
 │   ├── notes/
-│   │   ├── components/            # NoteItem (grid card with preview/thumbnail)
-│   │   │   └── editor/            # NoteEditor (paper page, autosave), NoteEditorHeader (back, save status,
-│   │   │                          # color, delete), NoteToolbar (top on md+, fixed above the keyboard on mobile)
-│   │   ├── hooks/                 # useNotes (list + search, useNote, useDeleteNote), useNoteAutosave,
+│   │   ├── components/            # NoteItem (grid card with preview/thumbnail, link badges, "Move to folder" menu)
+│   │   │   ├── editor/            # NoteEditor (paper page, autosave), NoteEditorHeader (back, save status,
+│   │   │   │   │                  # color, delete), NoteToolbar (top on md+, fixed above the keyboard on mobile)
+│   │   │   │   └── nodes/         # CodeBlockView (language picker + copy), LinkEmbedView (link card), LinkProviderIcon
+│   │   │   ├── folders/           # FolderFormDialog (name, color, linked goal), DeleteFolderDialog (keep / delete notes)
+│   │   │   └── links/             # NoteLinksBar (folder / goal / task chips in the editor), LinkPickerPopover,
+│   │   │                          # TaskNotesSection (notes in TaskDetail)
+│   │   ├── hooks/                 # useNotes (list + search, useNoteList, useNote, useDeleteNote, useTaskNotes,
+│   │   │                          # useNoteLinkOptions, useSetNoteLinks), useNoteFolders, useNoteAutosave,
 │   │   │                          # useKeyboardInset (visualViewport keyboard height)
-│   │   ├── lib/                   # editorExtensions (TipTap config + text/highlight colors), noteImage (compress + insert)
-│   │   ├── pages/                 # AllNotesPage, NoteEditorPage (/note/new and /note/:id)
+│   │   ├── lib/                   # editorExtensions (TipTap config + text/highlight colors), noteImage (compress + insert),
+│   │   │                          # codeBlock + codeLanguages (lowlight), linkEmbed (node + paste rule), linkProviders
+│   │   ├── pages/                 # AllNotesPage (folder chips, ?folder=all|unfiled|id), NoteEditorPage (/note/new and /note/:id)
+│   │   ├── schemas/               # folder.schema
 │   │   ├── stores/                # notesStore (useNotesStore: search state)
-│   │   ├── types/                 # note.ts: Note, NoteInput
+│   │   ├── types/                 # note.ts: Note, NoteInput, NoteFolder, NoteLinkOptions, LinkPreview
 │   │   └── utils/                 # colorMapper (NOTE_COLORS), textPreview (stripHtml, getNotePreview, formatNoteDate)
 │   ├── habits/
 │   │   ├── components/            # CreateHabitModal, EditHabitModal, HabitListModal, HabitViewTabs,
@@ -266,6 +273,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - `assistant/pages/AssistantPage` uses the `tasks`, `habits`, `goals`, `notes`, `reminders` and `brainstorms` list hooks for @mentions
   - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
   - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
+  - `tasks/TaskDetail` uses `notes/components/links/TaskNotesSection` (notes linked to the task)
   - `brainstorms` uses `tasks` (`TaskForm`, `useCreateTask`) and `reminders/ReminderFormDialog` (`onSaved`) to convert items
   - `search` uses `tasks` (`TaskDetail` in controlled mode via `open`/`onOpenChange`, `useTask`) to open a task result in place
   - `notifications` uses `reminders` (complete / snooze hooks, `Reminder` type), `tasks` (`useToggleTask`, `PRIORITY_STYLES`) and `settings/SettingsSection`; `settings` renders `NotificationsSection`; `focus/notify` and the sign-out handlers use `notifications/lib/push`
@@ -388,12 +396,21 @@ A quick-capture inbox: "your brain is for having ideas, not holding them".
 - Used by the calendar (`getVisibleRange`), habits (week/month/year grids; `useHabits` sends it as `weekStartsOn` query param and includes it in the key) and the dashboard "this week" bucket.
 - API: `GET /habits?weekStartsOn=` (validated with `isWeekStartsOn` from `utils/date.ts`, falls back to Monday).
 
+### Note folders and links
+
+- A note can be in one **folder** (`NoteFolder`, one level, unique name per user) and linked to one **goal** and one **task**. A folder can itself be linked to a goal; the goal page then lists the folder with its notes.
+- Both directions work: the editor's `NoteLinksBar` (chips under the title) sets folder / goal / task through `PATCH /notes/:id/links`; the goal page links notes or whole folders through the goal link endpoints, and `TaskDetail` shows `TaskNotesSection` (link existing, "New" → `/note/new?task=`).
+- `/note/new?folder=&goal=&task=` pre-fills the links; a new note sends them with its first autosave POST (`getCreateLinks`). Links never go through `PUT /notes/:id`, so autosave can't undo a link changed elsewhere.
+- Notes page: folder chips (All / Unfiled / folders) kept in `?folder=`; deleting a folder keeps its notes (unfiled) unless "Delete notes too".
+
 ### Notes editor (`/note/:id`)
 
 - There is no view/edit split or form: opening a note puts you straight into a full-page editor (title + TipTap body).
 - **Autosave** (`useNoteAutosave`): debounced 800 ms, saves never overlap, flushes on unmount / tab hide / Ctrl+S. The first save of `/note/new` POSTs and the URL is replaced with `/note/:id` without remounting the editor (`NoteEditorPage` keeps the same `key`). An empty title is saved as the body's first line, or "Untitled".
 - **Toolbar**: TipTap v3 doesn't re-render on transactions, so `NoteToolbar` reads state through `useEditorState`. Buttons call `preventDefault` on mousedown so the mobile keyboard stays open.
 - Images are downscaled (max 1600px, WebP/JPEG) and stored inline as data URLs; the API's JSON limit is 10 MB for this.
+- **Toggle blocks** (`@tiptap/extension-details`, `persist: true`, so open / closed is saved). **Code blocks** use `@tiptap/extension-code-block-lowlight` (StarterKit's `codeBlock` is off) with a React node view for the language picker and copy; hljs colors are in `index.css`.
+- **Link cards** (`linkEmbed` node): pasting a recognized URL (YouTube, X, Instagram, TikTok, GitHub, Spotify, …; see `linkProviders.ts`) on an empty line, or the toolbar's card button, inserts a card showing the provider and kind ("YouTube · Video", "X · Post"). YouTube / Vimeo / Aparat play inline after a click. Titles / authors / tweet text come once from `GET /notes/unfurl` (only fixed oEmbed endpoints are called) and are stored as `data-*` attributes; saved HTML keeps a plain `<a>` inside.
 - Each paragraph uses `unicode-bidi: plaintext`, so Persian and English lines get their own direction. Editor styles live under `.note-prose` in `index.css`.
 
 ### Known pre-existing issues (not regressions)
@@ -466,7 +483,8 @@ neura-api/
         │   ├── subtasks.controller.ts / subtasks.service.ts  # Subtasks (always check parent-task ownership first)
         │   └── tags.controller.ts / tags.service.ts          # Task tags; ownedTagIds() filters client tag ids
         ├── notes/
-        │   └── notes.routes.ts / notes.controller.ts / notes.service.ts
+        │   ├── notes.routes.ts / notes.controller.ts / notes.service.ts  # notes, links, folders
+        │   └── notes.unfurl.ts     # oEmbed link previews (YouTube, X, Vimeo, Spotify, SoundCloud), in-memory cache
         ├── habits/
         │   ├── habits.routes.ts / habits.controller.ts / habits.service.ts  # CRUD, entry toggle, overview + auto-archive
         │   └── habits.utils.ts     # Pure helpers: habitDueDate, getRange, shiftRange, groupEntriesByHabit,
@@ -587,11 +605,12 @@ neura-api/
 | `/tasks` (subtasks) | `POST /:taskId/subtasks`, `PUT /:taskId/subtasks/:subtaskId`, `PATCH /:taskId/subtasks/:subtaskId/toggle`, `DELETE /:taskId/subtasks/:subtaskId` |
 | `/tasks/lists` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/tasks/tags` | `GET /` (with `taskCount`), `POST /` (`{ name, color }`, 409 on duplicate name), `PUT /:id`, `DELETE /:id`. Tasks: `PATCH /tasks/:id/tags` (`{ tag_ids }`); `POST`/`PUT /tasks` accept optional `tag_ids` (omitted = unchanged) |
-| `/notes` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
+| `/notes` | `GET /?task_id=`, `POST /` (optional `folder_id`, `goal_id`, `task_id`), `GET /:id`, `PUT /:id` (content only), `PATCH /:id/links` (`folder_id` / `goal_id` / `task_id`; null unlinks, omitted = unchanged), `DELETE /:id`, `GET /link-options` (goals + open tasks), `GET /unfurl?url=` (oEmbed preview or null) |
+| `/notes/folders` | `GET /` (with `noteCount`, `goal`), `POST /` (`{ name, color?, goal_id? }`, 409 on duplicate name), `PATCH /:id`, `DELETE /:id?notes=keep\|delete` |
 | `/habits` | `GET /?view=&date=&today=&weekStartsOn=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
 | `/focus-sessions` | `GET /`, `GET /stats`, `POST /`, `PATCH /:id`, `DELETE /:id` |
 | `/users` | `GET /me`, `PATCH /me` |
-| `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks` (`show_in_tasks`, default false), `PATCH /:id/tasks/:taskId` (partial: `title`, `description`, `priority`, `due_date`, `show_in_tasks`), `DELETE /:id/tasks/:taskId`, `GET /:id/link-options`, `POST /:id/links`, `DELETE /:id/links/:type/:targetId` |
+| `/goals` | `GET /?archived=&today=`, `POST /`, `GET /:id`, `PATCH /:id`, `DELETE /:id?reminders=keep\|delete`, `PATCH /:id/status`, `POST /:id/extend`, `POST /:id/archive`, `POST /:id/progress`, `POST /:id/notes`, `DELETE /:id/logs/:logId`, `GET /:id/reminders`, `POST /:id/tasks` (`show_in_tasks`, default false), `PATCH /:id/tasks/:taskId` (partial: `title`, `description`, `priority`, `due_date`, `show_in_tasks`), `DELETE /:id/tasks/:taskId`, `GET /:id/link-options` (tasks, notes, folders), `POST /:id/links` (`type`: task \| note \| folder), `DELETE /:id/links/:type/:targetId` |
 | `/reminders` | `GET /?view=upcoming\|snoozed\|done\|all&goal_id=&task_id=&note_id=`, `POST /`, `GET /counts`, `GET /link-options`, `PATCH /:id`, `DELETE /:id`, `POST /:id/complete` (`{ scope }`), `/skip`, `/reopen`, `/snooze` (`{ until }`), `/pause`, `/resume` |
 | `/brainstorms` | `GET /?status=inbox\|processed`, `POST /` (`{ content }`), `DELETE /processed`, `PATCH /:id`, `DELETE /:id`, `POST /:id/keep`, `POST /:id/process` (`{ task_id }` \| `{ reminder_id }` \| `{}` to dismiss), `POST /:id/restore` |
 | `/notifications` | `GET /public-key`, `POST /subscription` (`{ subscription, time_zone }`), `DELETE /subscription` (`{ endpoint }`), `GET /settings`, `PATCH /settings` (`reminders`, `task_digest`, `task_digest_hour`, `task_nudge`, `task_nudge_hour`, `time_zone`), `POST /test`, `GET /inbox?today=`. Public (no session): `POST /action` (`{ token }`), `POST /dispatch` (header `x-cron-secret`) |
@@ -613,14 +632,15 @@ neura-api/
   - `showInTasks` (default `true`): tasks created from a goal page default to `false` and appear only on that goal. `GET /tasks` and `/tasks/calendar` return only `showInTasks: true`, each with its `goal` (`id`, `title`, `parent`). Unlinking a task or deleting its goal sets the flag back to `true`, so the task stays visible.
 - `SubTask`: title, completed, taskId (cascade delete)
 - `TaskTag`: name (unique per user), color (`colors` union), userId. Many-to-many with `Task` (implicit join table); tasks return `tags: { id, name, color }[]`.
-- `Note`: title, description (HTML from TipTap), color, userId
+- `Note`: title, description (HTML from TipTap), color, userId; optional folderId, goalId, taskId (all set null when the target is deleted)
+- `NoteFolder`: name (unique per user), color, userId, goalId (optional). Has many notes.
 - `FocusSession`
   - Fields: name, description, tag (enum: `work`, `personal`, `study`, `break`, `other`), duration (actual focused seconds), startTime, endTime, userId
 - `Habit`: title, color, startDate, durationDays (null means tracked forever), isArchived, userId. Has many entries.
 - `HabitEntry`: date, habitId. Unique on `(habitId, date)`, so there is one completion per day.
 - `Goal`
   - Fields: title, successCriteria, description, category, color, period, startDate / endDate (calendar days), metric, startValue / targetValue / currentValue / unit, status, completedAt, archivedAt, position
-  - Relations: parentId (sub-goals), tasks (`Task.goalId`), notes (`Note.goalId`), reminders, logs
+  - Relations: parentId (sub-goals), tasks (`Task.goalId`), notes (`Note.goalId`), noteFolders (`NoteFolder.goalId`), reminders, logs
 - `GoalLog`: type (`created`, `progress`, `note`, `status`, `extended`, `metric_changed`), value, note, meta.
 - `Reminder`
   - Fields: title, description, startAt, scheduledAt, snoozedUntil, nextAt, timeZone, repeat / interval / weekdays / repeatUntil, status, suspendedBy, origin (`manual` / `goal_auto`), autoKind

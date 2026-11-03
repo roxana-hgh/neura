@@ -99,7 +99,7 @@ export function htmlToText(html: string | null) {
   const text = html
     .replace(/<\/p>\s*<\/li>/gi, "</li>") // the editor wraps list items in <p>
     .replace(/<li[^>]*>/gi, "- ")
-    .replace(/<\/(p|div|h[1-6]|li|blockquote|ul|ol)>|<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|blockquote|ul|ol|pre|summary|details)>|<br\s*\/?>/gi, "\n")
     .replace(/<[^>]*>/g, "");
   return decodeEntities(text).replace(/\n{3,}/g, "\n\n").trim();
 }

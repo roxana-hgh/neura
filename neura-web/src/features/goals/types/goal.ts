@@ -81,8 +81,18 @@ export interface GoalDetail extends Goal {
   parent: { id: string; title: string } | null;
   subGoals: SubGoal[];
   tasks: GoalTask[];
-  notes: { id: string; title: string; color: colors; updatedAt: string }[];
+  notes: GoalNote[];
+  /** Note folders linked to the goal, with their notes */
+  noteFolders: { id: string; name: string; color: colors; notes: GoalNote[] }[];
   logs: GoalLog[];
+}
+
+export interface GoalNote {
+  id: string;
+  title: string;
+  color: colors;
+  updatedAt: string;
+  folderId: string | null;
 }
 
 export interface LinkedReminder {

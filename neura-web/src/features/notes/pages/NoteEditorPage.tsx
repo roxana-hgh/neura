@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FileQuestion } from "lucide-react";
 import NoteEditor from "@/features/notes/components/editor/NoteEditor";
 import { useNote } from "@/features/notes/hooks/useNotes";
@@ -10,6 +10,8 @@ import Loader from "@/components/ui/loader";
 function NoteEditorPage() {
   const { id = "new" } = useParams();
   const navigate = useNavigate();
+  // "New note" from a folder, goal or task: /note/new?folder=…&goal=…&task=…
+  const [params] = useSearchParams();
 
   // After the first autosave the URL switches from /note/new to /note/:id.
   // That is still the same writing session, so the editor must not remount.
@@ -46,6 +48,11 @@ function NoteEditorPage() {
       key={isDraft ? "draft" : id}
       note={isDraft ? undefined : note}
       onCreated={handleCreated}
+      initialLinks={{
+        folderId: params.get("folder"),
+        goalId: params.get("goal"),
+        taskId: params.get("task"),
+      }}
     />
   );
 }

@@ -112,6 +112,8 @@ export async function listGoals(userId: string, archived: boolean, todayKey: str
   return goals.map((g) => serializeListGoal(g, todayKey));
 }
 
+const noteSelect = { id: true, title: true, color: true, updatedAt: true, folderId: true } as const;
+
 export async function getGoal(userId: string, id: string, todayKey: string) {
   const goal = await prisma.goal.findFirst({
     where: { id, userId },
@@ -122,13 +124,17 @@ export async function getGoal(userId: string, id: string, todayKey: string) {
         include: { tasks: { select: { completed: true } }, _count: { select: { reminders: true } } },
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       },
-      notes: { select: { id: true, title: true, color: true, updatedAt: true }, orderBy: { updatedAt: "desc" } },
+      notes: { select: noteSelect, orderBy: { updatedAt: "desc" } },
+      noteFolders: {
+        select: { id: true, name: true, color: true, notes: { select: noteSelect, orderBy: { updatedAt: "desc" } } },
+        orderBy: { name: "asc" },
+      },
       logs: { orderBy: { createdAt: "desc" }, take: 50 },
     },
   });
   if (!goal) throw notFound("Goal not found");
 
-  const { subGoals, notes, logs, parent, ...rest } = goal;
+  const { subGoals, notes, noteFolders, logs, parent, ...rest } = goal;
   const tasks = await prisma.task.findMany({
     where: { userId, goalId: { in: [goal.id, ...subGoals.map((s) => s.id)] } },
     include: { subtasks: true },
@@ -144,6 +150,7 @@ export async function getGoal(userId: string, id: string, todayKey: string) {
     })),
     tasks,
     notes,
+    noteFolders,
     logs,
   };
 }
@@ -473,7 +480,7 @@ export async function deleteGoal(userId: string, id: string, keepReminders: bool
   await prisma.goal.delete({ where: { id } });
 }
 
-// ── Links (tasks, notes) ────────────────────────────────────────────────
+// ── Links (tasks, notes, note folders) ────────────────────────────────────────────────
 
 export interface GoalTaskUpdate {
   title?: string;
@@ -530,7 +537,7 @@ export async function createTask(
   });
 }
 
-export async function link(userId: string, id: string, type: "task" | "note", targetId: string, attach: boolean) {
+export async function link(userId: string, id: string, type: "task" | "note" | "folder", targetId: string, attach: boolean) {
   await findOwned(userId, id);
   const goalId = attach ? id : null;
   // detaching only clears a link that points at this goal
@@ -538,15 +545,17 @@ export async function link(userId: string, id: string, type: "task" | "note", ta
   // a detached task would otherwise be invisible everywhere, so it moves to the Tasks page
   const result = type === "task"
     ? await prisma.task.updateMany({ where, data: attach ? { goalId } : { goalId, showInTasks: true } })
-    : await prisma.note.updateMany({ where, data: { goalId } });
-  if (!result.count) throw notFound(type === "task" ? "Task not found" : "Note not found");
+    : type === "note"
+      ? await prisma.note.updateMany({ where, data: { goalId } })
+      : await prisma.noteFolder.updateMany({ where, data: { goalId } });
+  if (!result.count) throw notFound(type === "task" ? "Task not found" : type === "note" ? "Note not found" : "Folder not found");
 }
 
-/** Open tasks and notes that aren't linked to this goal yet, for the "Link existing" picker. */
+/** Open tasks, notes and note folders that aren't linked to this goal yet, for the "Link existing" picker. */
 export async function getLinkOptions(userId: string, id: string) {
   const goal = await findOwned(userId, id);
   const ids = await familyIds(goal);
-  const [tasks, notes] = await Promise.all([
+  const [tasks, notes, folders] = await Promise.all([
     prisma.task.findMany({
       where: { userId, completed: false, OR: [{ goalId: null }, { goalId: { notIn: ids } }] },
       select: { id: true, title: true, dueDate: true, goalId: true },
@@ -559,7 +568,16 @@ export async function getLinkOptions(userId: string, id: string) {
       orderBy: { updatedAt: "desc" },
       take: 50,
     }),
+    prisma.noteFolder.findMany({
+      where: { userId, OR: [{ goalId: null }, { goalId: { not: id } }] },
+      select: { id: true, name: true, goalId: true, _count: { select: { notes: true } } },
+      orderBy: { name: "asc" },
+    }),
   ]);
-  return { tasks, notes };
+  return {
+    tasks,
+    notes,
+    folders: folders.map(({ _count, name, ...f }) => ({ ...f, title: name, noteCount: _count.notes })),
+  };
 }
 
