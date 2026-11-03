@@ -82,11 +82,11 @@ function AllNotesPage() {
         </div>
       )}
 
-      {/* Floating "new note" button on phones */}
+      {/* Floating "new note" button on phones, stacked above the quick access button */}
       <Link
         to="/note/new"
         aria-label="New note"
-        className="fixed right-5 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-30 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95 sm:hidden"
+        className="fixed right-5 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-30 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95 sm:hidden"
       >
         <Plus className="size-6" />
       </Link>

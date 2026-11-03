@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "@/utils/http-error";
+import { ownedTagIds } from "@/modules/tasks/tags.service";
 
-/** Subtasks + the goal (and parent goal, for sub-goals) the task belongs to, for the "from goal" badge. */
+/** Subtasks, tags + the goal (and parent goal, for sub-goals) the task belongs to, for the "from goal" badge. */
 const taskInclude = {
   subtasks: true,
+  tags: { select: { id: true, name: true, color: true }, orderBy: { name: "asc" } },
   goal: { select: { id: true, title: true, parent: { select: { id: true, title: true } } } },
 } as const;
 
@@ -21,6 +23,8 @@ export interface TaskInput {
   priority?: string;
   due_date?: string | null;
   list_id?: string | null;
+  /** Omitted = leave the task's tags unchanged (other callers of PUT don't know about tags). */
+  tag_ids?: string[];
 }
 
 const toTaskData = ({ title, description, priority, due_date, list_id }: TaskInput) => ({
@@ -81,17 +85,39 @@ export async function assertTaskOwner(userId: string, taskId: string) {
   if (!task) throw notFound("Task not found");
 }
 
-export function createTask(userId: string, input: TaskInput) {
+/** `{ set: [...] }` with only the user's own tags, or undefined when tags aren't being changed. */
+async function tagsSet(userId: string, tagIds: unknown) {
+  if (!Array.isArray(tagIds)) return undefined;
+  const ids = await ownedTagIds(userId, tagIds.filter((id): id is string => typeof id === "string"));
+  return { set: ids.map((id) => ({ id })) };
+}
+
+export async function createTask(userId: string, input: TaskInput) {
+  const tags = await tagsSet(userId, input.tag_ids);
   return prisma.task.create({
-    data: { ...toTaskData(input), userId },
+    data: {
+      ...toTaskData(input),
+      userId,
+      ...(tags?.set.length && { tags: { connect: tags.set } }),
+    },
     include: taskInclude,
   });
 }
 
-export function updateTask(userId: string, id: string, input: TaskInput) {
+export async function updateTask(userId: string, id: string, input: TaskInput) {
+  const tags = await tagsSet(userId, input.tag_ids);
   return prisma.task.update({
     where: { id, userId },
-    data: toTaskData(input),
+    data: { ...toTaskData(input), ...(tags && { tags }) },
+    include: taskInclude,
+  });
+}
+
+/** Replaces only the task's tags (used by the quick tag picker in the task detail). */
+export async function setTaskTags(userId: string, id: string, tagIds: string[]) {
+  return prisma.task.update({
+    where: { id, userId },
+    data: { tags: await tagsSet(userId, tagIds) },
     include: taskInclude,
   });
 }

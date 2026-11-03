@@ -20,6 +20,18 @@ export interface Task {
   list_id: string | number | null; // null = not assigned to any list
   /** The goal (or sub-goal, with its parent) this task belongs to. */
   goal: TaskGoal | null;
+  tags: TaskTag[];
+}
+
+export interface TaskTag {
+  id: string;
+  name: string;
+  color: colors;
+}
+
+/** A tag as returned by GET /tasks/tags, with how many tasks use it. */
+export interface TaskTagWithCount extends TaskTag {
+  taskCount: number;
 }
 
 export interface TaskGoal {

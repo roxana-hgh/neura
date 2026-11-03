@@ -28,6 +28,8 @@ export const TaskSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => val ?? null),
+
+  tag_ids: z.array(z.string()).optional(),
 });
 
 export type TaskFormValues = z.infer<typeof TaskSchema>;

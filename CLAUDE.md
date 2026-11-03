@@ -70,7 +70,7 @@ Each app is installed and deployed on its own (Render, scoped to its subdirector
 The code is organized **by feature**, not by file type. Each feature folder is self-contained and owns its pages, components, hooks, stores, schemas, types and utils. The **only integration points** between features are:
 
 - `app/router.tsx`: wires every feature's pages to URLs
-- `layouts/`: the app shell (sidebar menu, header)
+- `layouts/`: the app shell (sidebar menu, header, `QuickAccessFab`)
 - `features/dashboard/`: composes widgets from other features
 
 Shared, feature-agnostic code lives in `components/ui`, `components/shared`, `hooks`, `lib`, `stores` and `types`.
@@ -88,6 +88,8 @@ src/
 │   ├── AppLayout.tsx              # SidebarProvider + SidebarNav + Header + <Outlet/> + Toaster
 │   ├── Header.tsx                 # Top bar: 3-column grid (sidebar trigger · centred logo on mobile · bell + user menu)
 │   ├── NeuraLogo.tsx              # Brain mark tile, shared by SidebarNav and Header
+│   ├── QuickAccessFab.tsx         # Floating speed-dial on every page (hidden on /assistant and the note editor):
+│   │                              # quick capture → Brainstorms inbox, plus Assistant / Brainstorms / Reminders / Tasks
 │   ├── SidebarNav.tsx             # Main navigation menu (also lists task lists, "add list")
 │   └── UserProfileMenu.tsx        # Avatar dropdown, sign out
 ├── features/
@@ -101,16 +103,20 @@ src/
 │   │   │   ├── calendar/          # CalendarHeader, CalendarMonthView, CalendarWeekView,
 │   │   │   │                      # CalendarWeekTaskCard, CalendarTaskChip (see "Calendar" below)
 │   │   │   ├── lists/             # AddNewList, EditList, ListForm, ListCardItem, NoList
+│   │   │   ├── tags/              # TagChip, TagColorPicker, TagPicker (search-or-create popover), TagManagerDialog,
+│   │   │   │                      # TagFilter (header button), ActiveTagFilters, TaskTagsEditor (in TaskDetail)
 │   │   │   └── task-list/         # TasksList, TaskListItem (`compact` for the dashboard), TaskSections,
 │   │   │                          # TaskSectionsSkeleton
-│   │   ├── hooks/                 # useTasks (tasks, lists, subtasks queries/mutations), useCalendarTasks
+│   │   ├── hooks/                 # useTasks (tasks, lists, subtasks queries/mutations), useCalendarTasks,
+│   │   │                          # useTaskTags (tags CRUD, useSetTaskTags)
 │   │   ├── pages/                 # TasksPage, CalendarPage, AllListsPage, SingleListPage
 │   │   ├── schemas/               # task.schema, list.schema (zod)
 │   │   ├── stores/                # tasksStore (useTasksStore: lists cache + search/priority filters + view mode),
 │   │   │                          # calendarStore (useCalendarStore: month/week view, persisted)
 │   │   ├── types/                 # task.ts: Task, SubTask, TaskList, TaskWithListName
 │   │   └── utils/                 # calendar, colorMapper, groupTasks, taskProgress, taskSelectors,
-│   │                              # taskStats (getDueInfo labels, getTaskStats counts)
+│   │                              # taskStats (getDueInfo labels, getTaskStats counts),
+│   │                              # taskTags (TAG_STYLES, nextTagColor, filterTasksByTags)
 │   ├── notes/
 │   │   ├── components/            # NoteItem (grid card with preview/thumbnail)
 │   │   │   └── editor/            # NoteEditor (paper page, autosave), NoteEditorHeader (back, save status,
@@ -181,6 +187,13 @@ src/
 │   │   ├── lib/                   # brainstormText (suggestFields, groupByCaptureDay, reviewQueue, timeAgo)
 │   │   ├── pages/                 # BrainstormsPage
 │   │   └── types/                 # brainstorm.ts
+│   ├── search/
+│   │   ├── components/            # GlobalSearch (palette dialog, mounted in AppLayout; Ctrl/⌘ K or "/"),
+│   │   │                          # SearchTrigger (header bar on md+, icon on phones), SearchResultRow, HighlightText
+│   │   ├── hooks/                 # useGlobalSearch (debounced GET /search, keepPreviousData)
+│   │   ├── lib/                   # searchItems (SEARCH_GROUPS, QUICK_LINKS, toSearchItems)
+│   │   ├── stores/                # searchStore (open state + recent queries, persisted as `neura-search`)
+│   │   └── types/                 # search.ts
 │   ├── settings/
 │   │   ├── components/            # SettingsSection (layout), AccountSection, ProfileForm, ProfileAvatar,
 │   │   │                          # AppearanceSection (theme), SessionSection (sign out)
@@ -191,7 +204,6 @@ src/
 │   └── dashboard/
 │       ├── components/            # WeeklyOverviewChart (focus minutes vs habit completion),
 │       │                          # GoalsAndRemindersRow ("Goals in progress" + "Up next")
-│       │                          # QuickAccessFab (floating speed-dial: Assistant, Brainstorms, Reminders, Tasks + live hints)
 │       └── pages/                 # DashboardPage (tasks, notes, lists, habits heatmap, charts, daily plan)
 ├── components/
 │   ├── ui/                        # shadcn/ui primitives: generated, keep stock (button, dialog, sidebar, chart, …)
@@ -250,11 +262,12 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 - Code used by a single feature belongs inside that feature. Move it to `components/shared`, `lib`, `hooks` or `types` only when two or more features need it.
 - Features should not import from each other. Allowed exceptions:
   - `dashboard` imports from all features
-  - `layouts/SidebarNav` imports from `tasks`
+  - `layouts/SidebarNav` imports from `tasks`; `layouts/QuickAccessFab` uses `tasks`, `reminders` and `brainstorms` hooks
   - `assistant/pages/AssistantPage` uses the `tasks`, `habits`, `goals`, `notes`, `reminders` and `brainstorms` list hooks for @mentions
   - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
   - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
   - `brainstorms` uses `tasks` (`TaskForm`, `useCreateTask`) and `reminders/ReminderFormDialog` (`onSaved`) to convert items
+  - `search` uses `tasks` (`TaskDetail` in controlled mode via `open`/`onOpenChange`, `useTask`) to open a task result in place
   - `notifications` uses `reminders` (complete / snooze hooks, `Reminder` type), `tasks` (`useToggleTask`, `PRIORITY_STYLES`) and `settings/SettingsSection`; `settings` renders `NotificationsSection`; `focus/notify` and the sign-out handlers use `notifications/lib/push`
 
 **Naming**
@@ -284,6 +297,12 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 
 **Dates**
 - Turn a local `Date` into a `"yyyy-MM-dd"` string with `format(date, "yyyy-MM-dd")` from date-fns, never `toISOString().split("T")[0]`. In zones ahead of UTC (for example Iran, UTC+3:30), `toISOString()` moves local midnight to the previous day.
+
+### Tags
+
+- A task has any number of tags (`Task.tags`). Tags are managed from the `TagPicker` popover (type to search, Enter creates with the chosen color, "Manage tags" opens `TagManagerDialog`).
+- The Tasks and single-list pages filter **client-side** with `filterTasksByTags` using `tasksStore.tagFilter` (cleared when the page unmounts, like the search) and `tagMatch` (`any` / `all`, persisted).
+- `TaskDetail` edits tags in place through `PATCH /tasks/:id/tags`, never the full `PUT`.
 
 ### Calendar (`/calendar`)
 
@@ -354,6 +373,13 @@ A quick-capture inbox: "your brain is for having ideas, not holding them".
 - **Convert:** `BrainstormConvertDialogs` prefills `TaskForm` / `ReminderFormDialog` with `suggestFields` (first line = title, rest = description, clipped to each form's limits). After the task / reminder is created, `POST /brainstorms/:id/process` records it and the item leaves the inbox.
 - **Reset** (`BrainstormReview`, inline on the page): **daily** = items with `reviewedAt` null (new since the last reset), **weekly** = the whole inbox. One item at a time, oldest first, from a snapshot: T task, R reminder, K keep (sets `reviewedAt`), D done, E edit, ←/→ move, Delete.
 - **Sorted** tab: processed items with what they became; Back to inbox, Delete, Clear history.
+
+### Global search
+
+- `GlobalSearch` is a command palette: full-screen on phones, a floating panel near the top on sm+. Opened from the header (`SearchTrigger`), Ctrl/⌘ K anywhere, or `/` when not typing.
+- Empty query: recent searches + "Jump to" page links. From 2 characters: results grouped by type with filter chips (Tab cycles them), ↑/↓ + Enter, matches highlighted.
+- Task results open `TaskDetail` in place; the rest navigate (goal / note / list to their page; reminders, habits, brainstorms to their list page).
+- Notes are matched on their text, not the HTML (inline images are base64), via `htmlToText`.
 
 ### Week start (Settings → Calendar)
 
@@ -437,7 +463,8 @@ neura-api/
         │   ├── tasks.routes.ts     # All /api/tasks routes, including lists and subtasks (order matters, see below)
         │   ├── tasks.controller.ts / tasks.service.ts        # Tasks + calendar; assertTaskOwner()
         │   ├── lists.controller.ts / lists.service.ts        # Task lists
-        │   └── subtasks.controller.ts / subtasks.service.ts  # Subtasks (always check parent-task ownership first)
+        │   ├── subtasks.controller.ts / subtasks.service.ts  # Subtasks (always check parent-task ownership first)
+        │   └── tags.controller.ts / tags.service.ts          # Task tags; ownedTagIds() filters client tag ids
         ├── notes/
         │   └── notes.routes.ts / notes.controller.ts / notes.service.ts
         ├── habits/
@@ -456,6 +483,8 @@ neura-api/
         │   ├── notifications.public.routes.ts  # /action (signed token) + /dispatch (x-cron-secret), no session
         │   ├── notifications.dispatch.ts       # dispatchDue (reminders + task briefs), startNotificationScheduler
         │   └── notifications.utils.ts          # action tokens (HMAC), push payload type, notification copy
+        ├── search/
+        │   └── search.routes.ts / .controller.ts / .service.ts  # searchEverything (also used by assistant search_everything)
         ├── brainstorms/
         │   └── brainstorms.routes.ts / .controller.ts / .service.ts  # inbox, keep, process (→ task / reminder), restore
         ├── reminders/
@@ -557,6 +586,7 @@ neura-api/
 | `/tasks` | `GET /`, `POST /`, `GET /calendar`, `GET /:id`, `PUT /:id`, `PATCH /:id/toggle`, `DELETE /:id` |
 | `/tasks` (subtasks) | `POST /:taskId/subtasks`, `PUT /:taskId/subtasks/:subtaskId`, `PATCH /:taskId/subtasks/:subtaskId/toggle`, `DELETE /:taskId/subtasks/:subtaskId` |
 | `/tasks/lists` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
+| `/tasks/tags` | `GET /` (with `taskCount`), `POST /` (`{ name, color }`, 409 on duplicate name), `PUT /:id`, `DELETE /:id`. Tasks: `PATCH /tasks/:id/tags` (`{ tag_ids }`); `POST`/`PUT /tasks` accept optional `tag_ids` (omitted = unchanged) |
 | `/notes` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/habits` | `GET /?view=&date=&today=&weekStartsOn=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
 | `/focus-sessions` | `GET /`, `GET /stats`, `POST /`, `PATCH /:id`, `DELETE /:id` |
@@ -565,6 +595,7 @@ neura-api/
 | `/reminders` | `GET /?view=upcoming\|snoozed\|done\|all&goal_id=&task_id=&note_id=`, `POST /`, `GET /counts`, `GET /link-options`, `PATCH /:id`, `DELETE /:id`, `POST /:id/complete` (`{ scope }`), `/skip`, `/reopen`, `/snooze` (`{ until }`), `/pause`, `/resume` |
 | `/brainstorms` | `GET /?status=inbox\|processed`, `POST /` (`{ content }`), `DELETE /processed`, `PATCH /:id`, `DELETE /:id`, `POST /:id/keep`, `POST /:id/process` (`{ task_id }` \| `{ reminder_id }` \| `{}` to dismiss), `POST /:id/restore` |
 | `/notifications` | `GET /public-key`, `POST /subscription` (`{ subscription, time_zone }`), `DELETE /subscription` (`{ endpoint }`), `GET /settings`, `PATCH /settings` (`reminders`, `task_digest`, `task_digest_hour`, `task_nudge`, `task_nudge_hour`, `time_zone`), `POST /test`, `GET /inbox?today=`. Public (no session): `POST /action` (`{ token }`), `POST /dispatch` (header `x-cron-secret`) |
+| `/search` | `GET /?q=&types=tasks,goals,…&limit=` (q 1–100 chars, limit per type default 6, max 20). Returns `{ tasks, goals, notes, reminders, habits, brainstorms, lists }` with a `snippet` around the match |
 | `/assistant` | `POST /` with `{ mode, question, history, … }`; mode `daily_plan` powers the dashboard card |
 
 `GET /health` (no `/api` prefix) returns `{ status: "ok" }`.
@@ -581,6 +612,7 @@ neura-api/
   - Relations: userId, listId (optional; set to null when the list is deleted), goalId (optional), subtasks
   - `showInTasks` (default `true`): tasks created from a goal page default to `false` and appear only on that goal. `GET /tasks` and `/tasks/calendar` return only `showInTasks: true`, each with its `goal` (`id`, `title`, `parent`). Unlinking a task or deleting its goal sets the flag back to `true`, so the task stays visible.
 - `SubTask`: title, completed, taskId (cascade delete)
+- `TaskTag`: name (unique per user), color (`colors` union), userId. Many-to-many with `Task` (implicit join table); tasks return `tags: { id, name, color }[]`.
 - `Note`: title, description (HTML from TipTap), color, userId
 - `FocusSession`
   - Fields: name, description, tag (enum: `work`, `personal`, `study`, `break`, `other`), duration (actual focused seconds), startTime, endTime, userId

@@ -32,6 +32,7 @@ model User {
   accounts      Account[]
   tasks         Task[]
   taskLists     TaskList[]
+  taskTags      TaskTag[]
   notes         Note[]
   focusSessions FocusSession[]
   habits        Habit[]
@@ -112,8 +113,22 @@ model Task {
   /// false = only on its goal's page (default for tasks added from a goal), hidden from Tasks / Calendar
   showInTasks Boolean      @default(true)
   subtasks    SubTask[]
+  tags        TaskTag[]
   reminders   Reminder[]
   brainstorms Brainstorm[]
+}
+
+/// User-defined label, many-to-many with tasks (implicit join table)
+model TaskTag {
+  id        String   @id @default(cuid())
+  name      String
+  color     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
 }
 
 model SubTask {

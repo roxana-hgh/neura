@@ -47,6 +47,13 @@ export async function toggleTask(req: Request<IdParams>, res: Response) {
   res.json(await tasksService.setTaskCompleted(req.userId!, req.params.id, req.body.completed));
 }
 
+// PATCH /api/tasks/:id/tags  { tag_ids }
+export async function setTaskTags(req: Request<IdParams>, res: Response) {
+  const { tag_ids } = req.body ?? {};
+  if (!Array.isArray(tag_ids)) return res.status(400).json({ error: "tag_ids must be an array" });
+  res.json(await tasksService.setTaskTags(req.userId!, req.params.id, tag_ids));
+}
+
 // DELETE /api/tasks/:id
 export async function deleteTask(req: Request<IdParams>, res: Response) {
   await tasksService.deleteTask(req.userId!, req.params.id);

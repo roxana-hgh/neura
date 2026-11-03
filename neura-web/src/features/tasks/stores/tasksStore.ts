@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 import type { TaskList } from "@/features/tasks/types/task";
 import type { TaskViewMode } from "@/features/tasks/utils/groupTasks";
 
+export type TagMatchMode = "any" | "all";
+
 export interface TaskStoreState {
   // ── Lists ──────────────────────────────────
   lists: TaskList[];
@@ -12,6 +14,10 @@ export interface TaskStoreState {
   priorities: Set<string>;
   /** Hide tasks that belong to a goal from the Tasks page (persisted) */
   hideGoalTasks: boolean;
+  /** Tag ids to filter the task list by (cleared when leaving the page) */
+  tagFilter: string[];
+  /** "any" = task has at least one selected tag, "all" = task has every one (persisted) */
+  tagMatch: TagMatchMode;
 
   // ── View state (persisted) ─────────────────
   viewMode: TaskViewMode;
@@ -27,6 +33,9 @@ export interface TaskStoreState {
   togglePriority: (priority: string) => void;
   clearFilters: () => void;
   toggleHideGoalTasks: () => void;
+  toggleTagFilter: (tagId: string) => void;
+  clearTagFilter: () => void;
+  setTagMatch: (mode: TagMatchMode) => void;
 
   // ── View actions ───────────────────────────
   setViewMode: (mode: TaskViewMode) => void;
@@ -40,6 +49,8 @@ export const useTasksStore = create<TaskStoreState>()(
   search: "",
   priorities: new Set<string>(),
   hideGoalTasks: false,
+  tagFilter: [],
+  tagMatch: "any",
   viewMode: "sorted",
 
   // ── List actions ───────────────────────────
@@ -72,13 +83,28 @@ export const useTasksStore = create<TaskStoreState>()(
 
   toggleHideGoalTasks: () => set((state) => ({ hideGoalTasks: !state.hideGoalTasks })),
 
+  toggleTagFilter: (tagId) =>
+    set((state) => ({
+      tagFilter: state.tagFilter.includes(tagId)
+        ? state.tagFilter.filter((id) => id !== tagId)
+        : [...state.tagFilter, tagId],
+    })),
+
+  clearTagFilter: () => set({ tagFilter: [] }),
+
+  setTagMatch: (tagMatch) => set({ tagMatch }),
+
   // ── View actions ───────────────────────────
   setViewMode: (viewMode) => set({ viewMode }),
     }),
     {
       name: "neura-tasks-view",
       // only view preferences are persisted; lists come from the API
-      partialize: (state) => ({ viewMode: state.viewMode, hideGoalTasks: state.hideGoalTasks }),
+      partialize: (state) => ({
+        viewMode: state.viewMode,
+        hideGoalTasks: state.hideGoalTasks,
+        tagMatch: state.tagMatch,
+      }),
     },
   ),
 );

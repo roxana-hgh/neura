@@ -21,6 +21,7 @@ export const mapTask = (raw: any): Task => ({
   list_id: raw.listId ?? null,
   subtasks: raw.subtasks ?? null,
   goal: raw.goal ?? null,
+  tags: raw.tags ?? [],
 });
 
 export function useTasks() {
@@ -40,6 +41,18 @@ export function useTasks() {
     },
     // keep showing the last results while a new search loads
     placeholderData: keepPreviousData,
+  });
+}
+
+/** A single task by id. Under ["tasks"], so every task mutation refreshes it. */
+export function useTask(id: string | null) {
+  return useQuery({
+    queryKey: ["tasks", "detail", id],
+    queryFn: async () => {
+      const { data } = await api.get(`/tasks/${id}`);
+      return mapTask(data);
+    },
+    enabled: !!id,
   });
 }
 

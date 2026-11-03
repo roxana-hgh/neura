@@ -10,6 +10,7 @@ import { DUE_TONE_STYLES, getDueInfo } from "@/features/tasks/utils/taskStats";
 import EditTask from "@/features/tasks/components/EditTask";
 import TaskDetail from "@/features/tasks/components/TaskDetail";
 import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
+import TagChip from "@/features/tasks/components/tags/TagChip";
 import AlertDialog from "@/components/shared/AlertDialog";
 import { useDeleteTask, useToggleTask } from "@/features/tasks/hooks/useTasks";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,8 @@ function TaskListItem({ task, compact = false }: Iprops) {
   const subtasks = task.subtasks ?? [];
   const subtasksDone = subtasks.filter((s) => s.completed).length;
   const checkboxId = `task-item-${task.id}`;
+  const maxTags = compact ? 2 : 3;
+  const tags = task.tags ?? [];
 
   return (
     <>
@@ -115,6 +118,22 @@ function TaskListItem({ task, compact = false }: Iprops) {
                 )}
 
                 {task.goal && <TaskGoalBadge goal={task.goal} className="max-w-56 text-[11px]" />}
+
+                {tags.length > 0 && (
+                  <span className="inline-flex min-w-0 flex-wrap items-center gap-1">
+                    {tags.slice(0, maxTags).map((tag) => (
+                      <TagChip key={tag.id} tag={tag} size="sm" muted={task.completed} />
+                    ))}
+                    {tags.length > maxTags && (
+                      <span
+                        className="text-[11px] tabular-nums text-muted-foreground"
+                        title={tags.slice(maxTags).map((t) => t.name).join(", ")}
+                      >
+                        +{tags.length - maxTags}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
             </div>
           }

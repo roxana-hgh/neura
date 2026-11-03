@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
 import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
+import TaskTagsEditor from "@/features/tasks/components/tags/TaskTagsEditor";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 
@@ -46,10 +47,16 @@ import AlertDialog from "@/components/shared/AlertDialog";
 interface IProps {
   task: Task;
   trigger?: React.ReactNode;
+  /** Controlled mode (no trigger is rendered), e.g. opened from global search. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-function TaskDetail({ task, trigger }: IProps) {
-  const [open, setOpen] = useState(false);
+function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
+  const [openState, setOpenState] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openState;
+  const setOpen = (next: boolean) => (controlled ? onOpenChange?.(next) : setOpenState(next));
   const [alertOpen, setAlertOpen] = useState(false);
   const [remindOpen, setRemindOpen] = useState(false);
   const [addingSubtask, setAddingSubtask] = useState(false);
@@ -164,7 +171,7 @@ function TaskDetail({ task, trigger }: IProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
+        {!controlled && <DialogTrigger asChild>
           {trigger ?? (
             <button
               type="button"
@@ -177,7 +184,7 @@ function TaskDetail({ task, trigger }: IProps) {
               <ExternalLink size={18} strokeWidth={1.5} />
             </button>
           )}
-        </DialogTrigger>
+        </DialogTrigger>}
 
         <DialogContent className=" overflow-hidden border-neutral-200/60 dark:border-neutral-700/40 bg-white/98 dark:bg-neutral-900/80 backdrop-blur-xl p-0 shadow-2xl">
           {/* Subtle ambient effect */}
@@ -283,6 +290,14 @@ function TaskDetail({ task, trigger }: IProps) {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-1.5">
+                <h3 className="text-[10px] uppercase tracking-wide text-neutral-600 dark:text-neutral-400 font-medium">
+                  Tags
+                </h3>
+                <TaskTagsEditor task={task} />
               </div>
 
               {/* Description  */}

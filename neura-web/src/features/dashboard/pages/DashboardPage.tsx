@@ -42,7 +42,6 @@ import { formatDuration } from "@/features/focus/utils/time";
 import { useDailyPlan } from "@/features/assistant/hooks/useDailyPlan";
 import { MarkdownMessage } from "@/features/assistant/components/MarkdownMessage";
 import WeeklyOverviewChart from "@/features/dashboard/components/WeeklyOverviewChart";
-import QuickAccessFab from "@/features/dashboard/components/QuickAccessFab";
 import GoalsAndRemindersRow from "@/features/dashboard/components/GoalsAndRemindersRow";
 
 type TaskTab = "today" | "week" | "later";
@@ -382,16 +381,6 @@ function Dashboard() {
           </div>
         </section>
       )}
-
-      <QuickAccessFab
-        tasksHint={
-          tasksPending
-            ? undefined
-            : stats.overdue
-              ? `${stats.overdue} overdue · ${stats.dueToday} due today`
-              : `${stats.dueToday} due today · ${stats.open} open`
-        }
-      />
     </div>
   );
 }

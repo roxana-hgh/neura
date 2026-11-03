@@ -71,6 +71,7 @@ function EditTask({ task, trigger }: IProps) {
             description: task.description,
             due_date: task.due_date,
             list_id: task.list_id,
+            tags: task.tags,
           }}
           onSubmit={submitHandler}
           submitLabel="Save Changes"

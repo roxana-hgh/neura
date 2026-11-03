@@ -8,6 +8,9 @@ import TaskSectionsSkeleton from "@/features/tasks/components/task-list/TaskSect
 import TaskViewToggle from "@/features/tasks/components/TaskViewToggle";
 import TasksSearch from "@/features/tasks/components/TaskSearch";
 import EditList from "@/features/tasks/components/lists/EditList";
+import TagFilter from "@/features/tasks/components/tags/TagFilter";
+import ActiveTagFilters from "@/features/tasks/components/tags/ActiveTagFilters";
+import { filterTasksByTags } from "@/features/tasks/utils/taskTags";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 import { useDeleteList, useTaskList } from "@/features/tasks/hooks/useTasks";
@@ -23,8 +26,11 @@ function SingleList() {
   const navigate = useNavigate();
 
   const { data: list, isPending: isLoading } = useTaskList(listId);
-  const { data: tasks, isPending: isTasksLoading, isPlaceholderData } = useTasksByList(listId);
+  const { data: listTasks, isPending: isTasksLoading, isPlaceholderData } = useTasksByList(listId);
   const isSearching = useTasksStore((s) => s.search.length > 0);
+  const tagFilter = useTasksStore((s) => s.tagFilter);
+  const tagMatch = useTasksStore((s) => s.tagMatch);
+  const tasks = filterTasksByTags(listTasks, tagFilter, tagMatch);
 
   const [alertOpen, setAlertOpen] = useState(false);
   const { mutate: deleteList } = useDeleteList();
@@ -69,8 +75,9 @@ function SingleList() {
     );
   }
 
-  const total = tasks?.length ?? 0;
-  const done = tasks?.filter((t) => t.completed).length ?? 0;
+  // progress is over the whole list, not the tag-filtered view
+  const total = listTasks?.length ?? 0;
+  const done = listTasks?.filter((t) => t.completed).length ?? 0;
   const percent = total ? Math.round((done / total) * 100) : 0;
 
   return (
@@ -93,6 +100,7 @@ function SingleList() {
             <>
               <TasksSearch className="order-last w-full sm:order-first sm:w-48" />
               <TaskViewToggle />
+              <TagFilter tasks={listTasks} />
               <EditList list={list} />
               <Button
                 type="button"
@@ -131,6 +139,8 @@ function SingleList() {
             </span>
           </div>
         )}
+
+        <ActiveTagFilters shownCount={isTasksLoading ? undefined : tasks?.length} />
 
         {isTasksLoading ? (
           <TaskSectionsSkeleton />

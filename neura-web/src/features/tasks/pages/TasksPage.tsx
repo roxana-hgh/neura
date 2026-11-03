@@ -12,15 +12,21 @@ import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import TaskSectionsSkeleton from "@/features/tasks/components/task-list/TaskSectionsSkeleton";
+import TagFilter from "@/features/tasks/components/tags/TagFilter";
+import ActiveTagFilters from "@/features/tasks/components/tags/ActiveTagFilters";
+import { filterTasksByTags } from "@/features/tasks/utils/taskTags";
 
 function TasksPage() {
   const { data: allTasks, isPending, isPlaceholderData } = useTasks();
   const isSearching = useTasksStore((s) => s.search.length > 0);
   const hideGoalTasks = useTasksStore((s) => s.hideGoalTasks);
   const toggleHideGoalTasks = useTasksStore((s) => s.toggleHideGoalTasks);
+  const tagFilter = useTasksStore((s) => s.tagFilter);
+  const tagMatch = useTasksStore((s) => s.tagMatch);
 
   const goalTaskCount = allTasks?.filter((t) => t.goal).length ?? 0;
-  const tasks = hideGoalTasks ? allTasks?.filter((t) => !t.goal) : allTasks;
+  const pageTasks = hideGoalTasks ? allTasks?.filter((t) => !t.goal) : allTasks;
+  const tasks = filterTasksByTags(pageTasks, tagFilter, tagMatch);
   const goalFilterLabel = hideGoalTasks ? "Show tasks from goals" : "Hide tasks from goals";
 
   return (
@@ -32,7 +38,8 @@ function TasksPage() {
         actions={
           <>
             <TasksSearch className="order-last w-full sm:order-first sm:w-60" />
-             <TaskViewToggle />
+            <TaskViewToggle />
+            <TagFilter tasks={pageTasks} />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Toggle
@@ -61,6 +68,8 @@ function TasksPage() {
           </>
         }
       />
+
+      <ActiveTagFilters shownCount={isPending ? undefined : tasks?.length} />
 
       {/* Counts describe all tasks, so they're hidden while the list is filtered by a search */}
       {!isSearching && <TasksSummary tasks={tasks} isLoading={isPending} />}

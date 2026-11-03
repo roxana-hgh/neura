@@ -4,6 +4,8 @@ import SidebarNav from "@/layouts/SidebarNav";
 import Header from "@/layouts/Header";
 import { Toaster } from "@/components/ui/sonner";
 import NotificationWatcher from "@/features/notifications/components/NotificationWatcher";
+import GlobalSearch from "@/features/search/components/GlobalSearch";
+import QuickAccessFab from "@/layouts/QuickAccessFab";
 
 function AppLayout() {
   return (
@@ -17,6 +19,8 @@ function AppLayout() {
         </main>
          <Toaster />
          <NotificationWatcher />
+         <GlobalSearch />
+         <QuickAccessFab />
       </div>
     </SidebarProvider>
   );

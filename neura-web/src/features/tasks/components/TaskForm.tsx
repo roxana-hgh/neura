@@ -18,7 +18,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ import type { TaskFormValues } from "@/features/tasks/schemas/task.schema";
 import type { Task } from "@/features/tasks/types/task";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
+import { useTaskTags } from "@/features/tasks/hooks/useTaskTags";
+import TagChip from "@/features/tasks/components/tags/TagChip";
+import TagPicker from "@/features/tasks/components/tags/TagPicker";
 
 
 
@@ -63,6 +66,9 @@ function formatDate(date: Date | undefined): string {
 
 function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProps) {
   const lists = useTasksStore((s) => s.lists);
+  const { data: allTags } = useTaskTags();
+  // the task's own tags render right away, before GET /tasks/tags answers
+  const tagsById = new Map([...(initialValues?.tags ?? []), ...(allTags ?? [])].map((t) => [t.id, t]));
 
   const [open, setOpen] = useState(false);
   const [dateInput, setDateInput] = useState<string>(
@@ -94,6 +100,7 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
       description: initialValues?.description ?? null,
       due_date: initialValues?.due_date ?? null,
       list_id: effectiveListId,
+      tag_ids: initialValues?.tags?.map((t) => t.id) ?? [],
     },
   });
 
@@ -274,6 +281,45 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
               {errors.list_id.message}
             </p>
           )}
+        </div>
+
+        {/* ── Tags ── */}
+        <div className="col-span-2">
+          <Label className="mb-2">Tags</Label>
+          <Controller
+            name="tag_ids"
+            control={control}
+            render={({ field }) => {
+              const ids = field.value ?? [];
+              return (
+                <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-input px-2 py-1.5 shadow-xs dark:bg-input/30">
+                  {ids.map((id) => {
+                    const tag = tagsById.get(id);
+                    return tag ? (
+                      <TagChip
+                        key={id}
+                        tag={tag}
+                        onRemove={() => field.onChange(ids.filter((x) => x !== id))}
+                      />
+                    ) : null;
+                  })}
+                  <TagPicker
+                    selectedIds={ids}
+                    onChange={field.onChange}
+                    trigger={
+                      <button
+                        type="button"
+                        className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-full px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        <Plus className="size-3" />
+                        {ids.length ? "Add" : "Add tags"}
+                      </button>
+                    }
+                  />
+                </div>
+              );
+            }}
+          />
         </div>
 
         {/* ── Description ── */}

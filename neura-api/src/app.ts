@@ -13,6 +13,7 @@ import assistantRoutes from "@/modules/assistant/assistant.routes";
 import goalsRoutes from "@/modules/goals/goals.routes";
 import remindersRoutes from "@/modules/reminders/reminders.routes";
 import brainstormsRoutes from "@/modules/brainstorms/brainstorms.routes";
+import searchRoutes from "@/modules/search/search.routes";
 import notificationsRoutes from "@/modules/notifications/notifications.routes";
 import notificationsPublicRoutes from "@/modules/notifications/notifications.public.routes";
 
@@ -42,6 +43,7 @@ app.use("/api/goals", requireAuth, goalsRoutes);
 app.use("/api/reminders", requireAuth, remindersRoutes);
 app.use("/api/brainstorms", requireAuth, brainstormsRoutes);
 app.use("/api/notifications", requireAuth, notificationsRoutes);
+app.use("/api/search", requireAuth, searchRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
