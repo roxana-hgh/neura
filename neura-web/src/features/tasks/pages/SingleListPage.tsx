@@ -14,6 +14,7 @@ import { filterTasksByTags } from "@/features/tasks/utils/taskTags";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 import { useDeleteList, useTaskList } from "@/features/tasks/hooks/useTasks";
+import LinkedNotesSection from "@/features/notes/components/links/LinkedNotesSection";
 import AlertDialog from "@/components/shared/AlertDialog";
 import EmptyState from "@/components/shared/EmptyState";
 import PageHeader from "@/components/shared/PageHeader";
@@ -149,6 +150,9 @@ function SingleList() {
             <TaskSections tasks={tasks} mainLabel="To do" defaultListId={list.id} />
           </div>
         )}
+
+        {/* Notes linked to this list (project docs, plans, meeting notes) */}
+        {!isSearching && <LinkedNotesSection target={{ type: "list", id: String(list.id) }} variant="card" />}
       </div>
 
       <AlertDialog

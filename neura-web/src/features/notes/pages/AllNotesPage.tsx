@@ -152,7 +152,7 @@ function AllNotesPage() {
       ) : visible.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           {visible.map((note) => (
-            <NoteItem key={note.id} note={note} showFolder={filter === "all"} folders={folders} />
+            <NoteItem key={note.id} note={note} showFolder={filter === "all"} menu />
           ))}
         </div>
       ) : search ? (

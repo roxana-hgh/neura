@@ -91,6 +91,7 @@ model TaskList {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks       Task[]
+  notes       Note[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -156,10 +157,13 @@ model Note {
   folder      NoteFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   taskId      String?
   task        Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  listId      String?
+  list        TaskList?   @relation(fields: [listId], references: [id], onDelete: SetNull)
   reminders   Reminder[]
 
   @@index([userId, folderId])
   @@index([taskId])
+  @@index([listId])
 }
 
 /// A folder of notes (one level). Can be linked to a goal, which then lists the folder's notes.

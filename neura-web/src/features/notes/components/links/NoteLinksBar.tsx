@@ -1,48 +1,35 @@
 import { forwardRef, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
-import { ArrowUpRight, CircleCheckBig, Folder, FolderPlus, Plus, Target } from "lucide-react";
+import { ArrowUpRight, CircleCheckBig, Folder, FolderPlus, ListTodo, Plus, Target } from "lucide-react";
 import LinkPickerPopover from "@/features/notes/components/links/LinkPickerPopover";
-import { useCreateNoteFolder, useNoteFolders } from "@/features/notes/hooks/useNoteFolders";
-import { useNoteLinkOptions } from "@/features/notes/hooks/useNotes";
+import { useCreateNoteFolder } from "@/features/notes/hooks/useNoteFolders";
+import { useNoteLinkPickers, type NoteLinkIds, type NoteLinkKey } from "@/features/notes/hooks/useNoteLinkPickers";
 import { getNoteColor } from "@/features/notes/utils/colorMapper";
 import type { Note } from "@/features/notes/types/note";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-export interface NoteLinkIds {
-  folderId: string | null;
-  goalId: string | null;
-  taskId: string | null;
-}
-
 interface NoteLinksBarProps {
   links: NoteLinkIds;
   /** The saved note, for names of links that aren't in the pickers (archived goal, completed task) */
   note?: Note;
-  onChange: (key: keyof NoteLinkIds, value: string | null) => void;
+  onChange: (key: NoteLinkKey, value: string | null) => void;
 }
 
-/** Folder / goal / task chips under the note title; each opens a picker. */
+/** Folder / goal / task / list chips under the note title; each opens a searchable picker. */
 export default function NoteLinksBar({ links, note, onChange }: NoteLinksBarProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { data: folders = [], isLoading: foldersLoading } = useNoteFolders();
-  // Names of a goal / task chosen before this page opened (e.g. "New note" from a goal) need the options too
-  const needsNames =
-    (!!links.goalId && links.goalId !== note?.goal?.id) || (!!links.taskId && links.taskId !== note?.task?.id);
-  const { data: options, isLoading: optionsLoading } = useNoteLinkOptions(pickerOpen || needsNames);
-
-  const folder = folders.find((f) => f.id === links.folderId);
-  const goalTitle =
-    options?.goals.find((g) => g.id === links.goalId)?.title ??
-    (note?.goal?.id === links.goalId ? note?.goal?.title : undefined);
-  const task =
-    options?.tasks.find((t) => t.id === links.taskId) ??
-    (note?.task?.id === links.taskId ? note?.task : undefined);
+  const { pickers, folder, goalTitle, task, list } = useNoteLinkPickers({
+    links,
+    note,
+    onChange,
+    optionsEnabled: pickerOpen,
+  });
 
   return (
     <div className="mb-5 flex flex-wrap items-center gap-1.5">
       <LinkPickerPopover
+        {...pickers.folderId}
         trigger={
           <Chip active={!!links.folderId} icon={<Folder className="size-3.5" />} placeholder="Folder">
             {folder && (
@@ -53,19 +40,6 @@ export default function NoteLinksBar({ links, note, onChange }: NoteLinksBarProp
             )}
           </Chip>
         }
-        items={folders.map((f) => ({
-          id: f.id,
-          label: f.name,
-          hint: `${f.noteCount} ${f.noteCount === 1 ? "note" : "notes"}`,
-          icon: <span className={cn("size-2.5 shrink-0 rounded-full", getNoteColor(f.color).swatch)} />,
-        }))}
-        selectedId={links.folderId}
-        onSelect={(id) => onChange("folderId", id)}
-        onClear={() => onChange("folderId", null)}
-        clearLabel="Move out of folder"
-        placeholder="Search folders…"
-        emptyText="No folders yet"
-        loading={foldersLoading}
         footer={(close) => (
           <NewFolderInline
             onCreated={(id) => {
@@ -78,25 +52,13 @@ export default function NoteLinksBar({ links, note, onChange }: NoteLinksBarProp
 
       <span className="inline-flex items-center">
         <LinkPickerPopover
+          {...pickers.goalId}
           onOpenChange={setPickerOpen}
           trigger={
             <Chip active={!!links.goalId} icon={<Target className="size-3.5" />} placeholder="Goal">
               {links.goalId && (goalTitle ?? "Linked goal")}
             </Chip>
           }
-          items={(options?.goals ?? []).map((g) => ({
-            id: g.id,
-            label: g.title,
-            hint: g.parentTitle ? `↳ sub-goal of ${g.parentTitle}` : null,
-            icon: <Target className="size-3.5 shrink-0 text-muted-foreground" />,
-          }))}
-          selectedId={links.goalId}
-          onSelect={(id) => onChange("goalId", id)}
-          onClear={() => onChange("goalId", null)}
-          clearLabel="Unlink goal"
-          placeholder="Search goals…"
-          emptyText="No active goals"
-          loading={optionsLoading}
         />
         {links.goalId && (
           <Link
@@ -111,30 +73,43 @@ export default function NoteLinksBar({ links, note, onChange }: NoteLinksBarProp
       </span>
 
       <LinkPickerPopover
+        {...pickers.taskId}
         onOpenChange={setPickerOpen}
         trigger={
           <Chip active={!!links.taskId} icon={<CircleCheckBig className="size-3.5" />} placeholder="Task">
             {links.taskId && (
-              <span className={cn(task && "completed" in task && task.completed && "line-through opacity-70")}>
-                {task?.title ?? "Linked task"}
-              </span>
+              <span className={cn(task?.completed && "line-through opacity-70")}>{task?.title ?? "Linked task"}</span>
             )}
           </Chip>
         }
-        items={(options?.tasks ?? []).map((t) => ({
-          id: t.id,
-          label: t.title,
-          hint: t.dueDate ? `Due ${format(new Date(t.dueDate), "MMM d")}` : null,
-          icon: <CircleCheckBig className="size-3.5 shrink-0 text-muted-foreground" />,
-        }))}
-        selectedId={links.taskId}
-        onSelect={(id) => onChange("taskId", id)}
-        onClear={() => onChange("taskId", null)}
-        clearLabel="Unlink task"
-        placeholder="Search open tasks…"
-        emptyText="No open tasks"
-        loading={optionsLoading}
       />
+
+      <span className="inline-flex items-center">
+        <LinkPickerPopover
+          {...pickers.listId}
+          onOpenChange={setPickerOpen}
+          trigger={
+            <Chip active={!!links.listId} icon={<ListTodo className="size-3.5" />} placeholder="List">
+              {links.listId && (
+                <>
+                  {list && <span className={cn("size-2 shrink-0 rounded-full", getNoteColor(list.color).swatch)} />}
+                  {list?.name ?? "Linked list"}
+                </>
+              )}
+            </Chip>
+          }
+        />
+        {links.listId && (
+          <Link
+            to={`/list/${links.listId}`}
+            aria-label="Open list"
+            title="Open list"
+            className="ms-0.5 flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <ArrowUpRight className="size-3.5" />
+          </Link>
+        )}
+      </span>
     </div>
   );
 }
@@ -171,7 +146,7 @@ const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
   );
 });
 
-function NewFolderInline({ onCreated }: { onCreated: (id: string) => void }) {
+export function NewFolderInline({ onCreated }: { onCreated: (id: string) => void }) {
   const [name, setName] = useState("");
   const create = useCreateNoteFolder();
 

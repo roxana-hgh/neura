@@ -20,12 +20,14 @@ const parseLinks = (body: Record<string, unknown> = {}): notesService.NoteLinks 
   folderId: optionalId(body, "folder_id"),
   goalId: optionalId(body, "goal_id"),
   taskId: optionalId(body, "task_id"),
+  listId: optionalId(body, "list_id"),
 });
 
-// GET /api/notes?task_id=
+// GET /api/notes?task_id=&list_id=
 export async function listNotes(req: Request, res: Response) {
   const taskId = typeof req.query.task_id === "string" ? req.query.task_id : undefined;
-  res.json(await notesService.listNotes(req.userId!, { taskId }));
+  const listId = typeof req.query.list_id === "string" ? req.query.list_id : undefined;
+  res.json(await notesService.listNotes(req.userId!, { taskId, listId }));
 }
 
 // GET /api/notes/:id
@@ -33,7 +35,7 @@ export async function getNote(req: Request<IdParams>, res: Response) {
   res.json(await notesService.getNote(req.userId!, req.params.id));
 }
 
-// POST /api/notes  { title, description, color, folder_id?, goal_id?, task_id? }
+// POST /api/notes  { title, description, color, folder_id?, goal_id?, task_id?, list_id? }
 export async function createNote(req: Request, res: Response) {
   const note = await notesService.createNote(req.userId!, req.body, parseLinks(req.body));
   res.status(201).json(note);
@@ -44,7 +46,7 @@ export async function updateNote(req: Request<IdParams>, res: Response) {
   res.json(await notesService.updateNote(req.userId!, req.params.id, req.body));
 }
 
-// PATCH /api/notes/:id/links  { folder_id?, goal_id?, task_id? }  (null unlinks, omitted = unchanged)
+// PATCH /api/notes/:id/links  { folder_id?, goal_id?, task_id?, list_id? }  (null unlinks, omitted = unchanged)
 export async function setLinks(req: Request<IdParams>, res: Response) {
   res.json(await notesService.setLinks(req.userId!, req.params.id, parseLinks(req.body)));
 }

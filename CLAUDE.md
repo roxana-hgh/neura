@@ -118,15 +118,16 @@ src/
 │   │                              # taskStats (getDueInfo labels, getTaskStats counts),
 │   │                              # taskTags (TAG_STYLES, nextTagColor, filterTasksByTags)
 │   ├── notes/
-│   │   ├── components/            # NoteItem (grid card with preview/thumbnail, link badges, "Move to folder" menu)
+│   │   ├── components/            # NoteItem (grid card: preview/thumbnail, color strip, link badges, ⋯ "Move or link" menu)
 │   │   │   ├── editor/            # NoteEditor (paper page, autosave), NoteEditorHeader (back, save status,
 │   │   │   │   │                  # color, delete), NoteToolbar (top on md+, fixed above the keyboard on mobile)
 │   │   │   │   └── nodes/         # CodeBlockView (language picker + copy), LinkEmbedView (link card), LinkProviderIcon
 │   │   │   ├── folders/           # FolderFormDialog (name, color, linked goal), DeleteFolderDialog (keep / delete notes)
-│   │   │   └── links/             # NoteLinksBar (folder / goal / task chips in the editor), LinkPickerPopover,
-│   │   │                          # TaskNotesSection (notes in TaskDetail)
-│   │   ├── hooks/                 # useNotes (list + search, useNoteList, useNote, useDeleteNote, useTaskNotes,
-│   │   │                          # useNoteLinkOptions, useSetNoteLinks), useNoteFolders, useNoteAutosave,
+│   │   │   └── links/             # NoteLinksBar (folder / goal / task / list chips in the editor), LinkPickerPopover
+│   │   │                          # (+ LinkPickerList), LinkedNotesSection (notes of a task or list)
+│   │   ├── hooks/                 # useNotes (list + search, useNoteList, useNote, useDeleteNote, useLinkedNotes,
+│   │   │                          # useNoteLinkOptions, useSetNoteLinks), useNoteFolders, useNoteLinkPickers
+│   │   │                          # (picker contents shared by the editor bar and the card menu), useNoteAutosave,
 │   │   │                          # useKeyboardInset (visualViewport keyboard height)
 │   │   ├── lib/                   # editorExtensions (TipTap config + text/highlight colors), noteImage (compress + insert),
 │   │   │                          # codeBlock + codeLanguages (lowlight), linkEmbed (node + paste rule), linkProviders
@@ -273,7 +274,7 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
   - `assistant/pages/AssistantPage` uses the `tasks`, `habits`, `goals`, `notes`, `reminders` and `brainstorms` list hooks for @mentions
   - `goals` uses `reminders` (`ReminderList`, `ReminderFormDialog`, `formatWhen`)
   - `tasks/TaskDetail` and `notes/NoteEditor` use `reminders/ReminderFormDialog` ("Remind me")
-  - `tasks/TaskDetail` uses `notes/components/links/TaskNotesSection` (notes linked to the task)
+  - `tasks/TaskDetail` and `tasks/pages/SingleListPage` use `notes/components/links/LinkedNotesSection` (notes linked to the task / list)
   - `brainstorms` uses `tasks` (`TaskForm`, `useCreateTask`) and `reminders/ReminderFormDialog` (`onSaved`) to convert items
   - `search` uses `tasks` (`TaskDetail` in controlled mode via `open`/`onOpenChange`, `useTask`) to open a task result in place
   - `notifications` uses `reminders` (complete / snooze hooks, `Reminder` type), `tasks` (`useToggleTask`, `PRIORITY_STYLES`) and `settings/SettingsSection`; `settings` renders `NotificationsSection`; `focus/notify` and the sign-out handlers use `notifications/lib/push`
@@ -398,9 +399,10 @@ A quick-capture inbox: "your brain is for having ideas, not holding them".
 
 ### Note folders and links
 
-- A note can be in one **folder** (`NoteFolder`, one level, unique name per user) and linked to one **goal** and one **task**. A folder can itself be linked to a goal; the goal page then lists the folder with its notes.
-- Both directions work: the editor's `NoteLinksBar` (chips under the title) sets folder / goal / task through `PATCH /notes/:id/links`; the goal page links notes or whole folders through the goal link endpoints, and `TaskDetail` shows `TaskNotesSection` (link existing, "New" → `/note/new?task=`).
-- `/note/new?folder=&goal=&task=` pre-fills the links; a new note sends them with its first autosave POST (`getCreateLinks`). Links never go through `PUT /notes/:id`, so autosave can't undo a link changed elsewhere.
+- A note can be in one **folder** (`NoteFolder`, one level, unique name per user) and linked to one **goal**, one **task** and one **task list** (project). A folder can itself be linked to a goal; the goal page then lists the folder with its notes.
+- Both directions work: the editor's `NoteLinksBar` (chips under the title) and the card's ⋯ menu set folder / goal / task / list through `PATCH /notes/:id/links`; the goal page links notes or whole folders through the goal link endpoints; `TaskDetail` and the list page show `LinkedNotesSection` (link existing, "New" → `/note/new?task=` / `?list=`).
+- The note color is only visual (a strip on the card, a dot in the editor); its name is never shown.
+- `/note/new?folder=&goal=&task=&list=` pre-fills the links; a new note sends them with its first autosave POST (`getCreateLinks`). Links never go through `PUT /notes/:id`, so autosave can't undo a link changed elsewhere.
 - Notes page: folder chips (All / Unfiled / folders) kept in `?folder=`; deleting a folder keeps its notes (unfiled) unless "Delete notes too".
 
 ### Notes editor (`/note/:id`)
@@ -605,7 +607,7 @@ neura-api/
 | `/tasks` (subtasks) | `POST /:taskId/subtasks`, `PUT /:taskId/subtasks/:subtaskId`, `PATCH /:taskId/subtasks/:subtaskId/toggle`, `DELETE /:taskId/subtasks/:subtaskId` |
 | `/tasks/lists` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/tasks/tags` | `GET /` (with `taskCount`), `POST /` (`{ name, color }`, 409 on duplicate name), `PUT /:id`, `DELETE /:id`. Tasks: `PATCH /tasks/:id/tags` (`{ tag_ids }`); `POST`/`PUT /tasks` accept optional `tag_ids` (omitted = unchanged) |
-| `/notes` | `GET /?task_id=`, `POST /` (optional `folder_id`, `goal_id`, `task_id`), `GET /:id`, `PUT /:id` (content only), `PATCH /:id/links` (`folder_id` / `goal_id` / `task_id`; null unlinks, omitted = unchanged), `DELETE /:id`, `GET /link-options` (goals + open tasks), `GET /unfurl?url=` (oEmbed preview or null) |
+| `/notes` | `GET /?task_id=&list_id=`, `POST /` (optional `folder_id`, `goal_id`, `task_id`, `list_id`), `GET /:id`, `PUT /:id` (content only), `PATCH /:id/links` (`folder_id` / `goal_id` / `task_id` / `list_id`; null unlinks, omitted = unchanged), `DELETE /:id`, `GET /link-options` (goals, open tasks, lists), `GET /unfurl?url=` (oEmbed preview or null) |
 | `/notes/folders` | `GET /` (with `noteCount`, `goal`), `POST /` (`{ name, color?, goal_id? }`, 409 on duplicate name), `PATCH /:id`, `DELETE /:id?notes=keep\|delete` |
 | `/habits` | `GET /?view=&date=&today=&weekStartsOn=`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/toggle` (body `{ date }`) |
 | `/focus-sessions` | `GET /`, `GET /stats`, `POST /`, `PATCH /:id`, `DELETE /:id` |
@@ -625,14 +627,14 @@ neura-api/
   - Fields: name, email, image, age, job, gender, weekStartsOn (`Int`, default `1`; `6` Sat / `0` Sun / `1` Mon), assistantInstructions (custom instructions, max 1000 chars, added to the assistant's system prompt)
   - Relations: sessions, accounts, tasks, taskLists, notes, focusSessions, habits
 - Better Auth tables: `Session`, `Account`, `Verification`
-- `TaskList`: name, color, description, userId. Has many tasks.
+- `TaskList`: name, color, description, userId. Has many tasks and notes.
 - `Task`
   - Fields: title, description, completed, completedAt, priority (`"low" | "medium" | "high"`, default `"medium"`), dueDate
   - Relations: userId, listId (optional; set to null when the list is deleted), goalId (optional), subtasks
   - `showInTasks` (default `true`): tasks created from a goal page default to `false` and appear only on that goal. `GET /tasks` and `/tasks/calendar` return only `showInTasks: true`, each with its `goal` (`id`, `title`, `parent`). Unlinking a task or deleting its goal sets the flag back to `true`, so the task stays visible.
 - `SubTask`: title, completed, taskId (cascade delete)
 - `TaskTag`: name (unique per user), color (`colors` union), userId. Many-to-many with `Task` (implicit join table); tasks return `tags: { id, name, color }[]`.
-- `Note`: title, description (HTML from TipTap), color, userId; optional folderId, goalId, taskId (all set null when the target is deleted)
+- `Note`: title, description (HTML from TipTap), color, userId; optional folderId, goalId, taskId, listId (all set null when the target is deleted)
 - `NoteFolder`: name (unique per user), color, userId, goalId (optional). Has many notes.
 - `FocusSession`
   - Fields: name, description, tag (enum: `work`, `personal`, `study`, `break`, `other`), duration (actual focused seconds), startTime, endTime, userId

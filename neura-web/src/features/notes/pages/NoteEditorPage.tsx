@@ -10,7 +10,7 @@ import Loader from "@/components/ui/loader";
 function NoteEditorPage() {
   const { id = "new" } = useParams();
   const navigate = useNavigate();
-  // "New note" from a folder, goal or task: /note/new?folder=…&goal=…&task=…
+  // "New note" from a folder, goal, task or list: /note/new?folder=…&goal=…&task=…&list=…
   const [params] = useSearchParams();
 
   // After the first autosave the URL switches from /note/new to /note/:id.
@@ -52,6 +52,7 @@ function NoteEditorPage() {
         folderId: params.get("folder"),
         goalId: params.get("goal"),
         taskId: params.get("task"),
+        listId: params.get("list"),
       }}
     />
   );

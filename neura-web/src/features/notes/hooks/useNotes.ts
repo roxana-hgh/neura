@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNotesStore } from "@/features/notes/stores/notesStore";
-import type { Note, NoteLinkOptions, NoteLinksInput } from "@/features/notes/types/note";
+import type { Note, NoteLinkOptions, NoteLinksInput, NoteLinkTarget } from "@/features/notes/types/note";
 import { stripHtml } from "@/features/notes/utils/textPreview";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -68,16 +68,16 @@ export const useDeleteNote = () => {
   });
 };
 
-/** Notes linked to one task (task detail) */
-export const useTaskNotes = (taskId: string, enabled = true) => {
+/** Notes linked to one task (task detail) or task list (list page) */
+export const useLinkedNotes = ({ type, id }: NoteLinkTarget) => {
   return useQuery({
-    queryKey: ["notes", "task", taskId],
-    queryFn: async () => (await api.get<Note[]>("/notes", { params: { task_id: taskId } })).data,
-    enabled: enabled && !!taskId,
+    queryKey: ["notes", type, id],
+    queryFn: async () => (await api.get<Note[]>("/notes", { params: { [`${type}_id`]: id } })).data,
+    enabled: !!id,
   });
 };
 
-/** Goals and open tasks a note can be linked to */
+/** Goals, open tasks and task lists a note can be linked to */
 export const useNoteLinkOptions = (enabled: boolean) => {
   return useQuery({
     queryKey: ["notes", "link-options"],

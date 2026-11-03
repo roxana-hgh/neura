@@ -4,7 +4,8 @@ import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/r
 import { format } from "date-fns";
 import NoteToolbar from "@/features/notes/components/editor/NoteToolbar";
 import NoteEditorHeader from "@/features/notes/components/editor/NoteEditorHeader";
-import NoteLinksBar, { type NoteLinkIds } from "@/features/notes/components/links/NoteLinksBar";
+import NoteLinksBar from "@/features/notes/components/links/NoteLinksBar";
+import type { NoteLinkIds } from "@/features/notes/hooks/useNoteLinkPickers";
 import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
 import AlertDialog from "@/components/shared/AlertDialog";
 import { useNoteAutosave, type NoteDraft } from "@/features/notes/hooks/useNoteAutosave";
@@ -24,7 +25,7 @@ interface NoteEditorProps {
   /** Undefined for a new note; it is created on the first autosave */
   note?: Note;
   onCreated: (id: string) => void;
-  /** Folder / goal / task for a new note (from `/note/new?folder=&goal=&task=`) */
+  /** Folder / goal / task / list for a new note (from `/note/new?folder=&goal=&task=&list=`) */
   initialLinks?: Partial<NoteLinkIds>;
 }
 
@@ -35,6 +36,7 @@ const toLinksInput = (l: Partial<NoteLinkIds>): NoteLinksInput => ({
   ...(l.folderId !== undefined && { folder_id: l.folderId }),
   ...(l.goalId !== undefined && { goal_id: l.goalId }),
   ...(l.taskId !== undefined && { task_id: l.taskId }),
+  ...(l.listId !== undefined && { list_id: l.listId }),
 });
 
 const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
@@ -62,11 +64,12 @@ function NoteEditor({ note, onCreated, initialLinks }: NoteEditorProps) {
   // Latest title/color for drafts built inside editor callbacks
   const latest = useRef({ title, color });
 
-  // Folder / goal / task links. A new note sends them with its first save.
+  // Folder / goal / task / list links. A new note sends them with its first save.
   const [links, setLinks] = useState<NoteLinkIds>(() => ({
     folderId: note ? note.folderId : initialLinks?.folderId ?? null,
     goalId: note ? note.goalId : initialLinks?.goalId ?? null,
     taskId: note ? note.taskId : initialLinks?.taskId ?? null,
+    listId: note ? note.listId : initialLinks?.listId ?? null,
   }));
   const linksRef = useRef(links);
   const setNoteLinks = useSetNoteLinks();
@@ -81,6 +84,7 @@ function NoteEditor({ note, onCreated, initialLinks }: NoteEditorProps) {
       if (created.folderId !== cur.folderId) diff.folderId = cur.folderId;
       if (created.goalId !== cur.goalId) diff.goalId = cur.goalId;
       if (created.taskId !== cur.taskId) diff.taskId = cur.taskId;
+      if (created.listId !== cur.listId) diff.listId = cur.listId;
       if (Object.keys(diff).length) setNoteLinks.mutate({ id: String(created.id), links: toLinksInput(diff) });
       onCreated(String(created.id));
     },
@@ -237,10 +241,7 @@ function NoteEditor({ note, onCreated, initialLinks }: NoteEditorProps) {
         <p className="mt-2 mb-3 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           {color !== "gray" && (
             <>
-              <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2 py-0.5 font-medium text-foreground/80">
-                <span className={cn("size-2 rounded-full", palette.swatch)} />
-                {palette.label}
-              </span>
+              <span aria-hidden className={cn("size-2.5 rounded-full", palette.swatch)} />
               <span aria-hidden>·</span>
             </>
           )}

@@ -13,6 +13,7 @@ export interface NoteLinks {
   folderId?: string | null;
   goalId?: string | null;
   taskId?: string | null;
+  listId?: string | null;
 }
 
 export interface FolderInput {
@@ -32,6 +33,7 @@ const noteInclude = {
   folder: { select: { id: true, name: true, color: true } },
   goal: { select: { id: true, title: true } },
   task: { select: { id: true, title: true, completed: true } },
+  list: { select: { id: true, name: true, color: true } },
 } satisfies Prisma.NoteInclude;
 
 // ── Links ───────────────────────────────────────────────────────────────
@@ -45,6 +47,7 @@ async function assertLinks(userId: string, links: NoteLinks) {
   if (links.folderId) check(prisma.noteFolder.findFirst({ where: { id: links.folderId, userId }, select: { id: true } }), "Folder not found");
   if (links.goalId) check(prisma.goal.findFirst({ where: { id: links.goalId, userId }, select: { id: true } }), "Goal not found");
   if (links.taskId) check(prisma.task.findFirst({ where: { id: links.taskId, userId }, select: { id: true } }), "Task not found");
+  if (links.listId) check(prisma.taskList.findFirst({ where: { id: links.listId, userId }, select: { id: true } }), "List not found");
   await Promise.all(checks);
 }
 
@@ -52,13 +55,14 @@ const linkData = (links: NoteLinks) => ({
   ...(links.folderId !== undefined && { folderId: links.folderId }),
   ...(links.goalId !== undefined && { goalId: links.goalId }),
   ...(links.taskId !== undefined && { taskId: links.taskId }),
+  ...(links.listId !== undefined && { listId: links.listId }),
 });
 
 // ── Notes ───────────────────────────────────────────────────────────────
 
-export function listNotes(userId: string, filter: { taskId?: string } = {}) {
+export function listNotes(userId: string, filter: { taskId?: string; listId?: string } = {}) {
   return prisma.note.findMany({
-    where: { userId, ...(filter.taskId && { taskId: filter.taskId }) },
+    where: { userId, ...(filter.taskId && { taskId: filter.taskId }), ...(filter.listId && { listId: filter.listId }) },
     include: noteInclude,
     orderBy: { updatedAt: "desc" },
   });
@@ -100,9 +104,9 @@ export async function deleteNote(userId: string, id: string) {
   });
 }
 
-/** Goals and open tasks a note can be linked to. */
+/** Goals, open tasks and task lists a note can be linked to. */
 export async function getLinkOptions(userId: string) {
-  const [goals, tasks] = await Promise.all([
+  const [goals, tasks, lists] = await Promise.all([
     prisma.goal.findMany({
       where: { userId, archivedAt: null, status: { in: ["active", "paused"] } },
       select: { id: true, title: true, color: true, parent: { select: { title: true } } },
@@ -115,10 +119,16 @@ export async function getLinkOptions(userId: string) {
       orderBy: { updatedAt: "desc" },
       take: 100,
     }),
+    prisma.taskList.findMany({
+      where: { userId },
+      select: { id: true, name: true, color: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
   return {
     goals: goals.map(({ parent, ...g }) => ({ ...g, parentTitle: parent?.title ?? null })),
     tasks,
+    lists,
   };
 }
 
