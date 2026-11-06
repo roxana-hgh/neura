@@ -293,7 +293,7 @@ export default function AssistantPage() {
           {!hasMessages ? (
             <div className="flex min-h-full flex-col items-center justify-center gap-8 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="space-y-2">
-                <h1 className="text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium tracking-tight text-foreground ">
                   {greeting}
                   {firstName ? `, ${firstName}` : ""}
                 </h1>

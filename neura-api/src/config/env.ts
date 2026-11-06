@@ -16,6 +16,9 @@ export const env = {
   VAPID_SUBJECT: process.env.VAPID_SUBJECT || "mailto:admin@neura.app",
   // Lets an external scheduler call POST /api/notifications/dispatch (optional)
   CRON_SECRET: process.env.CRON_SECRET,
+  // Google OAuth
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 };
 
 // Origins allowed for CORS and Better Auth (local dev + deployed frontend)

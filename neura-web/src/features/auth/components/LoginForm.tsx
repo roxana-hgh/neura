@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import {  useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { InputAlt } from "@/components/ui/inputAlt";
@@ -7,6 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import z from "zod";
+import GoogleButton from "@/features/auth/components/GoogleButton";
+import AuthDivider from "@/features/auth/components/AuthDivider";
+import PasswordInput from "@/features/auth/components/PasswordInput";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -40,58 +43,42 @@ function LoginForm() {
       return;
     }
 
-    navigate("/"); 
+    navigate("/");
   };
 
-  return (
-    <div className="w-full">
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="flex flex-col gap-4">
+const label = "text-xs font-medium text-neutral-600";
+const error = "text-[11px] text-red-500";
 
-          <div>
-            <Label className="px-1 text-sm block">Email</Label>
-            <InputAlt
-              placeholder="example@example.com"
-              type="email"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
-            )}
-          </div>
+return (
+  <div className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3" noValidate>
+      <div className="flex flex-col gap-1">
+        <Label className={label}>Email</Label>
+        <InputAlt className="h-9" placeholder="you@example.com" type="email" autoComplete="email" {...register("email")} />
+        {errors.email && <p className={error}>{errors.email.message}</p>}
+      </div>
 
-          <div>
-            <Label className="px-1 text-sm block">Password</Label>
-            <InputAlt
-              placeholder="password"
-              type="password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
-            )}
-          </div>
+      <div className="flex flex-col gap-1">
+        <Label className={label}>Password</Label>
+        <PasswordInput className="h-9" placeholder="Enter your password" autoComplete="current-password" {...register("password")} />
+        {errors.password && <p className={error}>{errors.password.message}</p>}
+      </div>
 
-          {/* Server-side errors: wrong credentials, unverified email, etc. */}
-          {serverError && (
-            <p className="text-sm text-red-500 text-center -mt-1">{serverError}</p>
-          )}
+      {serverError && (
+        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-center text-xs text-red-600">
+          {serverError}
+        </p>
+      )}
 
-          <Button variant="default" className="mt-3 bg-neutral-900 text-white hover:bg-neutral-800" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Logging in..." : "Login"}
-          </Button>
+      <Button type="submit" disabled={isSubmitting} className="mt-1 h-9 w-full bg-neutral-900 text-white hover:bg-neutral-800">
+        {isSubmitting ? "Logging in..." : "Login"}
+      </Button>
+    </form>
 
-          <p className="text-muted text-sm text-center w-full my-1">
-            Don't have an account?
-            <Link to="/signup" className="text-neutral-800 font-medium hover:underline mx-2">
-              Sign Up
-            </Link>
-          </p>
-
-        </div>
-      </form>
-    </div>
-  );
+    <AuthDivider />
+    <GoogleButton label="Google" disabled={isSubmitting} />
+  </div>
+);
 }
 
 export default LoginForm;
