@@ -527,3 +527,9 @@ body {
   display: none;
 }
 
+@media (max-width: 1023px) {
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #fff;
+    box-shadow: 0 0 0 1000px #171717 inset;
+  }
+}

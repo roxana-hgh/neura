@@ -25,7 +25,12 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-function GoogleButton({ label = "Continue with Google", disabled }: { label?: string; disabled?: boolean }) {
+type Props = {
+  label?: string;
+  disabled?: boolean;
+};
+
+function GoogleButton({ label = "Continue with Google", disabled }: Props) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
@@ -47,7 +52,7 @@ function GoogleButton({ label = "Continue with Google", disabled }: { label?: st
       type="button"
       onClick={handleClick}
       disabled={disabled || loading}
-      className="flex h-9 w-full items-center justify-center gap-2.5 rounded-md border border-neutral-300 bg-white text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30 disabled:pointer-events-none disabled:opacity-60"
+      className="flex h-9 w-full items-center justify-center gap-2.5 rounded-md border border-neutral-700 bg-neutral-900 text-sm font-medium text-neutral-100 transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:pointer-events-none disabled:opacity-60 lg:border-neutral-300 lg:bg-white lg:text-neutral-800 lg:hover:bg-neutral-100 lg:focus-visible:ring-neutral-900/30"
     >
       {loading ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon className="size-4.5" />}
       {loading ? "Redirecting..." : label}

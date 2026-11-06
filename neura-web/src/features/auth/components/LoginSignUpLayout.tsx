@@ -29,10 +29,9 @@ type Props = {
 
 function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
   return (
-    <div className="dark grid h-dvh w-full bg-neutral-50 lg:grid-cols-[1.1fr_1fr]">
-      {/* Brand side (left on desktop) */}
+    <div className="dark grid h-dvh w-full bg-neutral-950 lg:grid-cols-[1.1fr_1fr] lg:bg-neutral-50">
+      {/* Brand side (left on desktop, hidden on mobile) */}
       <aside className="relative hidden overflow-hidden bg-neutral-950 text-white lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-14">
-        {/* dot grid */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.18]"
@@ -42,7 +41,6 @@ function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
             maskImage: "radial-gradient(ellipse 70% 60% at 50% 45%, black, transparent)",
           }}
         />
-        {/* glow */}
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-1/3 size-105 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-[110px]"
@@ -64,7 +62,6 @@ function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
             <span className="text-neutral-500">Do more.</span>
           </h2>
 
-          {/* floating preview */}
           <div className="relative mt-10">
             <div className="rounded-2xl border border-white/10 bg-white/4 p-5 shadow-2xl backdrop-blur">
               <div className="mb-3 flex items-center justify-between text-xs">
@@ -77,7 +74,9 @@ function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
               <ul className="flex flex-col gap-2.5">
                 {TASKS.map((t) => (
                   <li key={t.title} className="flex items-center gap-2.5 text-sm">
-                    <CheckCircle2 className={`size-4 ${t.done ? "text-white" : "text-neutral-600"}`} />
+                    <CheckCircle2
+                      className={`size-4 ${t.done ? "text-white" : "text-neutral-600"}`}
+                    />
                     <span className={t.done ? "text-neutral-500 line-through" : "text-neutral-200"}>
                       {t.title}
                     </span>
@@ -97,26 +96,28 @@ function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
           </div>
         </div>
 
-        <p className="relative text-xs text-neutral-500">
-          Tasks · Notes · Habits · Goals · Focus
-        </p>
+        <p className="relative text-xs text-neutral-500">Tasks · Notes · Habits · Goals · Focus</p>
       </aside>
 
-      {/* Form side (right) */}
-      <main className="flex min-h-0 flex-col overflow-y-auto bg-neutral-50 px-6 text-neutral-900 sm:px-12">
-        <div className="mx-auto flex w-full max-w-88 flex-1 flex-col justify-center py-6">
-          {/* logo only when the brand side is hidden */}
+      {/* Form side: dark on mobile, light on desktop */}
+      <main className="relative flex min-h-0 flex-col overflow-y-auto bg-neutral-950 px-6 text-white sm:px-12 lg:bg-neutral-50 lg:text-neutral-900">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 left-1/2 size-72 -translate-x-1/2 rounded-full bg-white/10 blur-[90px] lg:hidden"
+        />
+
+        <div className="relative mx-auto flex w-full max-w-88 flex-1 flex-col justify-center py-6">
           <div className="mb-6 flex items-center gap-2.5 lg:hidden">
-            <LogoMark className="bg-neutral-900 text-white" />
+            <LogoMark className="bg-white text-neutral-900" />
             <span className="text-sm font-semibold tracking-[0.2em]">NEURA</span>
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
+          <p className="mt-1 text-sm text-neutral-400 lg:text-neutral-500">{subtitle}</p>
 
           <div className="mt-6">{children}</div>
 
-          <p className="mt-5 text-center text-sm text-neutral-500 [&_a]:mx-1.5 [&_a]:font-medium [&_a]:text-neutral-900 [&_a]:hover:underline">
+          <p className="mt-5 text-center text-sm text-neutral-400 lg:text-neutral-500 [&_a]:mx-1.5 [&_a]:font-medium [&_a]:text-white lg:[&_a]:text-neutral-900 [&_a]:hover:underline">
             {footer}
           </p>
         </div>
