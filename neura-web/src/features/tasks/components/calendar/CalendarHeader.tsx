@@ -48,13 +48,13 @@ export function CalendarHeader({
       <div className="min-w-0">
         <h1
           className={cn(
-            "text-lg md:text-2xl font-semibold tracking-tight text-foreground truncate transition-opacity",
+            "text-lg md:text-2xl font-semibold tracking-tight text-foreground truncate transition-opacity mb-1!",
             isFetching && "opacity-70",
           )}
         >
           {title}
         </h1>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <div className="mt-1! flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span className="tabular-nums">
             {stats.total} {stats.total === 1 ? "task" : "tasks"}
           </span>

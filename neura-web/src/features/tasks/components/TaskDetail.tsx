@@ -192,11 +192,11 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
           <div className="absolute inset-0 bg-linear-to-br from-neutral-100/50 via-transparent to-neutral-200/40 dark:from-neutral-900/10 dark:via-transparent dark:to-neutral-950/10 pointer-events-none" />
 
           <div className="relative overflow-y-auto max-h-[85vh] custom-scrollbar">
-            <DialogHeader className="px-6 pt-6 pb-3 border-b border-neutral-200 dark:border-neutral-800/50">
+            <DialogHeader className="p-4  sm:p-6 pb-3 border-b border-neutral-200 dark:border-neutral-800/50">
               <DialogTitle className="text-base font-normal tracking-tight">
                 <div className="flex items-center gap-2.5 group">
                   {isTaskPending ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
+                    <div className="size-4! aspect-square! rounded-full border-2 border-neutral-400 border-t-transparent animate-spin" />
                   ) : (
                     <Checkbox
                       checked={task.completed}
@@ -211,12 +211,12 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
                           { onSettled: () => setIsTaskPending(false) },
                         );
                       }}
-                      className=" h-4 w-4 mt-0.5 transition-all duration-150"
+                      className="size-4 mt-0.5 transition-all duration-150"
                     />
                   )}
 
                   <Label
-                    className={`cursor-pointer font-normal text-base leading-snug transition-colors duration-150 ${
+                    className={`cursor-pointer font-normal text-sm sm:text-base leading-snug transition-colors duration-150 text-start ${
                       task.completed
                         ? "line-through text-neutral-400 dark:text-neutral-500"
                         : "text-neutral-800 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-neutral-100"

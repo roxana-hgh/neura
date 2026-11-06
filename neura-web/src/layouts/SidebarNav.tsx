@@ -97,12 +97,9 @@ export function SidebarNav() {
     if (Taskslists) setLists(Taskslists);
   }, [Taskslists, setLists]);
 
-   const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const location = useLocation();
 
-  useEffect(() => {
-    if (Taskslists) setLists(Taskslists);
-  }, [Taskslists, setLists]);
 
   // Close mobile off-canvas sidebar whenever the route changes
   useEffect(() => {
@@ -115,7 +112,7 @@ export function SidebarNav() {
       <SidebarHeader>
         <Link to={"/"} className="">
           <div className="logo-sec flex items-center gap-2  ">
-            <NeuraLogo  />
+            <NeuraLogo />
             <span className="group-data-[collapsible=icon]:hidden">
               <h2 className="text-2xl font-bold ">Neura</h2>
             </span>
@@ -174,12 +171,10 @@ export function SidebarNav() {
       <SidebarFooter className="border-t">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton>
+            <SidebarMenuButton asChild>
               <Link to="/settings">
-                <div className="flex gap-2">
-                  <Settings size={18} />
-                  <span>Settings</span>
-                </div>
+                <Settings size={18} />
+                <span>Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
