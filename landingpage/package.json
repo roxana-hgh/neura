@@ -1,0 +1,10 @@
+{
+  "name": "neura-landing",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static landing page for Neura. No build step, no runtime dependencies.",
+  "scripts": {
+    "dev": "npx --yes serve@14.2.4 -l 4321 .",
+    "preview": "npx --yes serve@14.2.4 -l 4321 ."
+  }
+}

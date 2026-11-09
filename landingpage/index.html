@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neura — Your second brain, organized</title>
+  <meta name="description" content="Tasks, notes, habits, goals, reminders and a focus timer in one calm workspace — with an AI assistant that speaks Persian and English." />
+  <meta name="theme-color" content="#0a0a09" />
+  <meta property="og:title" content="Neura — Your second brain, organized" />
+  <meta property="og:description" content="Tasks, notes, habits, goals and reminders in one calm workspace, with an AI assistant that gets things done." />
+  <meta property="og:type" content="website" />
+
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/icons/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+
+  <link rel="preload" href="assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/InstrumentSerif-Italic.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/vendor/lenis.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script>document.documentElement.classList.replace("no-js", "js");</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- ───────────── Nav ───────────── -->
+  <header class="nav" id="nav">
+    <div class="nav__inner container">
+      <a href="#top" class="brand" aria-label="Neura home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 512 512"><use href="#logo" /></svg>
+        </span>
+        <span class="brand__name">Neura</span>
+      </a>
+
+      <nav class="nav__links" aria-label="Primary">
+        <a href="#workflow">Workflow</a>
+        <a href="#features">Features</a>
+        <a href="#assistant">Assistant</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="nav__actions">
+        <a class="btn btn--ghost btn--sm hide-sm" data-app="/login">Sign in</a>
+        <a class="btn btn--primary btn--sm" data-app="/signup">Get started</a>
+        <button class="nav__toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+          <span></span><span></span>
+        </button>
+      </div>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="#workflow">Workflow</a>
+      <a href="#features">Features</a>
+      <a href="#assistant">Assistant</a>
+      <a href="#faq">FAQ</a>
+      <a data-app="/login">Sign in</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ───────────── Hero ───────────── -->
+    <section class="hero" id="top">
+      <div class="hero__bg" aria-hidden="true">
+        <div class="grid-lines"></div>
+        <div class="glow glow--a"></div>
+        <div class="glow glow--b"></div>
+      </div>
+
+      <div class="container hero__content">
+        <a href="#assistant" class="pill" data-hero="0">
+          <span class="pill__dot"></span>
+          <span>New · A bilingual AI assistant</span>
+          <svg class="pill__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" /></svg>
+        </a>
+
+        <h1 class="hero__title">
+          <span class="line"><span class="word" data-hero="1">Your</span> <span class="word" data-hero="2">second</span> <span class="word" data-hero="3">brain,</span></span>
+          <span class="line"><em class="word serif" data-hero="4">organized.</em></span>
+        </h1>
+
+        <p class="hero__sub" data-hero="5">
+          Tasks, notes, habits, goals and reminders in one calm workspace —
+          with an AI assistant that turns a sentence into a plan.
+        </p>
+
+        <div class="hero__cta" data-hero="6">
+          <a class="btn btn--primary btn--lg" data-app="/signup">
+            Get started
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+          </a>
+          <a class="btn btn--outline btn--lg" href="#workflow">See how it works</a>
+        </div>
+        <p class="hero__hint mono" data-hero="7"><kbd>⌘</kbd><kbd>K</kbd> to search everything · <kbd>N</kbd> to capture a thought</p>
+      </div>
+
+      <!-- App mockup -->
+      <div class="container">
+        <div class="stage" id="stage">
+          <div class="window" id="heroWindow">
+            <div class="window__bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="window__url mono">neura.app/dashboard</span>
+              <span></span>
+            </div>
+            <div class="app">
+              <aside class="app__side">
+                <div class="app__logo"><span class="brand__mark sm"><svg viewBox="0 0 512 512"><use href="#logo" /></svg></span> Neura</div>
+                <ul class="app__nav">
+                  <li class="is-active"><i class="ico ico--home"></i>Dashboard</li>
+                  <li><i class="ico ico--check"></i>Tasks <b>8</b></li>
+                  <li><i class="ico ico--cal"></i>Calendar</li>
+                  <li><i class="ico ico--note"></i>Notes</li>
+                  <li><i class="ico ico--flame"></i>Habits</li>
+                  <li><i class="ico ico--target"></i>Goals</li>
+                  <li><i class="ico ico--bell"></i>Reminders</li>
+                  <li><i class="ico ico--timer"></i>Focus</li>
+                  <li><i class="ico ico--spark"></i>Assistant</li>
+                </ul>
+                <div class="app__lists">
+                  <span class="label">Lists</span>
+                  <span><i class="sw sw--violet"></i>Work</span>
+                  <span><i class="sw sw--emerald"></i>Personal</span>
+                  <span><i class="sw sw--amber"></i>Side project</span>
+                </div>
+              </aside>
+
+              <div class="app__main">
+                <div class="app__head">
+                  <div>
+                    <span class="eyebrow mono">Monday, 9 November</span>
+                    <h3>Good morning, Sara</h3>
+                  </div>
+                  <span class="app__search mono">Search… <kbd>⌘K</kbd></span>
+                </div>
+
+                <div class="tiles">
+                  <div class="tile"><span>Due today</span><b>5</b><small>2 high priority</small></div>
+                  <div class="tile"><span>Focus</span><b>2h 40m</b><small>this week</small></div>
+                  <div class="tile"><span>Habits</span><b>86%</b><small>7-day streak</small></div>
+                  <div class="tile hide-sm"><span>Goals</span><b>3</b><small>on track</small></div>
+                </div>
+
+                <div class="panels">
+                  <div class="panel">
+                    <div class="panel__title">Today</div>
+                    <ul class="tasks">
+                      <li class="done"><i class="cb"></i><span>Review Q4 roadmap</span><em class="tag tag--violet">work</em></li>
+                      <li><i class="cb"></i><span>Ship landing page</span><em class="pri pri--high"></em><em class="tag tag--amber">launch</em></li>
+                      <li><i class="cb"></i><span>Call mom</span><em class="pri pri--med"></em></li>
+                      <li><i class="cb"></i><span>Read 20 pages</span><em class="pri pri--low"></em><em class="tag tag--emerald">habit</em></li>
+                    </ul>
+                  </div>
+                  <div class="panel panel--plan">
+                    <div class="panel__title"><i class="ico ico--spark"></i> Daily plan</div>
+                    <p>Start with <b>Ship landing page</b> while your energy is high. Block 50 min of focus, then clear the two quick tasks before lunch.</p>
+                    <div class="heat" data-heat="56" aria-hidden="true"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="stage__fade" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Marquee ───────────── -->
+    <section class="marquee" aria-label="Modules">
+      <div class="marquee__track">
+        <div class="marquee__group">
+          <span>Tasks</span><span>Notes</span><span>Habits</span><span>Goals</span><span>Reminders</span><span>Focus timer</span><span>Calendar</span><span>Brainstorms</span><span>Global search</span><span>AI assistant</span><span>Web push</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span>Tasks</span><span>Notes</span><span>Habits</span><span>Goals</span><span>Reminders</span><span>Focus timer</span><span>Calendar</span><span>Brainstorms</span><span>Global search</span><span>AI assistant</span><span>Web push</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Manifesto (scroll-lit words) ───────────── -->
+    <section class="manifesto container">
+      <p class="eyebrow mono reveal">Why Neura</p>
+      <p class="manifesto__text" id="manifesto">
+        Your brain is for having ideas, not holding them. Neura gives every
+        thought a place — a task, a note, a habit, a goal — and quietly reminds
+        you at the right moment, so you can spend your attention on the work
+        that matters.
+      </p>
+    </section>
+
+    <!-- ───────────── Workflow (sticky story) ───────────── -->
+    <section class="story" id="workflow">
+      <div class="story__sticky">
+        <div class="container story__grid">
+          <div class="story__copy">
+            <p class="eyebrow mono">Workflow</p>
+            <h2 class="h2">From a passing thought to a <em class="serif">finished</em> thing.</h2>
+
+            <ol class="steps" id="steps">
+              <li class="step is-active">
+                <span class="step__num mono">01</span>
+                <div>
+                  <h3>Capture</h3>
+                  <p>Type, press Enter, move on. The brainstorm inbox holds every idea until you're ready for it.</p>
+                </div>
+              </li>
+              <li class="step">
+                <span class="step__num mono">02</span>
+                <div>
+                  <h3>Organize</h3>
+                  <p>Turn ideas into tasks with lists, tags, subtasks and due dates — or link them to a goal.</p>
+                </div>
+              </li>
+              <li class="step">
+                <span class="step__num mono">03</span>
+                <div>
+                  <h3>Focus</h3>
+                  <p>Start a session, silence the noise. Every minute is logged and counted toward your week.</p>
+                </div>
+              </li>
+              <li class="step">
+                <span class="step__num mono">04</span>
+                <div>
+                  <h3>Reflect</h3>
+                  <p>See goals, pace and habits at a glance. Know what moved — and what needs a review.</p>
+                </div>
+              </li>
+            </ol>
+            <div class="story__progress" aria-hidden="true"><span id="storyBar"></span></div>
+          </div>
+
+          <div class="story__visual" aria-hidden="true">
+            <div class="scene is-active" data-scene="0">
+              <div class="card card--glass capture">
+                <div class="capture__input"><span class="caret-text" id="captureText"></span><i class="caret"></i><kbd class="mono">↵</kbd></div>
+                <ul class="capture__list">
+                  <li><span>Idea: weekly review template</span><small class="mono">2m ago</small></li>
+                  <li><span>Book dentist appointment</span><small class="mono">1h ago</small></li>
+                  <li><span>Try the Pomodoro 50/10 split</span><small class="mono">Yesterday</small></li>
+                </ul>
+                <div class="capture__actions mono"><span><kbd>T</kbd> task</span><span><kbd>R</kbd> remind</span><span><kbd>K</kbd> keep</span><span><kbd>D</kbd> done</span></div>
+              </div>
+            </div>
+
+            <div class="scene" data-scene="1">
+              <div class="card card--glass organize">
+                <div class="organize__head"><i class="sw sw--violet"></i> Work <small class="mono">6 open</small></div>
+                <ul class="tasks tasks--lg">
+                  <li><i class="cb"></i><span>Prepare investor update</span><em class="pri pri--high"></em><em class="tag tag--violet">work</em></li>
+                  <li><i class="cb"></i><span>Weekly review template</span><em class="pri pri--med"></em><em class="tag tag--sky">ops</em></li>
+                  <li class="sub"><i class="cb cb--done"></i><span>Draft sections</span></li>
+                  <li class="sub"><i class="cb"></i><span>Share with team</span></li>
+                  <li><i class="cb"></i><span>Fix onboarding copy</span><em class="pri pri--low"></em><em class="tag tag--rose">bug</em></li>
+                </ul>
+                <div class="organize__goal"><i class="ico ico--target"></i> Linked to <b>Launch v2 by December</b></div>
+              </div>
+            </div>
+
+            <div class="scene" data-scene="2">
+              <div class="card card--glass focus">
+                <svg class="ring" viewBox="0 0 200 200">
+                  <circle cx="100" cy="100" r="88" class="ring__track" />
+                  <circle cx="100" cy="100" r="88" class="ring__bar" id="ringBar" />
+                </svg>
+                <div class="focus__time">
+                  <b class="mono" id="focusTime">24:59</b>
+                  <span>Deep work · Ship landing page</span>
+                </div>
+                <div class="focus__chips mono"><span>25</span><span class="on">50</span><span>90</span></div>
+              </div>
+            </div>
+
+            <div class="scene" data-scene="3">
+              <div class="card card--glass reflect">
+                <div class="reflect__head"><span>This week</span><small class="mono">Focus vs. habits</small></div>
+                <div class="bars">
+                  <i style="--h:42%"></i><i style="--h:68%"></i><i style="--h:55%"></i><i style="--h:80%"></i><i style="--h:62%"></i><i style="--h:30%"></i><i style="--h:74%"></i>
+                </div>
+                <div class="goal-row"><span>Launch v2</span><div class="meter"><i style="--w:72%"></i></div><small class="mono ok">On track</small></div>
+                <div class="goal-row"><span>Run 100 km</span><div class="meter"><i style="--w:41%"></i></div><small class="mono warn">Behind</small></div>
+                <div class="goal-row"><span>Read 12 books</span><div class="meter"><i style="--w:88%"></i></div><small class="mono ok">Ahead</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Features (bento) ───────────── -->
+    <section class="features container" id="features">
+      <div class="section-head">
+        <p class="eyebrow mono reveal">Features</p>
+        <h2 class="h2 reveal">Everything in one place.<br /><span class="dim">Nothing you don't need.</span></h2>
+      </div>
+
+      <div class="bento">
+        <article class="bcard bcard--w4 spot reveal">
+          <div class="bcard__text">
+            <h3>Tasks that keep up with you</h3>
+            <p>Lists, tags, subtasks, priorities and due dates. Filter by tag, switch views, and see a goal's tasks right where they belong.</p>
+          </div>
+          <div class="bcard__art">
+            <ul class="tasks tasks--lg">
+              <li><i class="cb"></i><span>Plan sprint</span><em class="pri pri--high"></em><em class="tag tag--violet">work</em><small class="mono due">Today</small></li>
+              <li><i class="cb cb--done"></i><span class="strike">Renew passport</span><em class="tag tag--sky">admin</em><small class="mono">Done</small></li>
+              <li><i class="cb"></i><span>Grocery run</span><em class="pri pri--low"></em><em class="tag tag--emerald">home</em><small class="mono">Tomorrow</small></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="bcard bcard--w2 spot reveal" style="--d:1">
+          <div class="bcard__text">
+            <h3>Habits, visualized</h3>
+            <p>Week, month and year views with streaks.</p>
+          </div>
+          <div class="bcard__art"><div class="heat heat--lg" data-heat="84"></div></div>
+        </article>
+
+        <article class="bcard bcard--w2 spot reveal">
+          <div class="bcard__text">
+            <h3>Notes that link up</h3>
+            <p>Rich text, code, toggles and link cards — connected to goals, tasks and lists.</p>
+          </div>
+          <div class="bcard__art">
+            <div class="note">
+              <div class="note__bar mono"><b>B</b><i>I</i><u>U</u><span>H1</span><span>{ }</span><span>☰</span></div>
+              <h4>Launch notes</h4>
+              <p>Ship <mark>Monday</mark>, then gather feedback.</p>
+              <div class="note__chips"><span>⌖ Launch v2</span><span>▤ Work</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="bcard bcard--w2 spot reveal" style="--d:1">
+          <div class="bcard__text">
+            <h3>Goals with a pace</h3>
+            <p>Numeric, milestone, task-based or manual — with a clear "needs review" when time is up.</p>
+          </div>
+          <div class="bcard__art">
+            <div class="goal-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" /><circle cx="60" cy="60" r="50" class="goal-ring__bar" /></svg><b class="mono">68%</b></div>
+          </div>
+        </article>
+
+        <article class="bcard bcard--w2 spot reveal" style="--d:2">
+          <div class="bcard__text">
+            <h3>Reminders that reach you</h3>
+            <p>Repeat daily, weekly or monthly. Web push even when the app is closed.</p>
+          </div>
+          <div class="bcard__art">
+            <div class="toasts">
+              <div class="toast"><i class="ico ico--bell"></i><div><b>Call mom</b><small>Today · 18:00</small></div><span class="mono">Done</span></div>
+              <div class="toast toast--back"><i class="ico ico--bell"></i><div><b>Weekly review</b><small>Every Friday</small></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="bcard bcard--w3 spot reveal">
+          <div class="bcard__text">
+            <h3>Search everything, instantly</h3>
+            <p>One palette for tasks, notes, goals, reminders, habits and ideas.</p>
+          </div>
+          <div class="bcard__art">
+            <div class="palette">
+              <div class="palette__input"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg><span>launch</span><kbd class="mono">esc</kbd></div>
+              <div class="palette__group mono">Tasks</div>
+              <div class="palette__row is-active"><i class="ico ico--check"></i><span>Ship <mark>launch</mark> page</span></div>
+              <div class="palette__group mono">Goals</div>
+              <div class="palette__row"><i class="ico ico--target"></i><span><mark>Launch</mark> v2 by December</span></div>
+              <div class="palette__row"><i class="ico ico--note"></i><span><mark>Launch</mark> notes</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="bcard bcard--w3 spot reveal" style="--d:1">
+          <div class="bcard__text">
+            <h3>A calendar that reads at a glance</h3>
+            <p>Month and week views with priority bars, overdue badges and keyboard navigation.</p>
+          </div>
+          <div class="bcard__art">
+            <div class="cal" id="cal" aria-hidden="true"></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────────── Assistant ───────────── -->
+    <section class="assistant container" id="assistant">
+      <div class="assistant__grid">
+        <div class="assistant__copy">
+          <p class="eyebrow mono reveal">AI assistant</p>
+          <h2 class="h2 reveal">Say it once.<br /><em class="serif">Neura</em> handles the rest.</h2>
+          <p class="lead reveal">Ask in plain language — in English or Persian. The assistant reads your tasks, habits and goals, then creates, updates and schedules for you. Every change shows up as a badge you can click.</p>
+          <ul class="checks reveal">
+            <li>Plans your day from what's actually due</li>
+            <li>@mention any task, goal or note for context</li>
+            <li>Asks before anything destructive</li>
+          </ul>
+        </div>
+
+        <div class="chat reveal" id="chat">
+          <div class="chat__head"><span class="brand__mark sm"><svg viewBox="0 0 512 512"><use href="#logo" /></svg></span> Assistant <span class="status mono">online</span></div>
+          <div class="chat__body">
+            <div class="msg msg--user" data-chat="0">Plan my week and remind me to call mom on Friday at 6pm</div>
+            <div class="msg msg--bot" data-chat="1">
+              <span class="typing"><i></i><i></i><i></i></span>
+              <span class="msg__text">Done. I spread your 6 open tasks across the week — the investor update goes first on Monday. Your reminder is set.</span>
+              <span class="badges">
+                <span class="badge"><i class="ico ico--check"></i>Updated 6 tasks</span>
+                <span class="badge"><i class="ico ico--bell"></i>Created · Call mom</span>
+              </span>
+            </div>
+            <div class="msg msg--user fa" dir="rtl" lang="fa" data-chat="2">فردا ساعت ۹ یادم بنداز گزارش رو بفرستم</div>
+            <div class="msg msg--bot fa" dir="rtl" lang="fa" data-chat="3">
+              <span class="typing"><i></i><i></i><i></i></span>
+              <span class="msg__text">حتماً! یادآور «ارسال گزارش» برای فردا ساعت ۹ صبح ساخته شد.</span>
+              <span class="badges"><span class="badge"><i class="ico ico--bell"></i>یادآور جدید</span></span>
+            </div>
+          </div>
+          <div class="chat__input"><span>Ask anything… try <b>@Launch v2</b></span><kbd class="mono">↵</kbd></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Keyboard / principles ───────────── -->
+    <section class="principles container">
+      <div class="section-head">
+        <p class="eyebrow mono reveal">Built for flow</p>
+        <h2 class="h2 reveal">Fast by default.<br /><span class="dim">Calm by design.</span></h2>
+      </div>
+      <div class="pgrid">
+        <div class="pcard reveal">
+          <div class="keys mono"><kbd>⌘</kbd><kbd>K</kbd></div>
+          <h3>Keyboard-first</h3>
+          <p>Search, capture and navigate the calendar without touching the mouse.</p>
+        </div>
+        <div class="pcard reveal" style="--d:1">
+          <div class="keys mono"><kbd>EN</kbd><kbd class="fa" lang="fa">فا</kbd></div>
+          <h3>Bilingual</h3>
+          <p>Persian and English side by side — each line finds its own direction.</p>
+        </div>
+        <div class="pcard reveal" style="--d:2">
+          <div class="keys mono"><kbd>↻</kbd><kbd>⏎</kbd></div>
+          <h3>Autosave everywhere</h3>
+          <p>Notes save as you type. Close the tab, nothing is lost.</p>
+        </div>
+        <div class="pcard reveal" style="--d:3">
+          <div class="keys mono"><kbd>☾</kbd><kbd>☀</kbd></div>
+          <h3>Light &amp; dark</h3>
+          <p>A warm, quiet interface that stays out of your way, day or night.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── FAQ ───────────── -->
+    <section class="faq container" id="faq">
+      <div class="section-head">
+        <p class="eyebrow mono reveal">FAQ</p>
+        <h2 class="h2 reveal">Questions, answered.</h2>
+      </div>
+      <div class="faq__list">
+        <details class="reveal">
+          <summary>Does the assistant understand Persian?</summary>
+          <p>Yes. Write in Persian or English and it replies in the same language. It can create and update tasks, habits, goals, reminders, notes and brainstorm items for you.</p>
+        </details>
+        <details class="reveal">
+          <summary>Will I get notifications when the app is closed?</summary>
+          <p>On Android and desktop Chromium browsers, yes — enable Web Push in Settings → Notifications. You can mark a task done or snooze a reminder right from the notification. In-app alerts always work.</p>
+        </details>
+        <details class="reveal">
+          <summary>How are goals measured?</summary>
+          <p>Pick a measure: a number (works for decreasing targets too), milestones from sub-goals, completed linked tasks, or a manual 0–100. Neura shows your pace against the time elapsed.</p>
+        </details>
+        <details class="reveal">
+          <summary>Can I connect notes to my tasks and goals?</summary>
+          <p>Every note can live in a folder and link to a goal, a task and a list. Open a goal and you'll see its notes, tasks and reminders together.</p>
+        </details>
+        <details class="reveal">
+          <summary>Which day does my week start on?</summary>
+          <p>Your choice — Saturday, Sunday or Monday. The calendar, habit grids and dashboard all follow it.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ───────────── CTA ───────────── -->
+    <section class="cta">
+      <div class="cta__glow" aria-hidden="true"></div>
+      <div class="container cta__inner">
+        <span class="brand__mark lg reveal" aria-hidden="true"><svg viewBox="0 0 512 512"><use href="#logo" /></svg></span>
+        <h2 class="cta__title reveal">Clear your head.<br /><em class="serif">Start with Neura.</em></h2>
+        <p class="lead reveal">Tasks, notes, habits and goals — set up in under a minute.</p>
+        <div class="hero__cta reveal">
+          <a class="btn btn--primary btn--lg" data-app="/signup">Create your account
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+          </a>
+          <a class="btn btn--outline btn--lg" data-app="/login">Sign in</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ───────────── Footer ───────────── -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <a href="#top" class="brand"><span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 512 512"><use href="#logo" /></svg></span><span class="brand__name">Neura</span></a>
+        <p>Your second brain, organized.</p>
+      </div>
+      <div class="footer__cols">
+        <div>
+          <h4>Product</h4>
+          <a href="#features">Features</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#assistant">Assistant</a>
+        </div>
+        <div>
+          <h4>Account</h4>
+          <a data-app="/signup">Sign up</a>
+          <a data-app="/login">Sign in</a>
+          <a href="#faq">FAQ</a>
+        </div>
+      </div>
+    </div>
+    <div class="container footer__base mono">
+      <span>© <span id="year">2026</span> Neura</span>
+      <a href="#top" class="to-top">Back to top ↑</a>
+    </div>
+  </footer>
+
+  <!-- Brand mark (same path as the app's NeuraLogo) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="logo" viewBox="0 0 512 512">
+      <path fill="currentColor" d="M184 0c30.9 0 56 25.1 56 56v400c0 30.9-25.1 56-56 56c-28.9 0-52.7-21.9-55.7-50.1c-5.2 1.4-10.7 2.1-16.3 2.1c-35.3 0-64-28.7-64-64c0-7.4 1.3-14.6 3.6-21.2C21.4 367.4 0 338.2 0 304c0-31.9 18.7-59.5 45.8-72.3C37.1 220.8 32 207 32 192c0-30.7 21.6-56.3 50.4-62.6C80.8 123.9 80 118 80 112c0-29.9 20.6-55.1 48.3-62.1c3-28 26.8-49.9 55.7-49.9m144 0c28.9 0 52.6 21.9 55.7 49.9C411.5 56.9 432 82 432 112c0 6-.8 11.9-2.4 17.4c28.8 6.2 50.4 31.9 50.4 62.6c0 15-5.1 28.8-13.8 39.7c27.1 12.8 45.8 40.4 45.8 72.3c0 34.2-21.4 63.4-51.6 74.8c2.3 6.6 3.6 13.8 3.6 21.2c0 35.3-28.7 64-64 64c-5.6 0-11.1-.7-16.3-2.1c-3 28.2-26.8 50.1-55.7 50.1c-30.9 0-56-25.1-56-56V56c0-30.9 25.1-56 56-56" />
+    </symbol>
+  </svg>
+
+  <script src="assets/vendor/lenis.min.js" defer></script>
+  <script src="assets/js/config.js" defer></script>
+  <script src="assets/js/main.js" defer></script>
+</body>
+</html>
