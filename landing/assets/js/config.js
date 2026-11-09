@@ -4,5 +4,5 @@
  * Every element with `data-app="/path"` links to APP_URL + path.
  */
 window.NEURA_CONFIG = {
-  APP_URL: "http://localhost:5173",
+  APP_URL: "https://neura-react.onrender.com",
 };
