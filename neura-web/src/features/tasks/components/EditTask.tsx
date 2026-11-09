@@ -70,6 +70,7 @@ function EditTask({ task, trigger }: IProps) {
             priority: task.priority,
             description: task.description,
             due_date: task.due_date,
+            due_time: task.due_time,
             list_id: task.list_id,
             tags: task.tags,
           }}

@@ -22,6 +22,7 @@ import {
   Check,
   Trash,
   Bell,
+  Clock,
 } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
 import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
@@ -38,7 +39,7 @@ import {
   useToggleTask,
   useUpdateSubtask,
 } from "@/features/tasks/hooks/useTasks";
-import { isBefore, startOfDay } from "date-fns";
+import { atTime, dueDay, formatDueTime, isPastDue } from "@/features/tasks/utils/dueDate";
 import { cn } from "@/lib/utils";
 import EditTask from "@/features/tasks/components/EditTask";
 import { ReminderFormDialog } from "@/features/reminders/components/ReminderFormDialog";
@@ -164,10 +165,10 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
   const progress =
     totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
-  const isOutdated =
-    !!task.due_date &&
-    !task.completed &&
-    isBefore(startOfDay(new Date(task.due_date)), startOfDay(new Date()));
+  const isOutdated = isPastDue(task);
+  // a reminder defaults to the deadline time, or the morning of an all-day due date, when still ahead
+  const day = dueDay(task);
+  const remindAt = day ? atTime(day, task.due_time ?? "09:00") : null;
 
   return (
     <>
@@ -245,8 +246,18 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
                         Due
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-neutral-700 dark:text-neutral-400">
+                    <p
+                      className={cn(
+                        "text-xs font-medium text-neutral-700 dark:text-neutral-400",
+                        isOutdated && "text-rose-600 dark:text-rose-400",
+                      )}
+                    >
                       {formatDate(task.due_date)}
+                      {task.due_time && (
+                        <span className="ms-1 inline-flex items-center gap-0.5 tabular-nums">
+                          <Clock size={10} /> {formatDueTime(task.due_time)}
+                        </span>
+                      )}
                     </p>
                   </div>
                 )}
@@ -573,10 +584,7 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
         defaults={{
           title: task.title,
           link: { type: "task", id: String(task.id), title: task.title },
-          // the morning of the due date, when that's still ahead
-          ...(task.due_date && new Date(new Date(task.due_date).setHours(9, 0, 0, 0)) > new Date() && {
-            at: new Date(new Date(task.due_date).setHours(9, 0, 0, 0)),
-          }),
+          ...(remindAt && remindAt > new Date() && { at: remindAt }),
         }}
       />
       {alertOpen && (

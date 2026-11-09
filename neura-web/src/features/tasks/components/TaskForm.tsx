@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
-import { parseDate } from "chrono-node";
+import { parse as parseNaturalDate } from "chrono-node";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus } from "lucide-react";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TaskSchema } from "@/features/tasks/schemas/task.schema";
 import type { TaskFormValues } from "@/features/tasks/schemas/task.schema";
@@ -34,6 +35,8 @@ import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 import { useTaskTags } from "@/features/tasks/hooks/useTaskTags";
 import TagChip from "@/features/tasks/components/tags/TagChip";
 import TagPicker from "@/features/tasks/components/tags/TagPicker";
+import DueTimePicker from "@/features/tasks/components/DueTimePicker";
+import { dueDay, formatDueTime } from "@/features/tasks/utils/dueDate";
 
 
 
@@ -47,21 +50,14 @@ interface IProps {
   submitLabel: string;
 }
 
-function formatDateValue(value: Date | string | null | undefined): string {
-  if (!value) return "";
-
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+function formatDateValue(value: Date | null | undefined): string {
+  return value ? format(value, "yyyy-MM-dd") : "";
 }
 
-function formatDate(date: Date | undefined): string {
-  return formatDateValue(date);
+/** Right-hand hint above the date field: "Tue, Nov 10 · 2:30 PM" */
+function formatDueHint(date: Date | undefined, time: string | null): string {
+  if (!date) return "";
+  return format(date, "EEE, MMM d") + (time ? ` · ${formatDueTime(time)}` : "");
 }
 
 function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProps) {
@@ -71,12 +67,9 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
   const tagsById = new Map([...(initialValues?.tags ?? []), ...(allTags ?? [])].map((t) => [t.id, t]));
 
   const [open, setOpen] = useState(false);
-  const [dateInput, setDateInput] = useState<string>(
-    initialValues?.due_date ? formatDateValue(initialValues.due_date) : ""
-  );
-  const [date, setDate] = useState<Date | undefined>(
-    initialValues?.due_date ? new Date(initialValues.due_date) : undefined
-  );
+  const initialDay = initialValues?.due_date ? dueDay({ due_date: initialValues.due_date }) : null;
+  const [dateInput, setDateInput] = useState<string>(formatDateValue(initialDay));
+  const [date, setDate] = useState<Date | undefined>(initialDay ?? undefined);
   const [loader, setLoader] = useState(false);
 
   // Resolve the effective default list_id:
@@ -91,6 +84,7 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<TaskFormValues>({
     resolver: zodResolver(TaskSchema),
@@ -99,6 +93,7 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
       priority: initialValues?.priority ?? "medium",
       description: initialValues?.description ?? null,
       due_date: initialValues?.due_date ?? null,
+      due_time: initialValues?.due_time ?? null,
       list_id: effectiveListId,
       tag_ids: initialValues?.tags?.map((t) => t.id) ?? [],
     },
@@ -106,25 +101,22 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
 
   // Sync date picker if initialValues change (e.g. edit modal opens)
   useEffect(() => {
-    if (initialValues?.due_date) {
-      setDateInput(formatDateValue(initialValues.due_date));
-      setDate(new Date(initialValues.due_date));
-    } else {
-      setDateInput("");
-      setDate(undefined);
-    }
+    const day = initialValues?.due_date ? dueDay({ due_date: initialValues.due_date }) : null;
+    setDateInput(formatDateValue(day));
+    setDate(day ?? undefined);
   }, [initialValues?.due_date]);
+
+  const dueTime = useWatch({ control, name: "due_time" }) ?? null;
+  const setDueTime = (time: string | null) => setValue("due_time", time, { shouldDirty: true });
 
   const onValidSubmit = (data: TaskFormValues) => {
     setLoader(true);
-    
+
     onSubmit({
       ...data,
-      due_date: date
-        ? new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-            .toISOString()
-            .split("T")[0]
-        : null,
+      due_date: date ? format(date, "yyyy-MM-dd") : null,
+      // a time only makes sense on a date
+      due_time: date ? data.due_time : null,
       list_id: data.list_id
     });
   };
@@ -142,48 +134,21 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
           )}
         </div>
 
-        {/* ── Priority + Due Date ── */}
+        {/* ── Due date + time ── */}
         <div className="col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-
-            {/* Priority */}
-            <div className="col-span-1">
-              <Label className="mb-2">Priority</Label>
-              <Controller
-                name="priority"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.priority && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.priority.message}
-                </p>
-              )}
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Due Date */}
             <div className="col-span-1">
               <div className="flex justify-between items-end mb-2">
                 <Label>Due Date</Label>
-                <span className="text-xs text-muted-foreground">
-                  {formatDate(date)}
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {formatDueHint(date, dueTime)}
                 </span>
               </div>
               <InputGroup>
                 <InputGroupInput
                   value={dateInput}
-                  placeholder="Tomorrow or next week"
+                  placeholder="Tomorrow 8pm, next week…"
                   onChange={(e) => {
                     const nextValue = e.target.value;
                     setDateInput(nextValue);
@@ -193,8 +158,12 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
                       return;
                     }
 
-                    const parsed = parseDate(nextValue);
-                    setDate(parsed ?? undefined);
+                    // "tomorrow 5pm" also fills the time; "tomorrow" alone leaves it as it was
+                    const [result] = parseNaturalDate(nextValue);
+                    setDate(result?.date() ?? undefined);
+                    if (result?.start.isCertain("hour")) {
+                      setDueTime(format(result.date(), "HH:mm"));
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "ArrowDown") {
@@ -237,50 +206,95 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
                 </InputGroupAddon>
               </InputGroup>
             </div>
+
+            {/* Time (optional) */}
+            <div className="col-span-1">
+              <div className="flex justify-between items-end mb-2">
+                <Label>Time</Label>
+                <span className="text-xs text-muted-foreground">
+                  {date ? "Optional" : "Pick a date first"}
+                </span>
+              </div>
+              <DueTimePicker value={date ? dueTime : null} onChange={setDueTime} disabled={!date} />
+              {errors.due_time && (
+                <p className="text-sm text-red-500 mt-1">{errors.due_time.message}</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* ── List ── */}
+        {/* ── Priority + List ── */}
         <div className="col-span-2">
-          <Label className="mb-2">List</Label>
-          <Controller
-            name="list_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                // Select requires string values — we convert null to the
-                // sentinel string "none" and convert back on change
-                value={field.value != null ? String(field.value) : "none"}
-                onValueChange={(val) =>
-                  field.onChange(val === "none" ? null : val)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="No list" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    <span className="text-muted-foreground">No list</span>
-                  </SelectItem>
-                  {lists.map((list) => (
-                    <SelectItem key={list.id} value={String(list.id)}>
-                      <span className="flex items-center gap-2">
-                        <span
-                          className={`inline-block w-2 h-2 rounded-full ${getListColorClass(list.color)}`}
-                        />
-                        {list.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.list_id && (
-            <p className="text-sm text-red-500 mt-1">
-              {errors.list_id.message}
-            </p>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Priority */}
+            <div className="col-span-1">
+              <Label className="mb-2">Priority</Label>
+              <Controller
+                name="priority"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.priority && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.priority.message}
+                </p>
+              )}
+            </div>
+
+            {/* List */}
+            <div className="col-span-1">
+              <Label className="mb-2">List</Label>
+              <Controller
+                name="list_id"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    // Select requires string values — we convert null to the
+                    // sentinel string "none" and convert back on change
+                    value={field.value != null ? String(field.value) : "none"}
+                    onValueChange={(val) =>
+                      field.onChange(val === "none" ? null : val)
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="No list" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">No list</span>
+                      </SelectItem>
+                      {lists.map((list) => (
+                        <SelectItem key={list.id} value={String(list.id)}>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full ${getListColorClass(list.color)}`}
+                            />
+                            {list.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.list_id && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.list_id.message}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ── Tags ── */}

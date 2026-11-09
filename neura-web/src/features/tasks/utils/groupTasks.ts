@@ -1,5 +1,6 @@
 import { differenceInCalendarDays, startOfDay } from "date-fns";
 import type { Task } from "@/features/tasks/types/task";
+import { compareDueTime } from "@/features/tasks/utils/dueDate";
 
 export type TaskViewMode = "sorted" | "grouped";
 
@@ -17,7 +18,7 @@ function byDueDate(a: Task, b: Task) {
   if (!a.due_date && !b.due_date) return 0;
   if (!a.due_date) return 1;
   if (!b.due_date) return -1;
-  return dueTime(a) - dueTime(b);
+  return dueTime(a) - dueTime(b) || compareDueTime(a, b);
 }
 
 /** Most recently completed first. */

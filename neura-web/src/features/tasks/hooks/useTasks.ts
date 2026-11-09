@@ -18,6 +18,7 @@ export const mapTask = (raw: any): Task => ({
   created_at: raw.createdAt, // DateTime → ISO string (already is one)
   completed_at: raw.completedAt ?? null,
   due_date: raw.dueDate ?? null,
+  due_time: raw.dueTime ?? null,
   list_id: raw.listId ?? null,
   subtasks: raw.subtasks ?? null,
   goal: raw.goal ?? null,

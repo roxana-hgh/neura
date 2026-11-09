@@ -8,3 +8,7 @@ export type WeekStartsOn = 0 | 1 | 6;
 export const WEEK_START_DAYS: readonly WeekStartsOn[] = [6, 0, 1];
 export const DEFAULT_WEEK_STARTS_ON: WeekStartsOn = 1;
 export const isWeekStartsOn = (v: unknown): v is WeekStartsOn => WEEK_START_DAYS.includes(v as WeekStartsOn);
+
+/** A 24h wall-clock time "HH:mm" (task deadline time). */
+export const isTimeOfDay = (value: unknown): value is string =>
+  typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);

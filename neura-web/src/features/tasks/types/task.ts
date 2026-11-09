@@ -15,6 +15,8 @@ export interface Task {
   created_at: string;
   completed_at: string | null;
   due_date: string | null;
+  /** Deadline time on the due day, "HH:mm"; null = all day (every task created before times existed) */
+  due_time: string | null;
   priority: "low" | "medium" | "high";
   subtasks: SubTask[] | null;
   list_id: string | number | null; // null = not assigned to any list

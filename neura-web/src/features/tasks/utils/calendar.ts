@@ -5,16 +5,15 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isBefore,
   isSameMonth,
   isSameYear,
-  startOfDay,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
 import type { Task } from "@/features/tasks/types/task";
 import type { CalendarView } from "@/features/tasks/stores/calendarStore";
 import type { WeekStartsOn } from "@/lib/weekStart";
+import { compareDueTime, isPastDue } from "@/features/tasks/utils/dueDate";
 
 export interface CalendarRange {
   start: Date;
@@ -65,16 +64,18 @@ export function dayKey(date: Date | string): string {
   return format(new Date(date), "yyyy-MM-dd");
 }
 
+// Past the deadline time when the task has one, otherwise past the due day
 export function isTaskOverdue(task: Task): boolean {
-  if (!task.due_date || task.completed) return false;
-  return isBefore(new Date(task.due_date), startOfDay(new Date()));
+  return isPastDue(task);
 }
 
 const PRIORITY_ORDER: Record<Task["priority"], number> = { high: 0, medium: 1, low: 2 };
 
-// Open tasks first, then by priority, then alphabetically
+// Open tasks first, then timed ones by time, then by priority, then alphabetically
 function compareTasks(a: Task, b: Task): number {
   if (a.completed !== b.completed) return a.completed ? 1 : -1;
+  const byTime = compareDueTime(a, b);
+  if (byTime !== 0) return byTime;
   const byPriority = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
   if (byPriority !== 0) return byPriority;
   return a.title.localeCompare(b.title);

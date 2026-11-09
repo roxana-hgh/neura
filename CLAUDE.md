@@ -313,6 +313,14 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 - The Tasks and single-list pages filter **client-side** with `filterTasksByTags` using `tasksStore.tagFilter` (cleared when the page unmounts, like the search) and `tagMatch` (`any` / `all`, persisted).
 - `TaskDetail` edits tags in place through `PATCH /tasks/:id/tags`, never the full `PUT`.
 
+### Due time
+
+- A task's deadline time is optional: `Task.dueTime` (`"HH:mm"`, frontend `due_time`) sits next to the date-only `dueDate`, so tasks without a time (and every older task) stay "all day".
+- `POST`/`PUT /tasks` accept `due_time` (omitted = unchanged, `null` = all day, 400 if not `HH:mm`); clearing `due_date` always clears it. The goal task endpoints don't edit it but clear it with the date.
+- Stored as 24h `"HH:mm"`, always **shown** 12h via `formatDueTime` ("8:30 PM").
+- `TaskForm` (Due date | Time side by side on sm+, stacked on phones) uses `DueTimePicker`: one plain text field, no popover. Type "930", "14:30", "2:30 pm", Persian digits, "ب.ظ" / "صبح" (`parseTimeInput`; a bare number is 24h). It applies on Enter / blur and snaps to 5 minutes (`snapTime`). A hint line under the field shows "Due by 8:30 PM" or what to try. Empty or × = all day, Esc reverts. Typing "tomorrow 8pm" in the date field fills the time too.
+- Helpers in `tasks/utils/dueDate.ts`: `parseTimeInput`, `snapTime`, `formatDueTime`, `to12h` / `from12h`, `dueDay`, `dueAt`, `isPastDue` (a timed task is overdue once its time passes, an all-day one after its day), `compareDueTime` (timed before all-day within a day). `isTaskOverdue`, `getDueInfo` ("Today · 2:30 PM") and the calendar ordering use them; Tasks page sections stay day-based.
+
 ### Calendar (`/calendar`)
 
 `pages/CalendarPage` shows tasks by due date in a **Month** or **Week** view. The chosen view is stored in `useCalendarStore` (persisted in localStorage as `neura-calendar-view`).
@@ -629,7 +637,7 @@ neura-api/
 - Better Auth tables: `Session`, `Account`, `Verification`
 - `TaskList`: name, color, description, userId. Has many tasks and notes.
 - `Task`
-  - Fields: title, description, completed, completedAt, priority (`"low" | "medium" | "high"`, default `"medium"`), dueDate
+  - Fields: title, description, completed, completedAt, priority (`"low" | "medium" | "high"`, default `"medium"`), dueDate, dueTime (optional `"HH:mm"` local wall-clock deadline on the due day; null = all day)
   - Relations: userId, listId (optional; set to null when the list is deleted), goalId (optional), subtasks
   - `showInTasks` (default `true`): tasks created from a goal page default to `false` and appear only on that goal. `GET /tasks` and `/tasks/calendar` return only `showInTasks: true`, each with its `goal` (`id`, `title`, `parent`). Unlinking a task or deleting its goal sets the flag back to `true`, so the task stays visible.
 - `SubTask`: title, completed, taskId (cascade delete)

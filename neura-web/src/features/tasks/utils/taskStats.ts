@@ -1,5 +1,6 @@
 import { differenceInCalendarDays, format, isThisYear, startOfDay, subDays } from "date-fns";
 import type { Task } from "@/features/tasks/types/task";
+import { formatDueTime, isPastDue } from "@/features/tasks/utils/dueDate";
 
 export type DueTone = "overdue" | "today" | "soon" | "later" | "none";
 
@@ -8,11 +9,18 @@ export interface DueInfo {
   tone: DueTone;
 }
 
-/** Human label for a task's due date: "Today", "Tomorrow", "Yesterday", "Mon", "Oct 30"… */
+/** Human label for a task's due date: "Today", "Today · 2:30 PM", "Tomorrow", "Mon", "Oct 30"… */
 export function getDueInfo(task: Task, now = new Date()): DueInfo {
   if (!task.due_date) return { label: "No date", tone: "none" };
+  const info = getDueDayInfo(task, task.due_date, now);
+  if (!task.due_time) return info;
+  // a deadline earlier today is already overdue
+  const tone = info.tone === "today" && isPastDue(task, now) ? "overdue" : info.tone;
+  return { label: `${info.label} · ${formatDueTime(task.due_time)}`, tone };
+}
 
-  const due = startOfDay(new Date(task.due_date));
+function getDueDayInfo(task: Task, dueDate: string, now: Date): DueInfo {
+  const due = startOfDay(new Date(dueDate));
   const days = differenceInCalendarDays(due, startOfDay(now));
   const date = format(due, isThisYear(due) ? "MMM d" : "MMM d, yyyy");
 

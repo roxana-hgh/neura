@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { notFound } from "@/utils/http-error";
+import { HttpError, notFound } from "@/utils/http-error";
+import { isTimeOfDay } from "@/utils/date";
 import { ownedTagIds } from "@/modules/tasks/tags.service";
 
 /** Subtasks, tags + the goal (and parent goal, for sub-goals) the task belongs to, for the "from goal" badge. */
@@ -22,16 +23,29 @@ export interface TaskInput {
   description?: string | null;
   priority?: string;
   due_date?: string | null;
+  /** "HH:mm" or null for all day. Omitted = unchanged (other callers of PUT don't know about it); cleared with the date. */
+  due_time?: string | null;
   list_id?: string | null;
   /** Omitted = leave the task's tags unchanged (other callers of PUT don't know about tags). */
   tag_ids?: string[];
 }
 
-const toTaskData = ({ title, description, priority, due_date, list_id }: TaskInput) => ({
+/** `{ dueTime }` to write, or {} to leave it. A task without a date never keeps a time. */
+function dueTimeData(due_date: TaskInput["due_date"], due_time: TaskInput["due_time"]) {
+  if (!due_date) return { dueTime: null };
+  if (due_time === undefined) return {};
+  if (due_time !== null && due_time !== "" && !isTimeOfDay(due_time)) {
+    throw new HttpError(400, "due_time must be HH:mm");
+  }
+  return { dueTime: due_time || null };
+}
+
+const toTaskData = ({ title, description, priority, due_date, due_time, list_id }: TaskInput) => ({
   title,
   description: description ?? null,
   priority,
   dueDate: due_date ? new Date(due_date) : null,
+  ...dueTimeData(due_date, due_time),
   listId: list_id ?? null,
 });
 
@@ -50,7 +64,8 @@ export function listTasks(userId: string, { search, priorities, listId, unassign
       }),
     },
     include: taskInclude,
-    orderBy: { dueDate: { sort: "asc", nulls: "last" } },
+    // tasks with a time come before the all-day ones of the same day
+    orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { dueTime: { sort: "asc", nulls: "last" } }],
   });
 }
 
@@ -66,7 +81,7 @@ export function listTasksForMonth(userId: string, year: number, month: number) {
       dueDate: { gte: start, lte: end },
     },
     include: taskInclude,
-    orderBy: { dueDate: "asc" },
+    orderBy: [{ dueDate: "asc" }, { dueTime: { sort: "asc", nulls: "last" } }],
   });
 }
 

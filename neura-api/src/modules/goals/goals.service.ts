@@ -508,6 +508,8 @@ export async function updateTask(userId: string, id: string, taskId: string, inp
       ...(input.description !== undefined && { description: input.description?.trim() || null }),
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.dueDate !== undefined && { dueDate: input.dueDate ? new Date(input.dueDate) : null }),
+      // the goal page doesn't edit the deadline time; clearing the date clears it too
+      ...(input.dueDate === null && { dueTime: null }),
       ...(input.showInTasks !== undefined && { showInTasks: input.showInTasks }),
     },
   });

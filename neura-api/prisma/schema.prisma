@@ -104,6 +104,8 @@ model Task {
   completedAt DateTime?
   priority    String       @default("medium")
   dueDate     DateTime?
+  /// Optional deadline time on the due day, local wall-clock "HH:mm"; null = all day
+  dueTime     String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   userId      String

@@ -23,6 +23,13 @@ export const TaskSchema = z.object({
     .optional()
     .transform((val) => val ?? null),
 
+  due_time: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a valid time")
+    .nullable()
+    .optional()
+    .transform((val) => val ?? null),
+
   list_id: z
     .union([z.string(), z.number()])
     .nullable()

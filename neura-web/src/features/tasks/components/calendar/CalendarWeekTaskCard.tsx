@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertCircle, ListChecks } from "lucide-react";
+import { AlertCircle, Clock, ListChecks } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
 import { Checkbox } from "@/components/ui/checkbox";
 import TaskDetail from "@/features/tasks/components/TaskDetail";
@@ -7,6 +7,7 @@ import { useToggleTask } from "@/features/tasks/hooks/useTasks";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 import { isTaskOverdue, PRIORITY_STYLES } from "@/features/tasks/utils/calendar";
+import { formatDueTime } from "@/features/tasks/utils/dueDate";
 import { cn } from "@/lib/utils";
 
 // Full task card for the week view: checkbox, title, priority, subtasks, list
@@ -62,6 +63,16 @@ export function CalendarWeekTaskCard({ task }: { task: Task }) {
               <span className={cn("rounded px-1.5 py-px font-medium", priority.badge)}>
                 {priority.label}
               </span>
+              {task.due_time && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-0.5 font-medium tabular-nums text-foreground/80",
+                    overdue && "text-red-600 dark:text-red-400",
+                  )}
+                >
+                  <Clock className="size-3" /> {formatDueTime(task.due_time)}
+                </span>
+              )}
               {overdue && (
                 <span className="inline-flex items-center gap-0.5 font-medium text-red-600 dark:text-red-400">
                   <AlertCircle className="size-3" /> Overdue

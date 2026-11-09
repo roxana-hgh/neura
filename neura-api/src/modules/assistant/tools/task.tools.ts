@@ -3,6 +3,7 @@ import { startOfDay, endOfDay, addDays } from "date-fns";
 import { assertTaskOwner, getTask } from "@/modules/tasks/tasks.service";
 import { requiredText } from "@/modules/assistant/tools/tool.utils";
 import { HttpError, notFound } from "@/utils/http-error";
+import { isTimeOfDay } from "@/utils/date";
 
 /**
  * Assistant tools for tasks: schemas the model can call + their execution,
@@ -14,7 +15,7 @@ const MAX_LISTED_TASKS = 50;
 const MAX_TITLE = 200;
 const MAX_DESCRIPTION = 2000;
 const MAX_SUBTASKS = 20;
-const TASK_SELECT = { id: true, title: true, priority: true, dueDate: true, completed: true };
+const TASK_SELECT = { id: true, title: true, priority: true, dueDate: true, dueTime: true, completed: true };
 
 // ---- Tool schemas (`functionDeclarations` groups; converted to OpenAI format by toGroqTools in lib/groq.ts) ----
 export const TASK_TOOLS = [
@@ -47,6 +48,7 @@ export const TASK_TOOLS = [
             description: { type: "string" },
             priority: { type: "string", enum: PRIORITIES },
             dueDate: { type: "string", description: "yyyy-MM-dd. Omit if not specified." },
+            dueTime: { type: "string", description: "HH:mm deadline, only if a time is given." },
             listId: { type: "string" },
             subtasks: { type: "array", items: { type: "string" }, description: "Subtask titles." },
           },
@@ -65,6 +67,7 @@ export const TASK_TOOLS = [
             description: { type: "string" },
             priority: { type: "string", enum: PRIORITIES },
             dueDate: { type: "string", description: "yyyy-MM-dd, or \"\" to clear." },
+            dueTime: { type: "string", description: "HH:mm, or \"\" for all day." },
             listId: { type: "string", description: "List id, or \"\" to remove it from its list." },
             completed: { type: "boolean" },
           },
@@ -237,6 +240,13 @@ async function listTasks({ scope, query }: any, userId: string) {
   return { tasks };
 }
 
+/** "HH:mm" or null; anything else is refused so the model can correct itself. */
+function timeArg(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (!isTimeOfDay(value)) throw new HttpError(400, "dueTime must be HH:mm (24h).");
+  return value;
+}
+
 async function createTask(args: any, userId: string) {
   const subtasks = args.subtasks?.length ? subtaskTitles(args.subtasks) : [];
   if (args.listId) await assertListOwner(userId, args.listId);
@@ -247,6 +257,7 @@ async function createTask(args: any, userId: string) {
       description: args.description ? requiredText(args.description, "Description", MAX_DESCRIPTION) : null,
       priority: PRIORITIES.includes(args.priority) ? args.priority : "medium",
       dueDate: args.dueDate ? new Date(args.dueDate) : null,
+      dueTime: args.dueDate ? timeArg(args.dueTime) : null,
       listId: args.listId || null,
       userId,
       subtasks: { create: subtasks.map((title) => ({ title })) },
@@ -270,6 +281,9 @@ async function updateTask(args: any, userId: string) {
   if (args.description !== undefined) data.description = args.description?.trim() || null;
   if (args.priority !== undefined) data.priority = args.priority;
   if (args.dueDate !== undefined) data.dueDate = args.dueDate ? new Date(args.dueDate) : null;
+  if (args.dueTime !== undefined) data.dueTime = timeArg(args.dueTime);
+  // a task without a date never keeps a time
+  if (!(args.dueDate !== undefined ? args.dueDate : existing.dueDate)) data.dueTime = null;
   if (args.listId !== undefined) data.listId = args.listId || null;
   // Keep completedAt in sync (same as setTaskCompleted) — dashboard charts bucket by it
   if (args.completed !== undefined && args.completed !== existing.completed) {

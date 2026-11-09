@@ -1,5 +1,6 @@
 import type { Task } from "@/features/tasks/types/task";
 import { isTaskOverdue, PRIORITY_STYLES } from "@/features/tasks/utils/calendar";
+import { formatDueTime } from "@/features/tasks/utils/dueDate";
 import { cn } from "@/lib/utils";
 
 // Compact one-line task used inside month cells; the left bar shows priority
@@ -8,7 +9,7 @@ export function CalendarTaskChip({ task }: { task: Task }) {
 
   return (
     <div
-      title={task.title}
+      title={task.due_time ? `${formatDueTime(task.due_time)} · ${task.title}` : task.title}
       className={cn(
         "relative truncate rounded-md py-0.5 pl-2 pr-1.5 text-[11px] leading-4 font-medium",
         "before:absolute before:inset-y-1 before:left-0.5 before:w-0.5 before:rounded-full",
@@ -19,6 +20,7 @@ export function CalendarTaskChip({ task }: { task: Task }) {
         task.completed && "line-through text-muted-foreground opacity-60",
       )}
     >
+      {task.due_time && <span className="me-1 tabular-nums opacity-70">{formatDueTime(task.due_time).replace(":00", "")}</span>}
       {task.title}
     </div>
   );
