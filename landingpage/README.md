@@ -3,7 +3,7 @@
 A standalone static landing page (HTML + CSS + vanilla JS). It doesn't depend on `neura-web` or `neura-api` and has no build step. Everything it needs is in this folder.
 
 ```
-landingpage/
+landin/
 ├── index.html
 ├── package.json            # only for a local preview server
 └── assets/
@@ -18,7 +18,7 @@ landingpage/
 ## Run locally
 
 ```bash
-cd landingpage
+cd landing
 npm run dev        # http://localhost:4321
 ```
 
