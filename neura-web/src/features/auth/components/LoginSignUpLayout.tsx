@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { CheckCircle2, Flame, Sparkles } from "lucide-react";
 
 const BRAIN_PATH =
@@ -15,9 +17,9 @@ function LogoMark({ className }: { className?: string }) {
 }
 
 const TASKS = [
-  { title: "Review weekly goals", done: true },
-  { title: "Write project notes", done: true },
-  { title: "Deep work, 45 min", done: false },
+  { title: "auth.layout.task1", done: true },
+  { title: "auth.layout.task2", done: true },
+  { title: "auth.layout.task3", done: false },
 ];
 
 type Props = {
@@ -28,6 +30,7 @@ type Props = {
 };
 
 function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="dark grid h-dvh w-full bg-neutral-950 lg:grid-cols-[1.1fr_1fr] lg:bg-neutral-50">
       {/* Brand side (left on desktop, hidden on mobile) */}
@@ -54,49 +57,49 @@ function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
         <div className="relative mx-auto w-full max-w-md">
           <p className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">
             <Sparkles className="size-3" />
-            AI-powered productivity
+            {t("auth.layout.badge")}
           </p>
           <h2 className="text-4xl font-semibold leading-[1.1] tracking-tight xl:text-5xl">
-            Think less.
+            {t("auth.layout.headline1")}
             <br />
-            <span className="text-neutral-500">Do more.</span>
+            <span className="text-neutral-500">{t("auth.layout.headline2")}</span>
           </h2>
 
           <div className="relative mt-10">
             <div className="rounded-2xl border border-white/10 bg-white/4 p-5 shadow-2xl backdrop-blur">
               <div className="mb-3 flex items-center justify-between text-xs">
-                <span className="font-medium text-neutral-200">Today</span>
+                <span className="font-medium text-neutral-200">{t("auth.layout.today")}</span>
                 <span className="text-neutral-500">2 / 3</span>
               </div>
               <div className="mb-4 h-1 overflow-hidden rounded-full bg-white/10">
                 <div className="h-full w-2/3 rounded-full bg-white" />
               </div>
               <ul className="flex flex-col gap-2.5">
-                {TASKS.map((t) => (
-                  <li key={t.title} className="flex items-center gap-2.5 text-sm">
+                {TASKS.map((task) => (
+                  <li key={task.title} className="flex items-center gap-2.5 text-sm">
                     <CheckCircle2
-                      className={`size-4 ${t.done ? "text-white" : "text-neutral-600"}`}
+                      className={`size-4 ${task.done ? "text-white" : "text-neutral-600"}`}
                     />
-                    <span className={t.done ? "text-neutral-500 line-through" : "text-neutral-200"}>
-                      {t.title}
+                    <span className={task.done ? "text-neutral-500 line-through" : "text-neutral-200"}>
+                      {t(task.title)}
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="absolute -right-4 -top-5 hidden items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-3 py-1.5 text-xs text-neutral-200 shadow-xl backdrop-blur xl:flex">
+            <div className="absolute -end-4 -top-5 hidden items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-3 py-1.5 text-xs text-neutral-200 shadow-xl backdrop-blur xl:flex">
               <Flame className="size-3.5" />
-              12 day streak
+              {t("auth.layout.streak")}
             </div>
-            <div className="absolute -bottom-5 -left-4 hidden items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-3 py-1.5 text-xs text-neutral-200 shadow-xl backdrop-blur xl:flex">
+            <div className="absolute -bottom-5 -start-4 hidden items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-3 py-1.5 text-xs text-neutral-200 shadow-xl backdrop-blur xl:flex">
               <Sparkles className="size-3.5" />
-              Plan my day
+              {t("auth.layout.planDay")}
             </div>
           </div>
         </div>
 
-        <p className="relative text-xs text-neutral-500">Tasks · Notes · Habits · Goals · Focus</p>
+        <p className="relative text-xs text-neutral-500">{t("auth.layout.footer")}</p>
       </aside>
 
       {/* Form side: dark on mobile, light on desktop */}
@@ -106,6 +109,7 @@ function LoginSignUpLayout({ title, subtitle, footer, children }: Props) {
           className="pointer-events-none absolute -top-24 left-1/2 size-72 -translate-x-1/2 rounded-full bg-white/10 blur-[90px] lg:hidden"
         />
 
+        <LanguageSwitcher className="absolute end-4 top-4" />
         <div className="relative mx-auto flex w-full max-w-88 flex-1 flex-col justify-center py-6">
           <div className="mb-6 flex items-center gap-2.5 lg:hidden">
             <LogoMark className="bg-white text-neutral-900" />

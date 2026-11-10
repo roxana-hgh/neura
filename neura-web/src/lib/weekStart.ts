@@ -5,10 +5,10 @@ export type WeekStartsOn = 0 | 1 | 6;
 
 export const DEFAULT_WEEK_STARTS_ON: WeekStartsOn = 1;
 
-export const WEEK_START_OPTIONS: { value: WeekStartsOn; label: string }[] = [
-  { value: 6, label: "Saturday" },
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
+export const WEEK_START_OPTIONS: { value: WeekStartsOn; key: string }[] = [
+  { value: 6, key: "settings.calendar.saturday" },
+  { value: 0, key: "settings.calendar.sunday" },
+  { value: 1, key: "settings.calendar.monday" },
 ];
 
 /** Weekday names in display order for the given week start, e.g. "EEE" → ["Mon", "Tue", …]. */

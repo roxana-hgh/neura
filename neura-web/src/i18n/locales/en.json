@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "application": "Application",
+    "home": "Home",
+    "tasks": "Tasks",
+    "calendar": "Calendar",
+    "goals": "Goals",
+    "reminders": "Reminders",
+    "brainstorms": "Brainstorms",
+    "notes": "Notes",
+    "focus": "Focus Mode",
+    "habits": "Habit Tracker",
+    "assistant": "Chat with AI",
+    "projects": "Projects",
+    "settings": "Settings"
+  },
+  "header": {
+    "home": "Neura home",
+    "accountMenu": "Account menu",
+    "account": "Account",
+    "logout": "Logout"
+  },
+  "settings": {
+    "eyebrow": "Settings",
+    "title": "Account & preferences",
+    "description": "Manage your profile, how Neura looks, the language, how weeks are laid out and when Neura nudges you.",
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose how Neura looks on this device.",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose the language of the interface on this device.",
+      "label": "Language"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "description": "The first day of the week in the calendar, habits and dashboard.",
+      "firstDay": "First day of the week",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "monday": "Monday"
+    },
+    "session": {
+      "title": "Session",
+      "description": "You're signed in on this browser.",
+      "signedInAs": "Signed in as",
+      "signOut": "Sign out",
+      "signingOut": "Signing out…"
+    }
+  },
+  "auth": {
+    "invalidEmail": "Invalid email address",
+    "passwordMin": "Password must be at least 8 characters",
+    "nameMin": "Name must be at least 2 characters",
+    "passwordMismatch": "Passwords do not match",
+    "genericError": "Something went wrong. Please try again.",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "confirm": "Confirm",
+    "enterPassword": "Enter your password",
+    "yourName": "Your name",
+    "minChars": "Min. 8 chars",
+    "repeatIt": "Repeat it",
+    "loggingIn": "Logging in...",
+    "login": "Login",
+    "creating": "Creating account...",
+    "createAccount": "Create account",
+    "orSignUp": "Or sign up with",
+    "orContinue": "Or continue with",
+    "redirecting": "Redirecting...",
+    "continueGoogle": "Continue with Google",
+    "hidePassword": "Hide password",
+    "showPassword": "Show password",
+    "welcomeBack": "Welcome back",
+    "signInSubtitle": "Sign in to continue to Neura",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "createYourAccount": "Create your account",
+    "signUpSubtitle": "Start organizing your work and your life",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in",
+    "layout": {
+      "badge": "AI-powered productivity",
+      "headline1": "Think less.",
+      "headline2": "Do more.",
+      "today": "Today",
+      "task1": "Review weekly goals",
+      "task2": "Write project notes",
+      "task3": "Deep work, 45 min",
+      "streak": "12 day streak",
+      "planDay": "Plan my day",
+      "footer": "Tasks · Notes · Habits · Goals · Focus"
+    }
+  }
+}

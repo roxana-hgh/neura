@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Home,
   Settings,
@@ -37,59 +38,60 @@ import { Link, useLocation } from "react-router-dom";
 // Menu items.
 const items = [
   {
-    title: "Home",
+    titleKey: "nav.home",
     url: "/",
     icon: Home,
   },
   {
-    title: "Tasks",
+    titleKey: "nav.tasks",
     url: "/tasks",
     icon: CircleCheckBig,
   },
   {
-    title: "Calendar",
+    titleKey: "nav.calendar",
     url: "/calendar",
     icon: Calendar,
   },
   {
-    title: "Goals",
+    titleKey: "nav.goals",
     url: "/goals",
     icon: Target,
   },
   {
-    title: "Reminders",
+    titleKey: "nav.reminders",
     url: "/reminders",
     icon: Bell,
   },
   {
-    title: "Brainstorms",
+    titleKey: "nav.brainstorms",
     url: "/brainstorms",
     icon: Lightbulb,
   },
 
   {
-    title: "Notes",
+    titleKey: "nav.notes",
     url: "/notes",
     icon: StickyNote,
   },
   {
-    title: "Focus Mode",
+    titleKey: "nav.focus",
     url: "/focus",
     icon: Timer,
   },
   {
-    title: "Habit Tracker",
+    titleKey: "nav.habits",
     url: "/habits",
     icon: CalendarCheck2,
   },
   {
-    title: "Chat with AI",
+    titleKey: "nav.assistant",
     url: "/assistant",
     icon: Stars,
   },
 ];
 
 export function SidebarNav() {
+  const { t, i18n } = useTranslation();
   const { data: Taskslists } = useTaskLists();
   const setLists = useTasksStore((s) => s.setLists);
 
@@ -108,7 +110,7 @@ export function SidebarNav() {
   }, [location.pathname]);
 
   return (
-    <Sidebar collapsible="icon" className="">
+    <Sidebar collapsible="icon" side={i18n.dir() === "rtl" ? "right" : "left"} className="">
       <SidebarHeader>
         <Link to={"/"} className="">
           <div className="logo-sec flex items-center gap-2  ">
@@ -121,15 +123,15 @@ export function SidebarNav() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.application")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild>
                     <Link to={item.url}>
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -140,7 +142,7 @@ export function SidebarNav() {
         <SidebarGroup className="group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel>
             <div className="flex items-center justify-between w-full">
-              <Link to="/lists">Projects</Link>
+              <Link to="/lists">{t("nav.projects")}</Link>
             </div>
           </SidebarGroupLabel>
           <SidebarGroupAction className=" peer-data-[active=true]/menu-button:opacity-100">
@@ -174,7 +176,7 @@ export function SidebarNav() {
             <SidebarMenuButton asChild>
               <Link to="/settings">
                 <Settings size={18} />
-                <span>Settings</span>
+                <span>{t("nav.settings")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

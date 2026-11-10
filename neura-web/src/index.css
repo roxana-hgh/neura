@@ -533,3 +533,6 @@ body {
     box-shadow: 0 0 0 1000px #171717 inset;
   }
 }
+:lang(fa) {
+  font-family: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+}

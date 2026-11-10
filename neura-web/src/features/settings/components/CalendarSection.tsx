@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import SettingsSection from "@/features/settings/components/SettingsSection";
 import { useProfile, useUpdateWeekStart } from "@/features/settings/hooks/useProfile";
@@ -5,17 +6,18 @@ import { DEFAULT_WEEK_STARTS_ON, WEEK_START_OPTIONS, getWeekdayLabels } from "@/
 import { cn } from "@/lib/utils";
 
 function CalendarSection() {
+  const { t } = useTranslation();
   const { data: user, isPending } = useProfile();
   const updateWeekStart = useUpdateWeekStart();
   const current = user?.weekStartsOn ?? DEFAULT_WEEK_STARTS_ON;
 
   return (
     <SettingsSection
-      title="Calendar"
-      description="The first day of the week in the calendar, habits and dashboard."
+      title={t("settings.calendar.title")}
+      description={t("settings.calendar.description")}
     >
-      <div role="radiogroup" aria-label="First day of the week" className="grid gap-3 sm:grid-cols-3">
-        {WEEK_START_OPTIONS.map(({ value, label }) => {
+      <div role="radiogroup" aria-label={t("settings.calendar.firstDay")} className="grid gap-3 sm:grid-cols-3">
+        {WEEK_START_OPTIONS.map(({ value, key }) => {
           const selected = current === value;
           return (
             <button
@@ -26,12 +28,12 @@ function CalendarSection() {
               disabled={isPending}
               onClick={() => !selected && updateWeekStart.mutate(value)}
               className={cn(
-                "cursor-pointer rounded-xl border p-3 text-left transition-all disabled:cursor-default disabled:opacity-60",
+                "cursor-pointer rounded-xl border p-3 text-start transition-all disabled:cursor-default disabled:opacity-60",
                 selected ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-foreground/20",
               )}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{label}</span>
+                <span className="text-sm font-medium">{t(key)}</span>
                 {selected && (
                   <span className="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <Check className="size-3" />

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -13,13 +14,14 @@ import PasswordInput from "@/features/auth/components/PasswordInput";
 import { authStyles as s } from "@/features/auth/lib/authStyles";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("auth.invalidEmail"),
+  password: z.string().min(8, "auth.passwordMin"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 function LoginForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -39,7 +41,7 @@ function LoginForm() {
     });
 
     if (error) {
-      setServerError(error.message ?? "Something went wrong. Please try again.");
+      setServerError(error.message ?? t("auth.genericError"));
       return;
     }
 
@@ -50,7 +52,7 @@ function LoginForm() {
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3" noValidate>
         <div className="flex flex-col gap-1">
-          <Label className={s.label}>Email</Label>
+          <Label className={s.label}>{t("auth.email")}</Label>
           <InputAlt
             className={s.input}
             placeholder="you@example.com"
@@ -58,18 +60,18 @@ function LoginForm() {
             autoComplete="email"
             {...register("email")}
           />
-          {errors.email && <p className={s.error}>{errors.email.message}</p>}
+          {errors.email && <p className={s.error}>{t(errors.email.message!)}</p>}
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label className={s.label}>Password</Label>
+          <Label className={s.label}>{t("auth.password")}</Label>
           <PasswordInput
             className={s.input}
-            placeholder="Enter your password"
+            placeholder={t("auth.enterPassword")}
             autoComplete="current-password"
             {...register("password")}
           />
-          {errors.password && <p className={s.error}>{errors.password.message}</p>}
+          {errors.password && <p className={s.error}>{t(errors.password.message!)}</p>}
         </div>
 
         {serverError && (
@@ -79,7 +81,7 @@ function LoginForm() {
         )}
 
         <Button type="submit" disabled={isSubmitting} className={s.primaryButton}>
-          {isSubmitting ? "Logging in..." : "Login"}
+          {isSubmitting ? t("auth.loggingIn") : t("auth.login")}
         </Button>
       </form>
 

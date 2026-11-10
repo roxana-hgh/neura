@@ -1,17 +1,19 @@
+import { useTranslation } from "react-i18next";
 // SignUpPage.tsx
 import { Link } from "react-router-dom";
 import SignUpForm from "@/features/auth/components/SignUpForm";
 import LoginSignUpLayout from "@/features/auth/components/LoginSignUpLayout";
 
 function SignUpPage() {
+  const { t } = useTranslation();
   return (
     <LoginSignUpLayout
-      title="Create your account"
-      subtitle="Start organizing your work and your life"
+      title={t("auth.createYourAccount")}
+      subtitle={t("auth.signUpSubtitle")}
       footer={
         <>
-          Already have an account?
-          <Link to="/login">Log in</Link>
+          {t("auth.haveAccount")}
+          <Link to="/login">{t("auth.logIn")}</Link>
         </>
       }
     >

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 
 function ProfileMenu() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: session } = authClient.useSession();
 
   const handleLogout = async () => {
@@ -25,7 +27,7 @@ function ProfileMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Account menu" className="size-8">
+        <Button variant="ghost" size="icon" aria-label={t("header.accountMenu")} className="size-8">
           <User className="size-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -34,14 +36,14 @@ function ProfileMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate("/settings")}>
           <User className="mr-px h-4 w-4" />
-          <span className="text-sm">Account</span>
+          <span className="text-sm">{t("header.account")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={handleLogout}
           className="text-red-500 focus:text-red-600"
         >
           <LogOut className="mr-px h-4 w-4 text-red-500"  />
-          <span className="text-sm">Logout</span>
+          <span className="text-sm">{t("header.logout")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

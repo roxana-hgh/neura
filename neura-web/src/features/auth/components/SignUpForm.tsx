@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -14,19 +15,20 @@ import { authStyles as s } from "@/features/auth/lib/authStyles";
 
 const signUpSchema = z
   .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    name: z.string().min(2, "auth.nameMin"),
+    email: z.string().email("auth.invalidEmail"),
+    password: z.string().min(8, "auth.passwordMin"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
+    message: "auth.passwordMismatch",
     path: ["confirmPassword"],
   });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
 function SignUpForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -47,7 +49,7 @@ function SignUpForm() {
     });
 
     if (error) {
-      setServerError(error.message ?? "Something went wrong. Please try again.");
+      setServerError(error.message ?? t("auth.genericError"));
       return;
     }
 
@@ -58,18 +60,18 @@ function SignUpForm() {
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3" noValidate>
         <div className="flex flex-col gap-1">
-          <Label className={s.label}>Name</Label>
+          <Label className={s.label}>{t("auth.name")}</Label>
           <InputAlt
             className={s.input}
-            placeholder="Your name"
+            placeholder={t("auth.yourName")}
             autoComplete="name"
             {...register("name")}
           />
-          {errors.name && <p className={s.error}>{errors.name.message}</p>}
+          {errors.name && <p className={s.error}>{t(errors.name.message!)}</p>}
         </div>
 
         <div className="flex flex-col gap-1">
-          <Label className={s.label}>Email</Label>
+          <Label className={s.label}>{t("auth.email")}</Label>
           <InputAlt
             className={s.input}
             placeholder="you@example.com"
@@ -77,31 +79,31 @@ function SignUpForm() {
             autoComplete="email"
             {...register("email")}
           />
-          {errors.email && <p className={s.error}>{errors.email.message}</p>}
+          {errors.email && <p className={s.error}>{t(errors.email.message!)}</p>}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <Label className={s.label}>Password</Label>
+            <Label className={s.label}>{t("auth.password")}</Label>
             <PasswordInput
               className={s.input}
-              placeholder="Min. 8 chars"
+              placeholder={t("auth.minChars")}
               autoComplete="new-password"
               {...register("password")}
             />
-            {errors.password && <p className={s.error}>{errors.password.message}</p>}
+            {errors.password && <p className={s.error}>{t(errors.password.message!)}</p>}
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label className={s.label}>Confirm</Label>
+            <Label className={s.label}>{t("auth.confirm")}</Label>
             <PasswordInput
               className={s.input}
-              placeholder="Repeat it"
+              placeholder={t("auth.repeatIt")}
               autoComplete="new-password"
               {...register("confirmPassword")}
             />
             {errors.confirmPassword && (
-              <p className={s.error}>{errors.confirmPassword.message}</p>
+              <p className={s.error}>{t(errors.confirmPassword.message!)}</p>
             )}
           </div>
         </div>
@@ -113,11 +115,11 @@ function SignUpForm() {
         )}
 
         <Button type="submit" disabled={isSubmitting} className={s.primaryButton}>
-          {isSubmitting ? "Creating account..." : "Create account"}
+          {isSubmitting ? t("auth.creating") : t("auth.createAccount")}
         </Button>
       </form>
 
-      <AuthDivider label="Or sign up with" />
+      <AuthDivider label={t("auth.orSignUp")} />
       <GoogleButton label="Google" disabled={isSubmitting} />
     </div>
   );
