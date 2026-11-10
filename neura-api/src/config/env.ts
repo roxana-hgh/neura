@@ -7,6 +7,9 @@ export const env = {
   NODE_ENV: nodeEnv,
   isProduction: nodeEnv === "production",
   PORT: process.env.PORT || 3000,
+  // Proxy hops in front of the app (Render's load balancer = 1), so req.ip is the client's IP
+  // for rate limiting. Defaults to 1 in production and 0 (no proxy) locally.
+  TRUST_PROXY: Number(process.env.TRUST_PROXY ?? (nodeEnv === "production" ? 1 : 0)),
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   CORS_ORIGIN: process.env.CORS_ORIGIN, // deployed frontend
   GROQ_API_KEY: process.env.GROQ_API_KEY,

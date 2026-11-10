@@ -230,7 +230,7 @@ export function useToggleGoalTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, completed }: { id: string; completed: boolean }) =>
-      (await api.patch(`/tasks/${id}/toggle`, { completed })).data,
+      (await api.patch(`/tasks/${id}/toggle`, { completed, today: format(new Date(), "yyyy-MM-dd") })).data,
     onSuccess: () => invalidateWithTasks(qc),
     onError: () => toast.error("Couldn't update the task"),
   });

@@ -36,6 +36,7 @@ import { useTaskTags } from "@/features/tasks/hooks/useTaskTags";
 import TagChip from "@/features/tasks/components/tags/TagChip";
 import TagPicker from "@/features/tasks/components/tags/TagPicker";
 import DueTimePicker from "@/features/tasks/components/DueTimePicker";
+import TaskRepeatPicker, { type TaskRepeatValue } from "@/features/tasks/components/TaskRepeatPicker";
 import { dueDay, formatDueTime } from "@/features/tasks/utils/dueDate";
 
 
@@ -96,6 +97,10 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
       due_time: initialValues?.due_time ?? null,
       list_id: effectiveListId,
       tag_ids: initialValues?.tags?.map((t) => t.id) ?? [],
+      repeat: initialValues?.repeat ?? "none",
+      repeat_interval: initialValues?.repeat_interval ?? 1,
+      repeat_weekdays: initialValues?.repeat_weekdays ?? [],
+      repeat_until: initialValues?.repeat_until ? initialValues.repeat_until.slice(0, 10) : null,
     },
   });
 
@@ -109,6 +114,29 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
   const dueTime = useWatch({ control, name: "due_time" }) ?? null;
   const setDueTime = (time: string | null) => setValue("due_time", time, { shouldDirty: true });
 
+  const [repeat, repeatInterval, repeatWeekdays, repeatUntil] = useWatch({
+    control,
+    name: ["repeat", "repeat_interval", "repeat_weekdays", "repeat_until"],
+  });
+  const repeatValue: TaskRepeatValue = {
+    repeat: repeat ?? "none",
+    interval: repeatInterval ?? 1,
+    weekdays: repeatWeekdays ?? [],
+    until: repeatUntil ?? null,
+  };
+  const setRepeat = (next: TaskRepeatValue) => {
+    // a repeating task needs a due date: start today when none is picked
+    if (next.repeat !== "none" && !date) {
+      const today = new Date();
+      setDate(today);
+      setDateInput(formatDateValue(today));
+    }
+    setValue("repeat", next.repeat, { shouldDirty: true });
+    setValue("repeat_interval", next.interval, { shouldDirty: true, shouldValidate: true });
+    setValue("repeat_weekdays", next.weekdays, { shouldDirty: true });
+    setValue("repeat_until", next.until, { shouldDirty: true });
+  };
+
   const onValidSubmit = (data: TaskFormValues) => {
     setLoader(true);
 
@@ -117,7 +145,16 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
       due_date: date ? format(date, "yyyy-MM-dd") : null,
       // a time only makes sense on a date
       due_time: date ? data.due_time : null,
-      list_id: data.list_id
+      list_id: data.list_id,
+      // so does repeating (the API clears it without a date too)
+      ...(date && data.repeat && data.repeat !== "none"
+        ? {
+            repeat: data.repeat,
+            repeat_interval: data.repeat_interval ?? 1,
+            repeat_weekdays: data.repeat === "weekly" ? data.repeat_weekdays : [],
+            repeat_until: data.repeat_until || null,
+          }
+        : { repeat: "none" as const }),
     });
   };
 
@@ -295,6 +332,16 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
               )}
             </div>
           </div>
+        </div>
+
+        {/* ── Repeat ── */}
+        <div className="col-span-2">
+          <TaskRepeatPicker
+            value={repeatValue}
+            onChange={setRepeat}
+            dueDate={date}
+            error={errors.repeat_interval?.message}
+          />
         </div>
 
         {/* ── Tags ── */}

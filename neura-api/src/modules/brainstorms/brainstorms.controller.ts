@@ -1,40 +1,36 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as brainstormsService from "@/modules/brainstorms/brainstorms.service";
-import { BRAINSTORM_STATUSES, type BrainstormStatus } from "@/modules/brainstorms/brainstorms.service";
-import { HttpError } from "@/utils/http-error";
+import { BRAINSTORM_STATUSES } from "@/modules/brainstorms/brainstorms.service";
+import { optionalId, parse, requiredText } from "@/utils/validate";
 
 type IdParams = { id: string };
 
 const MAX_CONTENT = 5000;
 
-function parseContent(value: unknown): string {
-  if (typeof value !== "string" || !value.trim()) throw new HttpError(400, "Content is required");
-  const content = value.trim();
-  if (content.length > MAX_CONTENT) throw new HttpError(400, `Content must be ${MAX_CONTENT} characters or less`);
-  return content;
-}
+const listQuery = z.object({
+  status: z.enum(BRAINSTORM_STATUSES, { error: "must be inbox or processed" }).default("inbox"),
+});
 
-const optionalId = (v: unknown) => (typeof v === "string" && v ? v : null);
+const contentBody = z.object({ content: requiredText(MAX_CONTENT) });
+
+const processBody = z.object({ task_id: optionalId.optional(), reminder_id: optionalId.optional() });
 
 // GET /api/brainstorms?status=inbox|processed
 export async function listBrainstorms(req: Request, res: Response) {
-  const status = (req.query.status ?? "inbox") as BrainstormStatus;
-  if (!BRAINSTORM_STATUSES.includes(status)) {
-    res.status(400).json({ error: "status must be inbox or processed" });
-    return;
-  }
+  const { status } = parse(listQuery, req.query);
   res.json(await brainstormsService.listBrainstorms(req.userId!, status));
 }
 
 // POST /api/brainstorms
 export async function createBrainstorm(req: Request, res: Response) {
-  const item = await brainstormsService.createBrainstorm(req.userId!, parseContent(req.body?.content));
+  const item = await brainstormsService.createBrainstorm(req.userId!, parse(contentBody, req.body).content);
   res.status(201).json(item);
 }
 
 // PATCH /api/brainstorms/:id
 export async function updateBrainstorm(req: Request<IdParams>, res: Response) {
-  res.json(await brainstormsService.updateBrainstorm(req.userId!, req.params.id, parseContent(req.body?.content)));
+  res.json(await brainstormsService.updateBrainstorm(req.userId!, req.params.id, parse(contentBody, req.body).content));
 }
 
 // POST /api/brainstorms/:id/keep
@@ -44,9 +40,10 @@ export async function keepBrainstorm(req: Request<IdParams>, res: Response) {
 
 // POST /api/brainstorms/:id/process — body { task_id } | { reminder_id } | {} (dismiss)
 export async function processBrainstorm(req: Request<IdParams>, res: Response) {
+  const body = parse(processBody, req.body);
   const item = await brainstormsService.processBrainstorm(req.userId!, req.params.id, {
-    taskId: optionalId(req.body?.task_id),
-    reminderId: optionalId(req.body?.reminder_id),
+    taskId: body.task_id ?? null,
+    reminderId: body.reminder_id ?? null,
   });
   res.json(item);
 }

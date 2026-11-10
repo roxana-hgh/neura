@@ -37,6 +37,17 @@ export const TaskSchema = z.object({
     .transform((val) => val ?? null),
 
   tag_ids: z.array(z.string()).optional(),
+
+  // a repeating task needs a due date; TaskForm fills today when none is picked
+  repeat: z.enum(["none", "daily", "weekly", "monthly", "yearly"]).optional(),
+  repeat_interval: z
+    .number({ message: "Enter a number" })
+    .int("Whole numbers only")
+    .min(1, "At least 1")
+    .max(365, "At most 365")
+    .optional(),
+  repeat_weekdays: z.array(z.number().int().min(0).max(6)).optional(),
+  repeat_until: z.string().nullable().optional(),
 });
 
 export type TaskFormValues = z.infer<typeof TaskSchema>;

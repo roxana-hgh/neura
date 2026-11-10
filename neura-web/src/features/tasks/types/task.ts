@@ -23,7 +23,16 @@ export interface Task {
   /** The goal (or sub-goal, with its parent) this task belongs to. */
   goal: TaskGoal | null;
   tags: TaskTag[];
+  /** Completing a repeating task creates its next occurrence, which takes over the rule. */
+  repeat: TaskRepeat;
+  repeat_interval: number;
+  /** weekly only: 0 = Sunday … 6 = Saturday; empty = the due day's weekday */
+  repeat_weekdays: number[];
+  /** Last day the series may land on (ISO), or null for never */
+  repeat_until: string | null;
 }
+
+export type TaskRepeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 export interface TaskTag {
   id: string;

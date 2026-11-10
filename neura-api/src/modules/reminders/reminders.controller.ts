@@ -1,102 +1,89 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as remindersService from "@/modules/reminders/reminders.service";
-import { REMINDER_VIEWS, type ReminderInput, type ReminderView } from "@/modules/reminders/reminders.service";
-import { REPEATS, isValidTimeZone, type Repeat } from "@/modules/reminders/reminders.utils";
-import { HttpError } from "@/utils/http-error";
+import { REMINDER_VIEWS, type ReminderInput } from "@/modules/reminders/reminders.service";
+import { REPEATS } from "@/modules/reminders/reminders.utils";
+import { dateTime, has, id, optionalId, parse, requiredText, timeZone } from "@/utils/validate";
 
 type IdParams = { id: string };
 
-const parseDate = (v: unknown): Date | null => {
-  if (typeof v !== "string" || !v) return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-};
+const link = optionalId.optional().transform((v) => v ?? null);
 
-const optionalId = (v: unknown) => (typeof v === "string" && v ? v : null);
+/** Every field optional; `parseBody` decides which ones are required and which were sent. */
+const reminderBody = z.object({
+  title: requiredText(200),
+  description: z.string().max(2000, "must be 2000 characters or less").nullish(),
+  scheduled_at: dateTime,
+  time_zone: timeZone,
+  repeat: z.enum(REPEATS, { error: "Invalid repeat" }),
+  interval: z.number({ error: "must be 1–365" }).int("must be 1–365").min(1, "must be 1–365").max(365, "must be 1–365"),
+  weekdays: z.array(z.number().int().min(0).max(6), { error: "must be numbers 0–6" }).max(7)
+    .transform((days) => [...new Set(days)].sort()),
+  repeat_until: z.union([dateTime, z.null()], { error: "must be an ISO date-time or null" }),
+  goal_id: link,
+  task_id: link,
+  note_id: link,
+}).partial();
 
 /**
  * Turns the snake_case request body into a ReminderInput. Only keys that are present
  * are set, so PATCH can send a partial body. Throws 400 on invalid values.
  */
 export function parseBody(body: Record<string, unknown>, isCreate: boolean): ReminderInput {
+  const schema = isCreate ? reminderBody.extend({ title: requiredText(200), scheduled_at: dateTime, time_zone: timeZone }) : reminderBody;
+  const b = parse(schema, body);
   const input: ReminderInput = {};
-  const has = (k: string) => Object.prototype.hasOwnProperty.call(body, k);
 
-  if (isCreate || has("title")) {
-    if (typeof body.title !== "string" || !body.title.trim()) throw new HttpError(400, "Title is required");
-    if (body.title.trim().length > 200) throw new HttpError(400, "Title is too long");
-    input.title = body.title;
-  }
-  if (has("description")) input.description = typeof body.description === "string" ? body.description : null;
-
-  if (isCreate || has("scheduled_at")) {
-    const at = parseDate(body.scheduled_at);
-    if (!at) throw new HttpError(400, "scheduled_at must be an ISO date-time");
-    input.scheduledAt = at;
-  }
-  if (isCreate || has("time_zone")) {
-    if (!isValidTimeZone(body.time_zone)) throw new HttpError(400, "time_zone must be an IANA time zone");
-    input.timeZone = body.time_zone;
-  }
-
-  if (has("repeat")) {
-    if (!REPEATS.includes(body.repeat as Repeat)) throw new HttpError(400, "Invalid repeat");
-    input.repeat = body.repeat as Repeat;
-  }
-  if (has("interval")) {
-    const n = body.interval;
-    if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 365) throw new HttpError(400, "interval must be 1–365");
-    input.interval = n as number;
-  }
-  if (has("weekdays")) {
-    const days = body.weekdays;
-    if (!Array.isArray(days) || !days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)) {
-      throw new HttpError(400, "weekdays must be numbers 0–6");
-    }
-    input.weekdays = [...new Set(days as number[])].sort();
-  }
-  if (has("repeat_until")) {
-    if (body.repeat_until === null) input.repeatUntil = null;
-    else {
-      const until = parseDate(body.repeat_until);
-      if (!until) throw new HttpError(400, "repeat_until must be an ISO date-time or null");
-      input.repeatUntil = until;
-    }
-  }
+  if (b.title !== undefined) input.title = b.title;
+  if (has(body, "description")) input.description = b.description ?? null;
+  if (b.scheduled_at !== undefined) input.scheduledAt = b.scheduled_at;
+  if (b.time_zone !== undefined) input.timeZone = b.time_zone;
+  if (b.repeat !== undefined) input.repeat = b.repeat;
+  if (b.interval !== undefined) input.interval = b.interval;
+  if (b.weekdays !== undefined) input.weekdays = b.weekdays;
+  if (has(body, "repeat_until")) input.repeatUntil = b.repeat_until ?? null;
 
   // links: sending any of them replaces the link (the others are cleared)
-  if (has("goal_id") || has("task_id") || has("note_id")) {
-    input.goalId = optionalId(body.goal_id);
-    input.taskId = optionalId(body.task_id);
-    input.noteId = optionalId(body.note_id);
+  if (has(body, "goal_id") || has(body, "task_id") || has(body, "note_id")) {
+    input.goalId = b.goal_id ?? null;
+    input.taskId = b.task_id ?? null;
+    input.noteId = b.note_id ?? null;
   }
   return input;
 }
 
+const listQuery = z.object({
+  view: z.enum(REMINDER_VIEWS, { error: "Invalid view" }).default("upcoming"),
+  goal_id: id.optional().catch(undefined),
+  task_id: id.optional().catch(undefined),
+  note_id: id.optional().catch(undefined),
+});
+
+const countsQuery = z.object({ end_of_today: dateTime.optional().catch(undefined) });
+
+const linkOptionsQuery = z.object({ q: z.string().trim().max(100).catch("") });
+
+const completeBody = z.object({ scope: z.enum(["occurrence", "series"]).catch("occurrence") });
+
+const snoozeBody = z.object({
+  until: dateTime.refine((d) => d.getTime() > Date.now(), "must be a future ISO date-time"),
+});
+
 // GET /api/reminders?view=upcoming|snoozed|done|all&goal_id=&task_id=&note_id=
 export async function listReminders(req: Request, res: Response) {
-  const view = (req.query.view as ReminderView) || "upcoming";
-  if (!REMINDER_VIEWS.includes(view)) {
-    res.status(400).json({ error: "Invalid view" });
-    return;
-  }
-  res.json(await remindersService.listReminders(req.userId!, {
-    view,
-    goalId: optionalId(req.query.goal_id) ?? undefined,
-    taskId: optionalId(req.query.task_id) ?? undefined,
-    noteId: optionalId(req.query.note_id) ?? undefined,
-  }));
+  const { view, goal_id, task_id, note_id } = parse(listQuery, req.query);
+  res.json(await remindersService.listReminders(req.userId!, { view, goalId: goal_id, taskId: task_id, noteId: note_id }));
 }
 
 // GET /api/reminders/counts?end_of_today=<ISO>  (the client's local end of day)
 export async function getCounts(req: Request, res: Response) {
-  const endOfToday = parseDate(req.query.end_of_today) ?? new Date(new Date().setHours(23, 59, 59, 999));
+  const endOfToday = parse(countsQuery, req.query).end_of_today ?? new Date(new Date().setHours(23, 59, 59, 999));
   res.json(await remindersService.getCounts(req.userId!, endOfToday));
 }
 
 // GET /api/reminders/link-options?q=
 export async function getLinkOptions(req: Request, res: Response) {
-  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  const { q } = parse(linkOptionsQuery, req.query);
   res.json(await remindersService.getLinkOptions(req.userId!, q));
 }
 
@@ -114,7 +101,7 @@ export async function updateReminder(req: Request<IdParams>, res: Response) {
 
 // POST /api/reminders/:id/complete  { scope?: "occurrence" | "series" }
 export async function completeReminder(req: Request<IdParams>, res: Response) {
-  const scope = req.body?.scope === "series" ? "series" : "occurrence";
+  const { scope } = parse(completeBody, req.body);
   res.json(await remindersService.completeReminder(req.userId!, req.params.id, scope));
 }
 
@@ -130,11 +117,7 @@ export async function reopenReminder(req: Request<IdParams>, res: Response) {
 
 // POST /api/reminders/:id/snooze  { until: ISO }
 export async function snoozeReminder(req: Request<IdParams>, res: Response) {
-  const until = parseDate(req.body?.until);
-  if (!until || until.getTime() <= Date.now()) {
-    res.status(400).json({ error: "until must be a future ISO date-time" });
-    return;
-  }
+  const { until } = parse(snoozeBody, req.body);
   res.json(await remindersService.snoozeReminder(req.userId!, req.params.id, until));
 }
 

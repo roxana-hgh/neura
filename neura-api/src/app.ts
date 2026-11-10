@@ -1,8 +1,10 @@
 import express from "express";
 import cors from "cors";
-import { allowedOrigins } from "@/config/env";
+import helmet from "helmet";
+import { allowedOrigins, env } from "@/config/env";
 import { requireAuth } from "@/middleware/require-auth";
 import { errorHandler, notFoundHandler } from "@/middleware/error-handler";
+import { apiLimiter } from "@/middleware/rate-limit";
 import authRoutes from "@/modules/auth/auth.routes";
 import tasksRoutes from "@/modules/tasks/tasks.routes";
 import notesRoutes from "@/modules/notes/notes.routes";
@@ -19,6 +21,12 @@ import notificationsPublicRoutes from "@/modules/notifications/notifications.pub
 
 const app = express();
 
+// Behind Render's proxy: read the client IP from X-Forwarded-For (rate limits are per IP)
+app.set("trust proxy", env.TRUST_PROXY);
+
+// Security headers. The API only serves JSON to a frontend on another origin, so
+// cross-origin reads of its responses must stay allowed.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 // Notes embed images as data URLs, so allow bodies larger than the 100kb default
 app.use(express.json({ limit: "10mb" }));
@@ -26,6 +34,8 @@ app.use(express.json({ limit: "10mb" }));
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api", apiLimiter);
 
 // Public
 app.use("/api/auth", authRoutes);

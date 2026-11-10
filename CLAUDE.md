@@ -42,6 +42,7 @@ Each app is installed and deployed on its own (Render, scoped to its subdirector
   - `GROQ_API_KEY`
   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`: Web Push (`npx web-push generate-vapid-keys`). Push is off when unset; the private key also signs notification action tokens
   - `CRON_SECRET`: optional, lets an external scheduler call `POST /api/notifications/dispatch`
+  - `TRUST_PROXY`: optional, proxy hops in front of the API (default `1` in production, `0` locally) so `req.ip` is the client's IP for rate limiting
   - `PORT`
   - `NODE_ENV`
 
@@ -321,6 +322,13 @@ Everything under `/` is wrapped in `ProtectedRoute` + `AppLayout`:
 - `TaskForm` (Due date | Time side by side on sm+, stacked on phones) uses `DueTimePicker`: one plain text field, no popover. Type "930", "14:30", "2:30 pm", Persian digits, "ب.ظ" / "صبح" (`parseTimeInput`; a bare number is 24h). It applies on Enter / blur and snaps to 5 minutes (`snapTime`). A hint line under the field shows "Due by 8:30 PM" or what to try. Empty or × = all day, Esc reverts. Typing "tomorrow 8pm" in the date field fills the time too.
 - Helpers in `tasks/utils/dueDate.ts`: `parseTimeInput`, `snapTime`, `formatDueTime`, `to12h` / `from12h`, `dueDay`, `dueAt`, `isPastDue` (a timed task is overdue once its time passes, an all-day one after its day), `compareDueTime` (timed before all-day within a day). `isTaskOverdue`, `getDueInfo` ("Today · 2:30 PM") and the calendar ordering use them; Tasks page sections stay day-based.
 
+### Repeating tasks
+
+- A task can repeat like a reminder: `repeat` (none / daily / weekly / monthly / yearly), every N (`repeat_interval`), weekdays for weekly (`repeat_weekdays`, 0 = Sun), optional end day (`repeat_until`). It needs a due date: picking a repeat in `TaskForm` (`TaskRepeatPicker`) without one sets today, and clearing the date clears the rule.
+- Completing a repeating task (`setTaskCompleted` → `rollRepeat` in `tasks.service.ts`) keeps it as a done task and creates the **next occurrence** (same title, description, priority, list, goal, tags, time, subtasks reset), which takes over the rule. The next day comes after the current due day but never before today, so a missed daily task comes back once, today, not as a backlog. Steps count from `repeatStart`, so "monthly on the 31st" doesn't drift.
+- Un-completing it right after takes the rule back and deletes the new occurrence, only if nobody touched it (`repeatFromId`). The toggle answers with `next` and the web toasts "Next …". The assistant's `update_task` / `bulk_update_tasks` roll the same way.
+- Helpers: `tasks/utils/taskRepeat.ts` (`describeTaskRepeat`, labels). Rows and `TaskDetail` show the rule with a `Repeat` icon.
+
 ### Calendar (`/calendar`)
 
 `pages/CalendarPage` shows tasks by due date in a **Month** or **Week** view. The chosen view is stored in `useCalendarStore` (persisted in localStorage as `neura-calendar-view`).
@@ -466,7 +474,7 @@ neura-api/
 ├── prisma.config.ts
 └── src/
     ├── index.ts                    # Entry: loads env, starts the server (app.listen)
-    ├── app.ts                      # Express app: CORS, JSON body, route mounting, 404 + error handler
+    ├── app.ts                      # Express app: trust proxy, Helmet, CORS, JSON body, /api rate limit, route mounting, 404 + error handler
     ├── config/
     │   └── env.ts                  # The ONLY place that reads process.env (loads dotenv); exports `env`, `allowedOrigins`
     ├── lib/                        # Clients for external systems
@@ -477,9 +485,11 @@ neura-api/
     │                               # runAssistantTurn (tool loop), AssistantBusyError
     ├── middleware/
     │   ├── require-auth.ts         # Checks the Better Auth session, sets req.userId, else 401 { error: "Unauthorized" }
+    │   ├── rate-limit.ts           # express-rate-limit limiters (see "Security"), 429 { error, message, retryAfterSec }
     │   └── error-handler.ts        # notFoundHandler (404 JSON) + errorHandler (HttpError / Prisma P2025 → 404 / else 500)
     ├── utils/
     │   ├── http-error.ts           # HttpError(status, message), notFound(message)
+    │   ├── validate.ts             # parse(schema, data) → 400 on the first zod issue; shared field schemas
     │   └── date.ts                 # dayKey(date) → "yyyy-MM-dd"
     ├── types/
     │   └── express.d.ts            # Augments Express.Request with `userId?: string`
@@ -560,7 +570,14 @@ neura-api/
 - Error JSON shape is always `{ error: string }`. The assistant 503 response also includes `message` and `retryAfterSec`, which the frontend reads.
 
 **Validation**
-- Validation is done by hand in controllers, returning `400 { error }`. There is no schema library on the backend.
+- Validation uses **zod** (v4) in controllers: a schema next to the handler and `parse(schema, req.body | req.query)` from `utils/validate.ts`, which throws `400 { error }` with the first issue ("title is required"; custom messages are lowercase predicates, prefixed with the field name).
+  - Reuse the field schemas in `validate.ts` (`requiredText`, `optionalText`, `id`, `optionalId`, `dayKey`, `timeOfDay`, `dateString`, `dateTime`, `timeZone`, `COLORS`, `PRIORITIES`, `queryInt`, `queryFlag`).
+  - PATCH-style bodies: make the schema `.partial()` and use `has(body, key)` to tell "absent = unchanged" from "null = clear" (see goals / reminders `parseBody`, which the assistant tools reuse).
+  - Services keep their own business-rule checks (e.g. the task repeat rules) and ownership checks.
+
+**Security**
+- `helmet()` sets the security headers (`Cross-Origin-Resource-Policy: cross-origin`, since the frontend is on another origin).
+- Rate limits (`middleware/rate-limit.ts`, in-memory, so per instance): every `/api` request 1500 / 15 min per IP; `/api/auth` 300 / 15 min per IP, sign-in / sign-up / password endpoints 10 **failed** attempts / 15 min, sign-ups 5 / hour; `/api/assistant` 8 / min and 150 / day per user; `/notes/unfurl` 30 / min per user; public `/notifications/action` 30 / min and `/dispatch` 6 / min per IP. Add a limiter to any new public or costly endpoint.
 
 **Config and env**
 - Read env vars only through `env` from `config/env.ts`. Add new variables there.
@@ -611,7 +628,7 @@ neura-api/
 | Base | Endpoints |
 |---|---|
 | `/auth/*` | Better Auth handler (sign-in, sign-up, session, sign-out) |
-| `/tasks` | `GET /`, `POST /`, `GET /calendar`, `GET /:id`, `PUT /:id`, `PATCH /:id/toggle`, `DELETE /:id` |
+| `/tasks` | `GET /`, `POST /`, `GET /calendar`, `GET /:id`, `PUT /:id`, `PATCH /:id/toggle` (`{ completed, today? }`, returns the task + `next`), `DELETE /:id`. `POST`/`PUT` accept `repeat`, `repeat_interval`, `repeat_weekdays`, `repeat_until` (omitted = unchanged) |
 | `/tasks` (subtasks) | `POST /:taskId/subtasks`, `PUT /:taskId/subtasks/:subtaskId`, `PATCH /:taskId/subtasks/:subtaskId/toggle`, `DELETE /:taskId/subtasks/:subtaskId` |
 | `/tasks/lists` | `GET /`, `POST /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
 | `/tasks/tags` | `GET /` (with `taskCount`), `POST /` (`{ name, color }`, 409 on duplicate name), `PUT /:id`, `DELETE /:id`. Tasks: `PATCH /tasks/:id/tags` (`{ tag_ids }`); `POST`/`PUT /tasks` accept optional `tag_ids` (omitted = unchanged) |
@@ -639,6 +656,7 @@ neura-api/
 - `Task`
   - Fields: title, description, completed, completedAt, priority (`"low" | "medium" | "high"`, default `"medium"`), dueDate, dueTime (optional `"HH:mm"` local wall-clock deadline on the due day; null = all day)
   - Relations: userId, listId (optional; set to null when the list is deleted), goalId (optional), subtasks
+  - Repeat: `repeat` (`ReminderRepeat` enum), `repeatInterval`, `repeatWeekdays`, `repeatUntil`, `repeatStart` (series anchor), `repeatFromId` (the occurrence it was created from). See "Repeating tasks".
   - `showInTasks` (default `true`): tasks created from a goal page default to `false` and appear only on that goal. `GET /tasks` and `/tasks/calendar` return only `showInTasks: true`, each with its `goal` (`id`, `title`, `parent`). Unlinking a task or deleting its goal sets the flag back to `true`, so the task stays visible.
 - `SubTask`: title, completed, taskId (cascade delete)
 - `TaskTag`: name (unique per user), color (`colors` union), userId. Many-to-many with `Task` (implicit join table); tasks return `tags: { id, name, color }[]`.

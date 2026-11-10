@@ -1,32 +1,47 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as notesService from "@/modules/notes/notes.service";
 import { unfurl } from "@/modules/notes/notes.unfurl";
-import { HttpError } from "@/utils/http-error";
+import { COLORS, id, optionalId, parse, requiredText } from "@/utils/validate";
 
 type IdParams = { id: string };
 
-const FOLDER_COLORS = ["blue", "green", "red", "yellow", "orange", "pink", "purple", "gray"];
+/** Link ids: absent = unchanged, null / "" = unlink. */
+const linksBody = z.object({
+  folder_id: optionalId.optional(),
+  goal_id: optionalId.optional(),
+  task_id: optionalId.optional(),
+  list_id: optionalId.optional(),
+});
 
-/** Reads an optional id: absent = unchanged, null / "" = unlink. */
-const optionalId = (body: Record<string, unknown>, key: string): string | null | undefined => {
-  if (!(key in body)) return undefined;
-  const value = body[key];
-  if (value === null || value === "") return null;
-  if (typeof value !== "string") throw new HttpError(400, `${key} must be a string or null`);
-  return value;
+const parseLinks = (body: unknown): notesService.NoteLinks => {
+  const links = parse(linksBody, body);
+  return { folderId: links.folder_id, goalId: links.goal_id, taskId: links.task_id, listId: links.list_id };
 };
 
-const parseLinks = (body: Record<string, unknown> = {}): notesService.NoteLinks => ({
-  folderId: optionalId(body, "folder_id"),
-  goalId: optionalId(body, "goal_id"),
-  taskId: optionalId(body, "task_id"),
-  listId: optionalId(body, "list_id"),
+const noteBody = z.object({
+  title: requiredText(300),
+  // TipTap HTML with inline images (data URLs); the JSON body limit (10 MB) caps it
+  description: z.string({ error: "must be text" }).nullish(),
+  // older notes may carry "default"
+  color: z.string({ error: "must be text" }).max(30).optional(),
+});
+
+const listQuery = z.object({ task_id: id.optional().catch(undefined), list_id: id.optional().catch(undefined) });
+
+const unfurlQuery = z.object({
+  url: z.url({ protocol: /^https?$/, error: "must be an http(s) URL" }).max(2000, "is too long"),
+});
+
+const folderBody = z.object({
+  name: requiredText(60),
+  color: z.enum(COLORS, { error: "Invalid color" }),
+  goal_id: optionalId,
 });
 
 // GET /api/notes?task_id=&list_id=
 export async function listNotes(req: Request, res: Response) {
-  const taskId = typeof req.query.task_id === "string" ? req.query.task_id : undefined;
-  const listId = typeof req.query.list_id === "string" ? req.query.list_id : undefined;
+  const { task_id: taskId, list_id: listId } = parse(listQuery, req.query);
   res.json(await notesService.listNotes(req.userId!, { taskId, listId }));
 }
 
@@ -37,13 +52,13 @@ export async function getNote(req: Request<IdParams>, res: Response) {
 
 // POST /api/notes  { title, description, color, folder_id?, goal_id?, task_id?, list_id? }
 export async function createNote(req: Request, res: Response) {
-  const note = await notesService.createNote(req.userId!, req.body, parseLinks(req.body));
+  const note = await notesService.createNote(req.userId!, parse(noteBody, req.body), parseLinks(req.body));
   res.status(201).json(note);
 }
 
 // PUT /api/notes/:id  (content only; links go through PATCH /:id/links)
 export async function updateNote(req: Request<IdParams>, res: Response) {
-  res.json(await notesService.updateNote(req.userId!, req.params.id, req.body));
+  res.json(await notesService.updateNote(req.userId!, req.params.id, parse(noteBody, req.body)));
 }
 
 // PATCH /api/notes/:id/links  { folder_id?, goal_id?, task_id?, list_id? }  (null unlinks, omitted = unchanged)
@@ -64,29 +79,17 @@ export async function getLinkOptions(req: Request, res: Response) {
 
 // GET /api/notes/unfurl?url=
 export async function unfurlLink(req: Request, res: Response) {
-  const url = typeof req.query.url === "string" ? req.query.url : "";
-  if (!url || url.length > 2000) {
-    res.status(400).json({ error: "url is required" });
-    return;
-  }
+  const { url } = parse(unfurlQuery, req.query);
   res.json(await unfurl(url));
 }
 
 // ── Folders ─────────────────────────────────────────────────────────────
 
-function parseFolder(body: Record<string, unknown> = {}, isCreate: boolean): notesService.FolderInput {
-  const input: notesService.FolderInput = {};
-  if (isCreate || "name" in body) {
-    const name = typeof body.name === "string" ? body.name.trim() : "";
-    if (!name || name.length > 60) throw new HttpError(400, "name is required (max 60 characters)");
-    input.name = name;
-  }
-  if ("color" in body) {
-    if (typeof body.color !== "string" || !FOLDER_COLORS.includes(body.color)) throw new HttpError(400, "Invalid color");
-    input.color = body.color;
-  }
-  input.goalId = optionalId(body, "goal_id");
-  return input;
+/** Create needs a name; on PATCH every field is optional (absent = unchanged). */
+function parseFolder(body: unknown, isCreate: boolean): notesService.FolderInput {
+  const schema = isCreate ? folderBody.partial().extend({ name: folderBody.shape.name }) : folderBody.partial();
+  const { name, color, goal_id } = parse(schema, body);
+  return { name, color, goalId: goal_id };
 }
 
 // GET /api/notes/folders

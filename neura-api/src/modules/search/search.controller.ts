@@ -1,34 +1,26 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as searchService from "@/modules/search/search.service";
 import { SEARCH_TYPES, type SearchType } from "@/modules/search/search.service";
+import { parse, queryInt, requiredText } from "@/utils/validate";
 
 const MAX_QUERY = 100;
 const DEFAULT_LIMIT = 6;
 const MAX_LIMIT = 20;
 
+const searchQuery = z.object({
+  q: requiredText(MAX_QUERY),
+  types: z.string().optional().catch(undefined).transform((v, ctx) => {
+    if (!v) return [...SEARCH_TYPES];
+    const types = v.split(",").filter((t): t is SearchType => SEARCH_TYPES.includes(t as SearchType));
+    if (!types.length) ctx.addIssue({ code: "custom", message: `must be any of ${SEARCH_TYPES.join(", ")}` });
+    return types;
+  }),
+  limit: queryInt.transform((n) => (n && n > 0 ? Math.min(n, MAX_LIMIT) : DEFAULT_LIMIT)),
+});
+
 // GET /api/search?q=&types=tasks,notes&limit=
 export async function search(req: Request, res: Response) {
-  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-  if (!q) {
-    res.status(400).json({ error: "q is required" });
-    return;
-  }
-  if (q.length > MAX_QUERY) {
-    res.status(400).json({ error: `q must be ${MAX_QUERY} characters or less` });
-    return;
-  }
-
-  let types: SearchType[] = [...SEARCH_TYPES];
-  if (typeof req.query.types === "string" && req.query.types) {
-    types = req.query.types.split(",").filter((t): t is SearchType => SEARCH_TYPES.includes(t as SearchType));
-    if (!types.length) {
-      res.status(400).json({ error: `types must be any of ${SEARCH_TYPES.join(", ")}` });
-      return;
-    }
-  }
-
-  const limit = Number(req.query.limit);
-  const perType = Number.isInteger(limit) && limit > 0 ? Math.min(limit, MAX_LIMIT) : DEFAULT_LIMIT;
-
-  res.json(await searchService.searchEverything(req.userId!, q, { perType, types }));
+  const { q, types, limit } = parse(searchQuery, req.query);
+  res.json(await searchService.searchEverything(req.userId!, q, { perType: limit, types }));
 }

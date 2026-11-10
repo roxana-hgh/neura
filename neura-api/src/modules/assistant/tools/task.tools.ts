@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, addDays } from "date-fns";
-import { assertTaskOwner, getTask } from "@/modules/tasks/tasks.service";
+import { assertTaskOwner, getTask, rollRepeat } from "@/modules/tasks/tasks.service";
 import { requiredText } from "@/modules/assistant/tools/tool.utils";
 import { HttpError, notFound } from "@/utils/http-error";
 import { isTimeOfDay } from "@/utils/date";
@@ -171,14 +171,14 @@ export const TASK_DETAIL_TOOLS = [
 ];
 
 // ---- Execution, always scoped to the authenticated user ----
-export async function executeTaskTool(name: string, args: any, userId: string) {
+export async function executeTaskTool(name: string, args: any, userId: string, todayKey?: string) {
   switch (name) {
     case "list_tasks":
       return listTasks(args, userId);
     case "create_task":
       return createTask(args, userId);
     case "update_task":
-      return updateTask(args, userId);
+      return updateTask(args, userId, todayKey);
     case "delete_task":
       return deleteTask(args, userId);
     case "get_task":
@@ -188,7 +188,7 @@ export async function executeTaskTool(name: string, args: any, userId: string) {
     case "update_subtask":
       return updateSubtask(args, userId);
     case "bulk_update_tasks":
-      return bulkUpdateTasks(args, userId);
+      return bulkUpdateTasks(args, userId, todayKey);
     case "list_task_lists":
       return listTaskLists(userId);
     case "create_task_list":
@@ -268,7 +268,7 @@ async function createTask(args: any, userId: string) {
   return { created: task };
 }
 
-async function updateTask(args: any, userId: string) {
+async function updateTask(args: any, userId: string, todayKey?: string) {
   // Ownership check — never trust an id the model produced without verifying it's this user's task
   const existing = await prisma.task.findFirst({ where: { id: args.taskId, userId } });
   if (!existing) {
@@ -296,6 +296,8 @@ async function updateTask(args: any, userId: string) {
     data,
     select: TASK_SELECT,
   });
+  // a repeating task hands its rule to the next occurrence
+  if (data.completed !== undefined) await rollRepeat(userId, task.id, data.completed, todayKey);
 
   return { updated: task };
 }
@@ -356,7 +358,7 @@ async function updateSubtask(args: any, userId: string) {
   return { updated: { id: args.taskId, title: updated.title, meta: updated.completed ? "done" : undefined } };
 }
 
-async function bulkUpdateTasks(args: any, userId: string) {
+async function bulkUpdateTasks(args: any, userId: string, todayKey?: string) {
   const { taskIds } = args;
   if (!Array.isArray(taskIds) || taskIds.length === 0) throw new HttpError(400, "taskIds is required");
   if (taskIds.length > MAX_LISTED_TASKS) throw new HttpError(400, `At most ${MAX_LISTED_TASKS} tasks at once`);
@@ -369,6 +371,14 @@ async function bulkUpdateTasks(args: any, userId: string) {
 
   // the userId filter drops any id that isn't this user's
   const where = { id: { in: taskIds as string[] }, userId };
+  // repeating tasks whose completion is about to change (they roll to their next occurrence after)
+  const rolling =
+    typeof args.completed === "boolean"
+      ? await prisma.task.findMany({
+          where: { ...where, completed: !args.completed, ...(args.completed ? { repeat: { not: "none" } } : {}) },
+          select: { id: true },
+        })
+      : [];
   const counts = await prisma.$transaction(async (tx) => {
     const changed = Object.keys(data).length ? await tx.task.updateMany({ where, data }) : { count: 0 };
     if (typeof args.completed !== "boolean") return changed.count;
@@ -378,6 +388,7 @@ async function bulkUpdateTasks(args: any, userId: string) {
     });
     return Math.max(changed.count, toggled.count);
   });
+  for (const { id } of rolling) await rollRepeat(userId, id, args.completed, todayKey);
 
   return { updated: { title: `${counts} tasks` } };
 }

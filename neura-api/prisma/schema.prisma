@@ -116,6 +116,18 @@ model Task {
   goal        Goal?        @relation(fields: [goalId], references: [id], onDelete: SetNull)
   /// false = only on its goal's page (default for tasks added from a goal), hidden from Tasks / Calendar
   showInTasks Boolean      @default(true)
+
+  /// Repeat rule (needs a due date). Completing the task creates the next occurrence and hands the rule to it.
+  repeat         ReminderRepeat @default(none)
+  repeatInterval Int            @default(1)
+  /// weekly only: 0 = Sunday … 6 = Saturday; empty = the due day's weekday
+  repeatWeekdays Int[]          @default([])
+  repeatUntil    DateTime?
+  /// First due day of the series; steps count from it, so "monthly on the 31st" doesn't drift
+  repeatStart    DateTime?
+  /// The occurrence this one was created from (un-completing that one takes the rule back)
+  repeatFromId   String?
+
   subtasks    SubTask[]
   tags        TaskTag[]
   reminders   Reminder[]

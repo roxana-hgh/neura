@@ -23,9 +23,11 @@ import {
   Trash,
   Bell,
   Clock,
+  Repeat,
 } from "lucide-react";
 import type { Task } from "@/features/tasks/types/task";
 import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
+import { describeTaskRepeatFull } from "@/features/tasks/utils/taskRepeat";
 import TaskTagsEditor from "@/features/tasks/components/tags/TaskTagsEditor";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
@@ -166,6 +168,7 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
     totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
   const isOutdated = isPastDue(task);
+  const repeatLabel = describeTaskRepeatFull(task);
   // a reminder defaults to the deadline time, or the morning of an all-day due date, when still ahead
   const day = dueDay(task);
   const remindAt = day ? atTime(day, task.due_time ?? "09:00") : null;
@@ -259,6 +262,15 @@ function TaskDetail({ task, trigger, open: openProp, onOpenChange }: IProps) {
                         </span>
                       )}
                     </p>
+                    {repeatLabel && (
+                      <p
+                        className="mt-0.5 flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-500"
+                        title={`Repeats: ${repeatLabel}`}
+                      >
+                        <Repeat size={10} className="shrink-0" />
+                        <span className="truncate">{repeatLabel}</span>
+                      </p>
+                    )}
                   </div>
                 )}
 

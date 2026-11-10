@@ -1,64 +1,57 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as habitsService from "@/modules/habits/habits.service";
-import { HABIT_VIEWS, isDayKey, type HabitView } from "@/modules/habits/habits.utils";
+import { HABIT_VIEWS, isDayKey } from "@/modules/habits/habits.utils";
 import { DEFAULT_WEEK_STARTS_ON, dayKey, isWeekStartsOn } from "@/utils/date";
+import { dayKey as dayKeySchema, parse, queryInt, requiredText } from "@/utils/validate";
 
 type IdParams = { id: string };
 
-function isValidDuration(v: unknown) {
-  return v === null || (Number.isInteger(v) && (v as number) >= 1);
-}
+const overviewQuery = z.object({
+  view: z.enum(HABIT_VIEWS as ["week", "month", "year", "all"], { error: "Invalid view" }).default("week"),
+  today: z.unknown(),
+  date: z.unknown(),
+  weekStartsOn: queryInt.transform((n) => (isWeekStartsOn(n) ? n : DEFAULT_WEEK_STARTS_ON)),
+});
+
+const habitFields = {
+  title: requiredText(200),
+  color: z.string({ error: "is required" }).min(1, "is required").max(30),
+  // 100 years at most; null = tracked forever
+  durationDays: z.number({ error: "must be a positive integer or null" })
+    .int("must be a positive integer or null").min(1, "must be a positive integer or null").max(36_500).nullable(),
+  startDate: dayKeySchema,
+};
+
+const createBody = z.object({
+  ...habitFields,
+  durationDays: habitFields.durationDays.optional(),
+  startDate: habitFields.startDate.optional(),
+});
+
+const updateBody = z.object(habitFields).partial();
+
+const toggleBody = z.object({ date: dayKeySchema });
 
 // GET /api/habits?view=week&date=2026-02-04&today=2026-02-06&weekStartsOn=1
 // `today` is the client's calendar day, so "future" and streaks match the user's time zone.
 // `weekStartsOn` (6 | 0 | 1) is the user's week-start setting; defaults to Monday.
 export async function getHabits(req: Request, res: Response) {
-  const view = (req.query.view as HabitView) || "week";
-  if (!HABIT_VIEWS.includes(view)) {
-    res.status(400).json({ error: "Invalid view" });
-    return;
-  }
-  const today = isDayKey(req.query.today) ? req.query.today : dayKey(new Date());
-  const date = isDayKey(req.query.date) ? req.query.date : today;
-  const weekStartsOn = Number(req.query.weekStartsOn);
-  res.json(await habitsService.getHabitsOverview(
-    req.userId!, view, date, today, isWeekStartsOn(weekStartsOn) ? weekStartsOn : DEFAULT_WEEK_STARTS_ON,
-  ));
+  const query = parse(overviewQuery, req.query);
+  const today = isDayKey(query.today) ? query.today : dayKey(new Date());
+  const date = isDayKey(query.date) ? query.date : today;
+  res.json(await habitsService.getHabitsOverview(req.userId!, query.view, date, today, query.weekStartsOn));
 }
 
 // POST /api/habits  { title, color, durationDays: number | null, startDate?: "yyyy-MM-dd" }
 export async function createHabit(req: Request, res: Response) {
-  if (!req.body.title?.trim()) {
-    res.status(400).json({ error: "Title is required" });
-    return;
-  }
-  if (req.body.startDate !== undefined && !isDayKey(req.body.startDate)) {
-    res.status(400).json({ error: "startDate must be yyyy-MM-dd" });
-    return;
-  }
-  if (req.body.durationDays !== undefined && !isValidDuration(req.body.durationDays)) {
-    res.status(400).json({ error: "durationDays must be a positive integer or null" });
-    return;
-  }
-  const habit = await habitsService.createHabit(req.userId!, req.body);
+  const habit = await habitsService.createHabit(req.userId!, parse(createBody, req.body));
   res.status(201).json(habit);
 }
 
 // PATCH /api/habits/:id  { title?, color?, durationDays?, startDate? }
 export async function updateHabit(req: Request<IdParams>, res: Response) {
-  if (req.body.title !== undefined && !req.body.title?.trim()) {
-    res.status(400).json({ error: "Title is required" });
-    return;
-  }
-  if (req.body.startDate !== undefined && !isDayKey(req.body.startDate)) {
-    res.status(400).json({ error: "startDate must be yyyy-MM-dd" });
-    return;
-  }
-  if (req.body.durationDays !== undefined && !isValidDuration(req.body.durationDays)) {
-    res.status(400).json({ error: "durationDays must be a positive integer or null" });
-    return;
-  }
-  res.json(await habitsService.updateHabit(req.userId!, req.params.id, req.body));
+  res.json(await habitsService.updateHabit(req.userId!, req.params.id, parse(updateBody, req.body)));
 }
 
 // DELETE /api/habits/:id
@@ -69,10 +62,6 @@ export async function deleteHabit(req: Request<IdParams>, res: Response) {
 
 // POST /api/habits/:id/toggle  { date: "2026-02-04" }
 export async function toggleHabitEntry(req: Request<IdParams>, res: Response) {
-  const { date } = req.body;
-  if (!isDayKey(date)) {
-    res.status(400).json({ error: "date is required (yyyy-MM-dd)" });
-    return;
-  }
+  const { date } = parse(toggleBody, req.body);
   res.json(await habitsService.toggleHabitEntry(req.userId!, req.params.id, date));
 }

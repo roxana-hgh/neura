@@ -1,21 +1,18 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as tagsService from "@/modules/tasks/tags.service";
+import { parse } from "@/utils/validate";
 
 type IdParams = { id: string };
 
-/** Validates `{ name, color }`; returns an error message or the cleaned input. */
-function parseTag(body: unknown): tagsService.TagInput | string {
-  const { name, color } = (body ?? {}) as Record<string, unknown>;
-  const trimmed = typeof name === "string" ? name.trim().replace(/\s+/g, " ") : "";
-  if (!trimmed) return "Tag name is required";
-  if (trimmed.length > tagsService.TAG_NAME_MAX) {
-    return `Tag name must be ${tagsService.TAG_NAME_MAX} characters or less`;
-  }
-  if (typeof color !== "string" || !(tagsService.TAG_COLORS as readonly string[]).includes(color)) {
-    return "Invalid tag color";
-  }
-  return { name: trimmed, color };
-}
+const tagBody = z.object({
+  name: z.string({ error: "Tag name is required" })
+    .transform((v) => v.trim().replace(/\s+/g, " "))
+    .pipe(z.string()
+      .min(1, "Tag name is required")
+      .max(tagsService.TAG_NAME_MAX, `Tag name must be ${tagsService.TAG_NAME_MAX} characters or less`)),
+  color: z.enum(tagsService.TAG_COLORS, { error: "Invalid tag color" }),
+});
 
 // GET /api/tasks/tags
 export async function listTags(req: Request, res: Response) {
@@ -24,15 +21,13 @@ export async function listTags(req: Request, res: Response) {
 
 // POST /api/tasks/tags  { name, color }
 export async function createTag(req: Request, res: Response) {
-  const input = parseTag(req.body);
-  if (typeof input === "string") return res.status(400).json({ error: input });
+  const input = parse(tagBody, req.body);
   res.status(201).json(await tagsService.createTag(req.userId!, input));
 }
 
 // PUT /api/tasks/tags/:id  { name, color }
 export async function updateTag(req: Request<IdParams>, res: Response) {
-  const input = parseTag(req.body);
-  if (typeof input === "string") return res.status(400).json({ error: input });
+  const input = parse(tagBody, req.body);
   res.json(await tagsService.updateTag(req.userId!, req.params.id, input));
 }
 

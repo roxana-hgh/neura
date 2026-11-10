@@ -7,6 +7,10 @@ import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import type { ListFormValues } from "@/features/tasks/schemas/list.schema";
 import { useMemo } from "react";
 import { eachDayOfInterval, format, isSameDay, startOfDay, subDays } from "date-fns";
+import { toast } from "@/lib/toast";
+import { dueDay } from "@/features/tasks/utils/dueDate";
+
+const formatDueDay = (dueDate: string) => format(dueDay({ due_date: dueDate })!, "EEE, MMM d");
 
 // Map snake_case DB fields → your frontend types
 export const mapTask = (raw: any): Task => ({
@@ -23,6 +27,10 @@ export const mapTask = (raw: any): Task => ({
   subtasks: raw.subtasks ?? null,
   goal: raw.goal ?? null,
   tags: raw.tags ?? [],
+  repeat: raw.repeat ?? "none",
+  repeat_interval: raw.repeatInterval ?? 1,
+  repeat_weekdays: raw.repeatWeekdays ?? [],
+  repeat_until: raw.repeatUntil ?? null,
 });
 
 export function useTasks() {
@@ -149,10 +157,14 @@ export function useToggleTask() {
       id: string | number;
       completed: boolean;
     }) => {
-      const { data } = await api.patch(`/tasks/${id}/toggle`, { completed });
-      return mapTask(data);
+      const { data } = await api.patch(`/tasks/${id}/toggle`, { completed, today: format(new Date(), "yyyy-MM-dd") });
+      return { ...mapTask(data), next: (data.next ?? null) as { id: string; dueDate: string | null } | null };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: (task) => {
+      // a repeating task was completed: say when it comes back
+      if (task.next?.dueDate) toast.default(`Next "${task.title}": ${formatDueDay(task.next.dueDate)}`);
+      return queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
 }
 

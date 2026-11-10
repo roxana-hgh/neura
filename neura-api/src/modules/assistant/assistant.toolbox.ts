@@ -23,13 +23,13 @@ interface ToolGroup {
 }
 
 const CORE_GROUPS: ToolGroup[] = [
-  { tools: TASK_TOOLS, execute: (name, args, ctx) => executeTaskTool(name, args, ctx.userId) },
+  { tools: TASK_TOOLS, execute: (name, args, ctx) => executeTaskTool(name, args, ctx.userId, ctx.todayKey) },
   { tools: HABIT_TOOLS, execute: (name, args, ctx) => executeHabitTool(name, args, ctx.userId) },
   { tools: SEARCH_TOOLS, execute: executeSearchTool },
 ];
 
 const AREAS = {
-  task_details: { tools: TASK_DETAIL_TOOLS, execute: (name, args, ctx) => executeTaskTool(name, args, ctx.userId) },
+  task_details: { tools: TASK_DETAIL_TOOLS, execute: (name, args, ctx) => executeTaskTool(name, args, ctx.userId, ctx.todayKey) },
   goals: { tools: GOAL_TOOLS, execute: executeGoalTool },
   reminders: { tools: REMINDER_TOOLS, execute: executeReminderTool },
   brainstorms: { tools: BRAINSTORM_TOOLS, execute: executeBrainstormTool },

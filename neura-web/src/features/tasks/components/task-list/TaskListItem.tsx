@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarDays, ListChecks, Trash2 } from "lucide-react";
+import { CalendarDays, ListChecks, Repeat, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Task } from "@/features/tasks/types/task";
@@ -7,6 +7,7 @@ import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
 import { PRIORITY_STYLES } from "@/features/tasks/utils/calendar";
 import { DUE_TONE_STYLES, getDueInfo } from "@/features/tasks/utils/taskStats";
+import { describeTaskRepeat } from "@/features/tasks/utils/taskRepeat";
 import EditTask from "@/features/tasks/components/EditTask";
 import TaskDetail from "@/features/tasks/components/TaskDetail";
 import TaskGoalBadge from "@/features/tasks/components/TaskGoalBadge";
@@ -38,6 +39,7 @@ function TaskListItem({ task, compact = false }: Iprops) {
   };
 
   const due = getDueInfo(task);
+  const repeatLabel = describeTaskRepeat(task);
   const priority = PRIORITY_STYLES[task.priority];
   const subtasks = task.subtasks ?? [];
   const subtasksDone = subtasks.filter((s) => s.completed).length;
@@ -92,6 +94,13 @@ function TaskListItem({ task, compact = false }: Iprops) {
                   <CalendarDays className="size-3.5" />
                   {due.tone === "overdue" ? `Overdue · ${due.label}` : due.label}
                 </span>
+
+                {repeatLabel && (
+                  <span className="inline-flex items-center gap-1 text-muted-foreground" title={`Repeats: ${repeatLabel}`}>
+                    <Repeat className="size-3.5" />
+                    {repeatLabel}
+                  </span>
+                )}
 
                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                   <span className={cn("size-2 rounded-full", task.completed ? "bg-muted-foreground/40" : priority.dot)} />
