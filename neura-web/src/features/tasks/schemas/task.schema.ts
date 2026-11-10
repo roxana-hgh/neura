@@ -6,9 +6,7 @@ export const TaskSchema = z.object({
     .min(1, "Title is required")
     .max(100, "Title must be 100 characters or less"),
 
-  priority: z.enum(["low", "medium", "high"], {
-    errorMap: () => ({ message: "Please select a valid priority" }),
-  }),
+  priority: z.enum(["low", "medium", "high"], { message: "Please select a valid priority" }),
 
   description: z
     .string()
@@ -50,4 +48,5 @@ export const TaskSchema = z.object({
   repeat_until: z.string().nullable().optional(),
 });
 
-export type TaskFormValues = z.infer<typeof TaskSchema>;
+export type TaskFormInput = z.input<typeof TaskSchema>;
+export type TaskFormValues = z.output<typeof TaskSchema>;

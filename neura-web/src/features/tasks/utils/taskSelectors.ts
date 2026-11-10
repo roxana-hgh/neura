@@ -15,7 +15,7 @@ export const useTasksByList = (listId: string) => {
   return useQuery({
     queryKey: ["tasks", "list", listId, search, [...priorities].sort()],
     queryFn: async () => {
-      const { data } = await api.get<any[]>("/tasks", {
+      const { data } = await api.get<unknown[]>("/tasks", {
         params: {
           listId,
           search: search || undefined,
@@ -33,7 +33,7 @@ export const useUnassignedTasks = () => {
   return useQuery({
     queryKey: ["tasks", "unassigned"],
     queryFn: async () => {
-      const { data } = await api.get<any[]>("/tasks", {
+      const { data } = await api.get<unknown[]>("/tasks", {
         params: { unassigned: true },
       });
       return data.map(mapTask);

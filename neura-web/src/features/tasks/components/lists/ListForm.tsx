@@ -1,7 +1,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { colors } from "@/types/color";
-import { ListSchema, type ListFormValues } from "@/features/tasks/schemas/list.schema";
+import { ListSchema, type ListFormInput, type ListFormValues } from "@/features/tasks/schemas/list.schema";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ function ListForm({ initialValues, onSubmit, submitLabel }: IProps) {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ListFormValues>({
+  } = useForm<ListFormInput, unknown, ListFormValues>({
     resolver: zodResolver(ListSchema),
     defaultValues: {
       name: initialValues?.name ?? "",

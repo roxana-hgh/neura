@@ -9,8 +9,8 @@ type IdParams = { id: string };
 
 const overviewQuery = z.object({
   view: z.enum(HABIT_VIEWS as ["week", "month", "year", "all"], { error: "Invalid view" }).default("week"),
-  today: z.unknown(),
-  date: z.unknown(),
+  today: z.unknown().optional(),
+  date: z.unknown().optional(),
   weekStartsOn: queryInt.transform((n) => (isWeekStartsOn(n) ? n : DEFAULT_WEEK_STARTS_ON)),
 });
 

@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { parse as parseNaturalDate } from "chrono-node";
 import { Label } from "@/components/ui/label";
@@ -28,7 +27,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TaskSchema } from "@/features/tasks/schemas/task.schema";
-import type { TaskFormValues } from "@/features/tasks/schemas/task.schema";
+import type { TaskFormInput, TaskFormValues } from "@/features/tasks/schemas/task.schema";
 import type { Task } from "@/features/tasks/types/task";
 import { useTasksStore } from "@/features/tasks/stores/tasksStore";
 import { getListColorClass } from "@/features/tasks/utils/colorMapper";
@@ -87,7 +86,7 @@ function TaskForm({ initialValues, defaultListId, onSubmit, submitLabel }: IProp
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<TaskFormValues>({
+  } = useForm<TaskFormInput, unknown, TaskFormValues>({
     resolver: zodResolver(TaskSchema),
     defaultValues: {
       title: initialValues?.title ?? "",

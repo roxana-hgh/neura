@@ -68,10 +68,11 @@ export const timeZone = z.string({ error: "must be an IANA time zone" }).min(1).
 );
 
 /** A query-string flag: "true" → true, anything else → false. */
-export const queryFlag = z.unknown().transform((v) => v === "true");
+// `.optional()`: in zod v4 a transformed `z.unknown()` is required, so a missing param would be a 400
+export const queryFlag = z.unknown().optional().transform((v) => v === "true");
 
 /** A query-string integer, or undefined when missing / not a number. */
-export const queryInt = z.unknown().transform((v) => {
+export const queryInt = z.unknown().optional().transform((v) => {
   const n = Number(v);
   return v !== undefined && v !== "" && Number.isInteger(n) ? n : undefined;
 });

@@ -17,9 +17,7 @@ export const ListSchema = z.object({
     .min(1, "List name is required")
     .max(50, "List name must be 50 characters or less"),
 
-  color: z.enum(colorValues, {
-    errorMap: () => ({ message: "Please select a color" }),
-  }),
+  color: z.enum(colorValues, { message: "Please select a color" }),
 
   description: z
     .string()
@@ -29,4 +27,5 @@ export const ListSchema = z.object({
     .transform((val) => val ?? null),
 });
 
-export type ListFormValues = z.infer<typeof ListSchema>;
+export type ListFormInput = z.input<typeof ListSchema>;
+export type ListFormValues = z.output<typeof ListSchema>;

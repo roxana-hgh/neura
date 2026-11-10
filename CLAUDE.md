@@ -433,12 +433,7 @@ A quick-capture inbox: "your brain is for having ideas, not holding them".
 
 ### Known pre-existing issues (not regressions)
 
-- `tsc` reports about 16 errors that existed before the restructure:
-  - zod v4 no longer supports `errorMap` in `z.enum`
-  - resolver type mismatches in `TaskForm` and `ListForm`
-  - a few unused variables
-- `vite build` still succeeds because Vite does not type-check.
-- ESLint reports about 21 pre-existing problems (react-hooks / react-refresh rules, unused vars).
+- `tsc` and ESLint are clean (0 errors, 0 warnings); keep them that way. Forms whose zod schema transforms values use `useForm<XInput, unknown, XValues>` (`z.input` / `z.output`). `react-refresh/only-export-components` is off for `src/components/ui/**` so the shadcn files stay stock.
 - The production bundle is a single chunk of about 2.2 MB. There is no code-splitting yet.
 
 ---

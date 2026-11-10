@@ -73,9 +73,8 @@ export const useTasksStore = create<TaskStoreState>()(
   togglePriority: (priority) =>
     set((state) => {
       const priorities = new Set(state.priorities);
-      priorities.has(priority)
-        ? priorities.delete(priority)
-        : priorities.add(priority);
+      if (priorities.has(priority)) priorities.delete(priority);
+      else priorities.add(priority);
       return { priorities };
     }),
 

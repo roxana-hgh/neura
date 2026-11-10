@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { User } from "@/features/settings/types/user";
 import {
@@ -24,8 +24,8 @@ function ProfileForm({ profile, onSubmit, isSubmitting }: ProfileFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     setValue,
-    watch,
     formState: { errors, isDirty },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -38,8 +38,8 @@ function ProfileForm({ profile, onSubmit, isSubmitting }: ProfileFormProps) {
     },
   });
 
-  const gender = watch("gender");
-  const instructionsLength = watch("assistantInstructions")?.length ?? 0;
+  const gender = useWatch({ control, name: "gender" });
+  const instructionsLength = useWatch({ control, name: "assistantInstructions" })?.length ?? 0;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
