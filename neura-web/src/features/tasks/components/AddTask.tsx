@@ -59,7 +59,7 @@ const handleSubmit = (values: TaskFormValues) => {
         )}
       </DialogTrigger>
 
-      <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="overflow-y-auto max-h-[85vh] custom-scrollbar" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Add New Task</DialogTitle>
           <DialogDescription>
